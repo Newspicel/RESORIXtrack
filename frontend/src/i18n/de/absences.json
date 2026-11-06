@@ -81,5 +81,10 @@
   "delete_attachment_message": "Das Dokument wird von dieser Abwesenheit entfernt. Die Entfernung wird im Änderungsverlauf festgehalten.",
   "history_title": "Änderungsverlauf",
   "history_empty": "Noch keine Änderungen erfasst.",
-  "keep": "Abwesenheit behalten"
+  "keep": "Abwesenheit behalten",
+  "calendar": "Kalender",
+  "legend_selected": "Gewählte Tage",
+  "legend_approved": "Abwesenheit (bewilligt)",
+  "calendar_hint": "Ersten Tag der Abwesenheit anklicken, dann den letzten.",
+  "calendar_hint_end": "Jetzt den letzten Tag anklicken (oder einen früheren, um neu zu beginnen)."
 }

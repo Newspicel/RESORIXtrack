@@ -6,6 +6,7 @@ import { Shell } from "../components/Shell";
 import { Confirm, Empty, Field, Loading, Modal, PageHead, StatusBadge, useAction, useAsync } from "../components/ui";
 import { AbsenceHistoryModal } from "../components/absence_history";
 import { halfSuffix } from "../lib/absence";
+import { AbsenceCalendar } from "../components/absence_calendar";
 import { api } from "../lib/api";
 import { absenceLabel, t } from "../lib/i18n";
 import { bumpData, dataVersion, me, toast, type User } from "../lib/store";
@@ -280,6 +281,9 @@ export function RequestModal({ user, mode, onClose, onDone }: { user: User; mode
           <Field label={t("absences.end")} error={fieldErrors.end_date}>
             <input type="date" class="input" required min={start} value={end} onInput={(e) => setEnd((e.target as HTMLInputElement).value)} />
           </Field>
+          <div class="full">
+            <AbsenceCalendar userId={self ? undefined : user.id} start={start} end={end} today={today} onChange={(s, e) => { setStart(s); setEnd(e); }} />
+          </div>
           {single ? (
             <Field label={t("absences.single_day")} class="full">
               <div class="segmented">

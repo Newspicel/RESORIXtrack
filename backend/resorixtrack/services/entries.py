@@ -340,6 +340,8 @@ def _close(user: User, e: TimeEntry, t: datetime, source: str) -> datetime:
         current_app.logger.info("Clock entry %s exceeded 24h; closing at start+24h", e.id)
         t = e.start_at + MAX_ENTRY
     e.end_at = t
+    if source == "manual":  # end time chosen by hand ("clock out with a custom time"): shown as manual, not as a punch
+        e.source = "manual"
     revisions.record(obj=e, action="update", actor=user, subject_user_id=user.id, before=before,
                      reason="clock (offline sync: earlier time)" if backdated else "clock", source=source)
     return t

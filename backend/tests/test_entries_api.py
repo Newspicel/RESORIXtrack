@@ -346,3 +346,26 @@ def test_clock_in_with_a_custom_time_in_the_past(make_client, org):
     # overlapping the entry just closed is refused too
     r = anna.post("/api/v1/clock/start", json={"at": (DEFAULT_NOW - timedelta(hours=1)).isoformat(), "custom": True})
     assert r.status_code == 409 and r.get_json()["error"]["code"] == "overlap"
+
+
+def test_clock_out_with_a_custom_time(make_client, org):
+    from datetime import timedelta
+
+    from conftest import DEFAULT_NOW
+
+    anna = make_client("anna@example.com")
+    assert anna.post("/api/v1/clock/start", json={"at": (DEFAULT_NOW - timedelta(hours=3)).isoformat()}).status_code == 200
+    # clock out at a hand-chosen time between the start and now: entry closed there and marked as manual
+    end = DEFAULT_NOW - timedelta(minutes=30)
+    r = anna.post("/api/v1/clock/stop", json={"at": end.isoformat(), "custom": True})
+    assert r.status_code == 200 and r.get_json()["state"] == "idle"
+    day = DEFAULT_NOW.date().isoformat()
+    e = anna.get(f"/api/v1/entries?from={day}&to={day}").get_json()[-1]
+    assert e["end_at"].startswith(end.strftime("%Y-%m-%dT%H:%M")) and e["source"] == "manual"
+    # a plain clock-out keeps the entry a real punch
+    anna.post("/api/v1/clock/start", json={})
+    anna.post("/api/v1/clock/stop", json={})
+    assert anna.get(f"/api/v1/entries?from={day}&to={day}").get_json()[-1]["source"] == "clock"
+    # an end in the future is refused
+    anna.post("/api/v1/clock/start", json={})
+    assert anna.post("/api/v1/clock/stop", json={"at": (DEFAULT_NOW + timedelta(hours=2)).isoformat(), "custom": True}).status_code == 422

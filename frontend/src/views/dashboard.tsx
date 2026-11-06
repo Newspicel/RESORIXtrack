@@ -146,12 +146,12 @@ function ClockCard({ today, sick, onSick }: { today: any; sick: { allowed: boole
   const sickAbsence = today.absences.find((a: any) => a.category === "sick" && a.status === "approved");
   const [customStart, setCustomStart] = useState(false);
   const [startAt, setStartAt] = useState(() => localHHMM(new Date().toISOString(), tz));
+  const customAt = () => (customStart && startAt ? `${todayIn(tz)}T${startAt}:00` : undefined);
   function startWork() {
-    if (customStart && startAt) clockAction("start", `${todayIn(tz)}T${startAt}:00`);
-    else clockAction("start");
+    clockAction("start", customAt());
   }
   async function stopAndPrompt() {
-    await clockAction("stop");
+    await clockAction("stop", customAt());
     const cfg = worklogConfig();
     if (cfg.mode === "required" && today.worklog_required_min > 0 && today.worklog_min < today.worklog_required_min) {
       toast(t("worklog.clock_out_prompt"), "info", 8000);
@@ -194,23 +194,22 @@ function ClockCard({ today, sick, onSick }: { today: any; sick: { allowed: boole
             {st === "idle" && <button class="btn btn-gradient btn-lg" disabled={clockBusy.value || (customStart && !startAt)} onClick={startWork}><Icon.play />{t("clock.start_work")}</button>}
             {st === "working" && <>
               <button class="btn btn-warn btn-lg" disabled={clockBusy.value} onClick={() => clockAction("break")}><Icon.coffee />{t("clock.take_break")}</button>
-              <button class="btn btn-lg" disabled={clockBusy.value} onClick={stopAndPrompt}><Icon.stop />{t("clock.stop_work")}</button>
+              <button class="btn btn-lg" disabled={clockBusy.value || (customStart && !startAt)} onClick={stopAndPrompt}><Icon.stop />{t("clock.stop_work")}</button>
             </>}
             {st === "on_break" && <>
               <button class="btn btn-gradient btn-lg" disabled={clockBusy.value} onClick={() => clockAction("resume")}><Icon.play />{t("clock.resume_work")}</button>
-              <button class="btn btn-lg" disabled={clockBusy.value} onClick={stopAndPrompt}><Icon.stop />{t("clock.stop_work")}</button>
+              <button class="btn btn-lg" disabled={clockBusy.value || (customStart && !startAt)} onClick={stopAndPrompt}><Icon.stop />{t("clock.stop_work")}</button>
             </>}
             <a class="btn btn-ghost" href="/time?add=1"><Icon.plus />{t("dashboard.forgot_clock")}</a>
             {sick.allowed && <button class="btn btn-ghost" onClick={onSick}><Icon.thermo />{t("dashboard.report_sick")}</button>}
           </div>
-          {st === "idle" && (
-            <div class="row wrap small" style="gap:10px;align-items:center">
-              <label class="row" style="gap:8px;cursor:pointer"><input type="checkbox" checked={customStart} style="accent-color:var(--color-brand)"
-                onChange={(e) => { const on = (e.target as HTMLInputElement).checked; setCustomStart(on); if (on) setStartAt(localHHMM(new Date().toISOString(), tz)); }} />{t("clock.custom_time")}</label>
-              {customStart && <TimeInput value={startAt} onChange={setStartAt} required ariaLabel={t("clock.custom_time_label")} style="width:130px" />}
-              {customStart && <span class="tiny muted">{t("clock.custom_time_help")}</span>}
-            </div>
-          )}
+          <div class="row wrap small" style="gap:10px;align-items:center">
+            <label class="row" style="gap:8px;cursor:pointer"><input type="checkbox" checked={customStart} style="accent-color:var(--color-brand)"
+              onChange={(e) => { const on = (e.target as HTMLInputElement).checked; setCustomStart(on); if (on) setStartAt(localHHMM(new Date().toISOString(), tz)); }} />
+              {st === "idle" ? t("clock.custom_time_in") : t("clock.custom_time_out")}</label>
+            {customStart && <TimeInput value={startAt} onChange={setStartAt} required ariaLabel={st === "idle" ? t("clock.custom_time_label_in") : t("clock.custom_time_label_out")} style="width:130px" />}
+            {customStart && <span class="tiny muted">{st === "idle" ? t("clock.custom_time_help_in") : t("clock.custom_time_help_out")}</span>}
+          </div>
           <div class="tiny faint">{t("clock.shortcuts")} <span class="kbd">S</span> {t("clock.start_stop")} · <span class="kbd">B</span> {t("clock.break_resume")}</div>
         </div>
       </div>

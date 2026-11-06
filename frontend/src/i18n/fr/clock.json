@@ -22,7 +22,10 @@
   "break_resume": "commencer / terminer la pause",
   "queued_offline": "Vous êtes hors ligne. L'heure a été enregistrée et sera synchronisée automatiquement.",
   "synced": "Timbrages hors ligne synchronisés.",
-  "custom_time": "Timbrer avec une heure choisie",
-  "custom_time_label": "Heure de début",
-  "custom_time_help": "Aujourd'hui, avant maintenant (jusqu'à 48 heures en arrière). L'entrée est marquée comme manuelle."
+  "custom_time_in": "Timbrer l'arrivée avec une heure choisie",
+  "custom_time_out": "Timbrer le départ avec une heure choisie",
+  "custom_time_label_in": "Heure de début",
+  "custom_time_label_out": "Heure de fin",
+  "custom_time_help_in": "Aujourd'hui, avant maintenant (jusqu'à 48 heures en arrière). L'entrée est marquée comme manuelle.",
+  "custom_time_help_out": "Aujourd'hui, entre le début de cette entrée et maintenant. L'entrée est marquée comme manuelle."
 }

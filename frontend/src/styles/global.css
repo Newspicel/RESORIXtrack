@@ -412,3 +412,21 @@ input[type="date"].input, input[type="time"].input, input[type="datetime-local"]
 .pp-sub { display: block; font-size: .75rem; color: var(--color-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pp-check { color: var(--color-brand-bright); display: inline-flex; }
 .pp-empty { padding: 8px; font-size: .85rem; color: var(--color-muted); }
+
+/* Absence calendar (request dialog) */
+.abs-cal { user-select: none; }
+.abs-cal .head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.abs-cal .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.abs-cal .wd { font-size: .72rem; color: var(--color-muted); text-align: center; padding: 2px 0; }
+.abs-cal .d { position: relative; height: 40px; border-radius: 8px; border: 1px solid transparent; background: var(--color-surface-2); color: var(--color-text); font: inherit; font-size: .85rem; display: flex; align-items: flex-start; justify-content: flex-end; padding: 4px 7px; cursor: pointer; }
+.abs-cal .d:hover { border-color: var(--color-border); }
+.abs-cal .d.other { opacity: .35; }
+.abs-cal .d.we { background: transparent; border-color: var(--color-border-soft); color: var(--color-muted); }
+.abs-cal .d.hol { background: color-mix(in srgb, var(--color-holiday) 28%, var(--color-surface-2)); }
+.abs-cal .d.today { box-shadow: inset 0 0 0 2px var(--color-brand); }
+.abs-cal .d.sel { background: color-mix(in srgb, var(--color-brand) 35%, var(--color-surface-2)); font-weight: 650; color: var(--color-text); }
+.abs-cal .d.sel.hol { background: linear-gradient(135deg, color-mix(in srgb, var(--color-brand) 35%, var(--color-surface-2)) 50%, color-mix(in srgb, var(--color-holiday) 40%, var(--color-surface-2)) 50%); }
+.abs-cal .d .mark { position: absolute; left: 6px; right: 6px; bottom: 5px; height: 5px; border-radius: 3px; }
+.abs-cal .d .mark.am { right: 50%; }
+.abs-cal .d .mark.pm { left: 50%; }
+.abs-cal .d .mark.pending { opacity: .7; background-image: repeating-linear-gradient(45deg, rgba(255,255,255,.55) 0 2px, transparent 2px 4px); }

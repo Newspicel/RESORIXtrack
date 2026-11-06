@@ -81,5 +81,10 @@
   "delete_attachment_message": "The document is removed from this absence. The removal is recorded in the change history.",
   "history_title": "Change history",
   "history_empty": "No changes recorded yet.",
-  "keep": "Keep absence"
+  "keep": "Keep absence",
+  "calendar": "Calendar",
+  "legend_selected": "Selected days",
+  "legend_approved": "Absence (approved)",
+  "calendar_hint": "Click the first day of the period, then the last day.",
+  "calendar_hint_end": "Now click the last day (or an earlier day to start over)."
 }

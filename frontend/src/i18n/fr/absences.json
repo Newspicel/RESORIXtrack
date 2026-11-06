@@ -81,5 +81,10 @@
   "delete_attachment_message": "Le document est retiré de cette absence. La suppression est consignée dans l'historique des modifications.",
   "history_title": "Historique des modifications",
   "history_empty": "Aucune modification enregistrée.",
-  "keep": "Conserver l'absence"
+  "keep": "Conserver l'absence",
+  "calendar": "Calendrier",
+  "legend_selected": "Jours choisis",
+  "legend_approved": "Absence (approuvée)",
+  "calendar_hint": "Cliquez sur le premier jour de la période, puis sur le dernier.",
+  "calendar_hint_end": "Cliquez maintenant sur le dernier jour (ou sur un jour antérieur pour recommencer)."
 }

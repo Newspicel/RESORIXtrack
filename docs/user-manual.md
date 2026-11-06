@@ -23,7 +23,7 @@ The dashboard shows your clock, today's and this week's hours against your targe
 - Forgot to clock in? **Add time manually** opens the entry editor.
 - Forgot to clock out? The next morning the dashboard warns you: clock out, then correct the end time of yesterday's entry under *My time* (a reason is required for past days). After a configurable number of hours you also get an email reminder.
 
-Forgot to clock in? Tick **Clock in with a custom time** under the button and enter when you really started (today, up to 48 hours back). The entry is marked as manual, like a corrected one.
+Forgot to clock in or out? Tick **Clock in with a custom time** (or **Clock out with a custom time** while clocked in) under the buttons and enter the real time: today, earlier than now, up to 48 hours back for a start. Such entries are marked as manual, like corrected ones. Times in the future are not accepted.
 
 ### Report sick
 
@@ -56,6 +56,8 @@ If your company has switched the work log on, you describe what you worked on: a
 ## Absences
 
 Vacation, sick leave and other absences, with your **vacation account** for the year: entitlement, carried over, taken, planned, remaining.
+
+The request dialog shows a calendar: public holidays in red, weekends and days off greyed out, your approved absences as a coloured bar, pending requests hatched, today outlined. Click the first day and then the last day of the period; the legend below explains the colours.
 
 <p><img src="screenshots/employee-dark-absences.png" alt="Absences" width="760"></p>
 
