@@ -2,13 +2,14 @@
 // SPDX-FileCopyrightText: 2026 RESORIX AG
 import { useEffect, useState } from "preact/hooks";
 import { Icon } from "../components/icons";
+import { TimeInput } from "../components/time_input";
 import { Shell, fmtClock } from "../components/Shell";
 import { Confirm, Duration, ErrorBox, Loading, StatusBadge, useAsync } from "../components/ui";
 import { api } from "../lib/api";
 import { clock, clockAction, clockBusy, liveSinceSeconds, liveWorked } from "../lib/clock";
 import { absenceLabel, holidayName, t, tError } from "../lib/i18n";
 import { bumpData, dataVersion, me, pendingApprovals, toast } from "../lib/store";
-import { fmtDate, fmtDays, fmtDuration, fmtTime, todayIn, weekdayName } from "../lib/time";
+import { localHHMM, fmtDate, fmtDays, fmtDuration, fmtTime, todayIn, weekdayName } from "../lib/time";
 import { GettingStarted } from "./getting_started";
 import { TodayWorkLog, worklogConfig } from "./worklog";
 
@@ -143,6 +144,12 @@ function ClockCard({ today, sick, onSick }: { today: any; sick: { allowed: boole
   const color = st === "on_break" ? "var(--color-break)" : "url(#ringGrad)";
   const tz = me.value!.user.timezone;
   const sickAbsence = today.absences.find((a: any) => a.category === "sick" && a.status === "approved");
+  const [customStart, setCustomStart] = useState(false);
+  const [startAt, setStartAt] = useState(() => localHHMM(new Date().toISOString(), tz));
+  function startWork() {
+    if (customStart && startAt) clockAction("start", `${todayIn(tz)}T${startAt}:00`);
+    else clockAction("start");
+  }
   async function stopAndPrompt() {
     await clockAction("stop");
     const cfg = worklogConfig();
@@ -184,7 +191,7 @@ function ClockCard({ today, sick, onSick }: { today: any; sick: { allowed: boole
             </p>
           </div>
           <div class="row wrap">
-            {st === "idle" && <button class="btn btn-gradient btn-lg" disabled={clockBusy.value} onClick={() => clockAction("start")}><Icon.play />{t("clock.start_work")}</button>}
+            {st === "idle" && <button class="btn btn-gradient btn-lg" disabled={clockBusy.value || (customStart && !startAt)} onClick={startWork}><Icon.play />{t("clock.start_work")}</button>}
             {st === "working" && <>
               <button class="btn btn-warn btn-lg" disabled={clockBusy.value} onClick={() => clockAction("break")}><Icon.coffee />{t("clock.take_break")}</button>
               <button class="btn btn-lg" disabled={clockBusy.value} onClick={stopAndPrompt}><Icon.stop />{t("clock.stop_work")}</button>
@@ -196,6 +203,14 @@ function ClockCard({ today, sick, onSick }: { today: any; sick: { allowed: boole
             <a class="btn btn-ghost" href="/time?add=1"><Icon.plus />{t("dashboard.forgot_clock")}</a>
             {sick.allowed && <button class="btn btn-ghost" onClick={onSick}><Icon.thermo />{t("dashboard.report_sick")}</button>}
           </div>
+          {st === "idle" && (
+            <div class="row wrap small" style="gap:10px;align-items:center">
+              <label class="row" style="gap:8px;cursor:pointer"><input type="checkbox" checked={customStart} style="accent-color:var(--color-brand)"
+                onChange={(e) => { const on = (e.target as HTMLInputElement).checked; setCustomStart(on); if (on) setStartAt(localHHMM(new Date().toISOString(), tz)); }} />{t("clock.custom_time")}</label>
+              {customStart && <TimeInput value={startAt} onChange={setStartAt} required ariaLabel={t("clock.custom_time_label")} style="width:130px" />}
+              {customStart && <span class="tiny muted">{t("clock.custom_time_help")}</span>}
+            </div>
+          )}
           <div class="tiny faint">{t("clock.shortcuts")} <span class="kbd">S</span> {t("clock.start_stop")} · <span class="kbd">B</span> {t("clock.break_resume")}</div>
         </div>
       </div>

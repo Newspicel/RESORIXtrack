@@ -97,12 +97,15 @@ class ProfileIn(Base):
     name = fields.String(validate=validate.Length(min=1, max=120))
     timezone = fields.String()
     locale = fields.String(validate=validate.OneOf(["en", "de", "fr"]))
+    time_format = fields.String(validate=validate.OneOf(["24h", "12h"]))
     notify_email_on_correction = fields.Boolean()
 
 
 # ----------------------------------------------------------------------------- clock / entries
 class ClockIn(Base):
     at = fields.DateTime(load_default=None, allow_none=True)
+    # true when the person chose the time by hand (clock in "with a custom time"): the entry is then marked as manual
+    custom = fields.Boolean(load_default=False)
     note = fields.String(load_default="", validate=validate.Length(max=500))
 
 
@@ -231,6 +234,7 @@ class UserIn(Base):
     holiday_calendar_id = fields.Integer(load_default=None, allow_none=True)
     timezone = fields.String(load_default=None, allow_none=True)
     locale = fields.String(load_default=None, allow_none=True)
+    time_format = fields.String(load_default=None, allow_none=True, validate=validate.OneOf(["24h", "12h"]))
     employment_start = fields.Date(load_default=None, allow_none=True, validate=DATE_RANGE)
     employment_end = fields.Date(load_default=None, allow_none=True, validate=DATE_RANGE)
     vacation_days_per_year = fields.Float(load_default=None, allow_none=True, validate=validate.Range(0, 366))
@@ -260,6 +264,7 @@ class UserPatch(Base):
     team_id = fields.Integer(allow_none=True)
     holiday_calendar_id = fields.Integer(allow_none=True)
     timezone = fields.String()
+    time_format = fields.String(validate=validate.OneOf(["24h", "12h"]))
     locale = fields.String()
     employment_start = fields.Date(allow_none=True, validate=DATE_RANGE)
     employment_end = fields.Date(allow_none=True, validate=DATE_RANGE)

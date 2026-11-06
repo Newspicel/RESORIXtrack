@@ -37,7 +37,7 @@ RESORIXtrack is a self-hosted time-tracking application by RESORIX AG: Flask + S
 - **Three languages.** Every UI string lives in `frontend/src/i18n/{en,de,fr}`; `node scripts/i18n-check.mjs` must pass. Emails and PDF labels are translated in the backend.
 - **No bloat.** Add a dependency only when it clearly pays for itself; keep the lock files hash-pinned (`make lock`), then run `scripts/licenses.py --write` – the license check fails on anything outside the reviewed allow-list.
 - **Strict CSP.** Inline scripts are allowed only through the hash list the build generates (see docs/security.md); never add `unsafe-inline`. No remote resources in emails.
-- **Schema changes** go into Alembic migrations (`make migration m="..."`); before the first release the schema lives in a single migration `0001_initial_schema.py` that is regenerated, see docs/development.md.
+- **Schema changes** go into new Alembic migrations (`make migration m="..."`, then review the file). Released migrations are never edited: `0001` is the released initial schema (with the frozen database guards), later changes are additive and must preserve data; see docs/development.md.
 - **Git.** Only the owner pushes. Do not commit or push unless asked.
 
 ## Checks before you finish

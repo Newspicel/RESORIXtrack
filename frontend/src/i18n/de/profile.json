@@ -93,5 +93,9 @@
     "required": "Ihre Firma verlangt für Ihr Konto die Zwei-Faktor-Authentifizierung. Bitte jetzt aktivieren."
   },
   "uses_one": "{count} Aufruf",
-  "uses_other": "{count} Aufrufe"
+  "uses_other": "{count} Aufrufe",
+  "time_format": "Zeitformat",
+  "time_format_help": "Wie Uhrzeiten in der App angezeigt und eingegeben werden. Berichte und E-Mails verwenden immer das 24-Stunden-Format.",
+  "time_format_24": "24 Stunden (13:30)",
+  "time_format_12": "12 Stunden (1:30 PM)"
 }

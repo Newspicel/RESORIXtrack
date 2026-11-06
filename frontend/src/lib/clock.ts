@@ -63,12 +63,13 @@ export function liveSinceSeconds(): number {
   return Math.max(0, (now.value - new Date(c.since).getTime()) / 1000);
 }
 
-export async function clockAction(action: "start" | "break" | "resume" | "stop") {
+/** `customAt`: a time chosen by hand (local "YYYY-MM-DDTHH:MM:00" in the user's timezone); the entry is then marked as manual. */
+export async function clockAction(action: "start" | "break" | "resume" | "stop", customAt?: string) {
   if (clockBusy.value) return;
   clockBusy.value = true;
-  const at = new Date().toISOString();
+  const at = customAt || new Date().toISOString();
   try {
-    clock.value = await api.post<ClockData>(`/clock/${action}`, { at });
+    clock.value = await api.post<ClockData>(`/clock/${action}`, customAt ? { at, custom: true } : { at });
     loadedAt.value = Date.now();
     bumpData();
   } catch (e) {

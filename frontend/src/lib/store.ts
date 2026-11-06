@@ -3,6 +3,7 @@
 import { signal } from "@preact/signals";
 import { api } from "./api";
 import { setLocale } from "./i18n";
+import { setHour12 } from "./time";
 
 export interface User {
   id: number;
@@ -15,6 +16,7 @@ export interface User {
   is_active: boolean;
   timezone: string;
   locale: string;
+  time_format?: "24h" | "12h";
   employment_start: string | null;
   employment_end: string | null;
   vacation_days_per_year: number;
@@ -64,6 +66,7 @@ export async function loadMe(): Promise<Me> {
   me.value = data;
   unread.value = data.unread_notifications;
   if (data.user.locale) setLocale(data.user.locale);
+  setHour12(data.user.time_format === "12h");
   return data;
 }
 

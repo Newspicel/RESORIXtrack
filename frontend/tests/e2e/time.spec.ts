@@ -35,8 +35,8 @@ test("past entries need a reason and edits are visible in the history", async ({
   const dialog = page.getByRole("dialog");
   const yesterday = new Date(Date.now() - 86400000 * 1).toISOString().slice(0, 10);
   await dialog.locator('input[type="date"]').fill(yesterday);
-  await dialog.locator('input[type="time"]').nth(0).fill("05:00");
-  await dialog.locator('input[type="time"]').nth(1).fill("06:15");
+  await dialog.locator("input[data-time-input]").nth(0).fill("05:00");
+  await dialog.locator("input[data-time-input]").nth(1).fill("06:15");
   // a past day: the requirement is announced up front and enforced on save
   await expect(dialog.getByText(/a reason is required/i)).toBeVisible();
   await expect(dialog.getByText("Required", { exact: true })).toBeVisible();
@@ -49,7 +49,7 @@ test("past entries need a reason and edits are visible in the history", async ({
   const row = page.locator("tr", { hasText: "05:00 – 06:15" });
   await expect(row).toBeVisible();
   await row.click();
-  await page.getByRole("dialog").locator('input[type="time"]').nth(1).fill("06:30");
+  await page.getByRole("dialog").locator("input[data-time-input]").nth(1).fill("06:30");
   await page.getByRole("dialog").getByPlaceholder(/forgot to clock in/i).fill("Call took longer");
   await page.getByRole("dialog").getByRole("button", { name: /^save$/i }).click();
   await page.locator("tr", { hasText: "05:00 – 06:30" }).getByRole("button", { name: /history/i }).click();

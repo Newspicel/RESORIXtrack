@@ -33,11 +33,51 @@ function parts(iso: string, tz: string) {
   return p;
 }
 
-/** "HH:MM" in the given timezone. */
-export function fmtTime(iso: string | null | undefined, tz: string): string {
-  if (!iso) return "…";
+let hour12 = false;
+/** Profile setting: show and enter times as 12-hour (1:05 PM) instead of 24-hour (13:05). */
+export function setHour12(v: boolean) { hour12 = v; }
+export function usesHour12(): boolean { return hour12; }
+
+/** "HH:MM" (always 24 h internally) -> text per the profile setting: "13:05" or "1:05 PM". */
+export function fmtTimeOfDay(hhmm: string | null | undefined): string {
+  if (!hhmm) return "…";
+  const [h, m] = hhmm.split(":").map(Number);
+  if (!hour12) return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  return `${h % 12 === 0 ? 12 : h % 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
+}
+
+/** Compact label for a full hour on a timeline: "06:00" or "6 AM". */
+export function fmtHourLabel(hour: number): string {
+  if (!hour12) return `${String(hour).padStart(2, "0")}:00`;
+  return `${hour % 12 === 0 ? 12 : hour % 12} ${hour < 12 ? "AM" : "PM"}`;
+}
+
+/** Lenient parse of a typed time ("9", "930", "9:30", "9.30", "9:30 pm", "21:30") -> "HH:MM", or null. */
+export function parseTimeInput(text: string): string | null {
+  const s = text.trim().toLowerCase().replace(/\s+/g, "").replace(/\./g, ":");
+  const m = s.match(/^(\d{1,2})(?::?(\d{2}))?(am|pm|a|p)?$/);
+  if (!m) return null;
+  let h = Number(m[1]);
+  const min = m[2] ? Number(m[2]) : 0;
+  if (min > 59) return null;
+  if (m[3]) {
+    if (h < 1 || h > 12) return null;
+    if (m[3].startsWith("p") && h !== 12) h += 12;
+    if (m[3].startsWith("a") && h === 12) h = 0;
+  } else if (h > 23) return null;
+  return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+}
+
+/** Wall-clock "HH:MM" (24 h) of an ISO timestamp in a timezone, for inputs and arithmetic. */
+export function localHHMM(iso: string, tz: string): string {
   const p = parts(iso, tz);
   return `${p.hour}:${p.minute}`;
+}
+
+/** Time of an ISO timestamp in the given timezone, per the profile setting. */
+export function fmtTime(iso: string | null | undefined, tz: string): string {
+  if (!iso) return "…";
+  return fmtTimeOfDay(localHHMM(iso, tz));
 }
 
 /** Local date "YYYY-MM-DD" of an ISO timestamp in a timezone. */
@@ -111,7 +151,8 @@ export function fmtDate(s: string | null | undefined, opts: Intl.DateTimeFormatO
 
 export function fmtDateTime(iso: string | null | undefined, tz: string): string {
   if (!iso) return "–";
-  return new Intl.DateTimeFormat(intlLocale(), { timeZone: tz, day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+  return new Intl.DateTimeFormat(intlLocale(), { timeZone: tz, day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+    ...(hour12 ? { hour12: true } : { hourCycle: "h23" as const }) }).format(new Date(iso));
 }
 
 export function weekdayName(i: number, style: "short" | "long" | "narrow" = "short"): string {

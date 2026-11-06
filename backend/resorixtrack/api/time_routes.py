@@ -39,12 +39,13 @@ def clock_get():
 @scope_required("clock")
 @bp.arguments(s.ClockIn)
 def clock_post(data, action: str):
-    """Quick entry: `start`, `break`, `resume`, `stop`. Idempotent. Optional `at` (for offline sync)."""
+    """Quick entry: `start`, `break`, `resume`, `stop`. Idempotent. Optional `at` (offline sync, or a time chosen by
+    hand together with `custom: true`, which marks the entry as manual)."""
     if action not in ("start", "break", "resume", "stop"):
         raise NotFound("Unknown clock action")
     user = me()
-    entries.clock_action(user, action, at=aware(data.get("at"), user.timezone),
-                         source=request_source(), note=data.get("note") or "")
+    source = "manual" if (data.get("custom") and data.get("at")) else request_source()
+    entries.clock_action(user, action, at=aware(data.get("at"), user.timezone), source=source, note=data.get("note") or "")
     db.session.commit()
     return jsonify(entries.clock_state(user))
 

@@ -579,3 +579,11 @@ def test_admin_token_overview_and_revocation(app, make_client, org):
     r = anna.post("/api/v1/tokens", json={"name": "Nope", "scopes": ["clock"], "current_password": PASSWORD})
     assert r.status_code == 409 and r.get_json()["error"]["code"] == "tokens_disabled"
     assert anna.get("/api/v1/me").get_json()["api_tokens_enabled"] is False
+
+
+def test_time_format_is_a_profile_setting(make_client, org):
+    anna = make_client("anna@example.com")
+    assert anna.get("/api/v1/me").get_json()["user"]["time_format"] == "24h"
+    assert anna.patch("/api/v1/me", json={"time_format": "13h"}).status_code == 422
+    assert anna.patch("/api/v1/me", json={"time_format": "12h"}).status_code == 200
+    assert anna.get("/api/v1/me").get_json()["user"]["time_format"] == "12h"

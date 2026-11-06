@@ -35,12 +35,13 @@ function PersonalCard() {
   const [name, setName] = useState(u.name);
   const [locale, setLoc] = useState(u.locale);
   const [tz, setTz] = useState(u.timezone);
+  const [timeFormat, setTimeFormat] = useState<"24h" | "12h">(u.time_format === "12h" ? "12h" : "24h");
   const [notify, setNotify] = useState(!!u.notify_email_on_correction);
   const { busy, run } = useAction();
   const browserTz = browserTimezone();
   async function save(e: Event) {
     e.preventDefault();
-    const ok = await run(() => api.patch("/me", { name, locale, timezone: tz, notify_email_on_correction: notify }), t("common.saved"));
+    const ok = await run(() => api.patch("/me", { name, locale, timezone: tz, time_format: timeFormat, notify_email_on_correction: notify }), t("common.saved"));
     if (ok !== undefined) { setLocale(locale); await loadMe(); }
   }
   return (
@@ -55,6 +56,12 @@ function PersonalCard() {
         </Field>
         <Field label={t("profile.timezone")} help={browserTz !== tz ? <button type="button" class="btn btn-ghost btn-sm" style="padding:0;height:auto" onClick={() => setTz(browserTz)}>{t("profile.use_device_tz", { tz: browserTz })}</button> : t("profile.tz_help")}>
           <TimezoneSelect value={tz} onChange={setTz} />
+        </Field>
+        <Field label={t("profile.time_format")} help={t("profile.time_format_help")}>
+          <select class="select" value={timeFormat} onChange={(e) => setTimeFormat((e.target as HTMLSelectElement).value as "24h" | "12h")}>
+            <option value="24h">{t("profile.time_format_24")}</option>
+            <option value="12h">{t("profile.time_format_12")}</option>
+          </select>
         </Field>
       </div>
       <Switch checked={notify} onChange={setNotify} label={t("profile.notify_corrections")} />

@@ -93,5 +93,9 @@
     "required": "Votre entreprise exige l'authentification à deux facteurs pour votre compte. Veuillez l'activer maintenant."
   },
   "uses_one": "{count} appel",
-  "uses_other": "{count} appels"
+  "uses_other": "{count} appels",
+  "time_format": "Format de l'heure",
+  "time_format_help": "Affichage et saisie des heures dans l'application. Les rapports et e-mails utilisent toujours le format 24 heures.",
+  "time_format_24": "24 heures (13:30)",
+  "time_format_12": "12 heures (1:30 PM)"
 }

@@ -23,6 +23,8 @@ The dashboard shows your clock, today's and this week's hours against your targe
 - Forgot to clock in? **Add time manually** opens the entry editor.
 - Forgot to clock out? The next morning the dashboard warns you: clock out, then correct the end time of yesterday's entry under *My time* (a reason is required for past days). After a configurable number of hours you also get an email reminder.
 
+Forgot to clock in? Tick **Clock in with a custom time** under the button and enter when you really started (today, up to 48 hours back). The entry is marked as manual, like a corrected one.
+
 ### Report sick
 
 **Report sick** records today as a sick day and informs your team lead. It is available on working days that aren't public holidays or vacation days. You can attach a doctor's note afterwards under *Absences* (optional, unless your company requires it).
@@ -87,6 +89,7 @@ Open it from your name at the bottom of the sidebar or from the avatar menu at t
 - **Language** (English, German, French) and **timezone**.
 - **Password**: changing it signs out all your other devices and revokes your API tokens. An email confirms the change. New passwords that appear in known data breaches are refused.
 - **Two-factor authentication**: strongly recommended for team leads and administrators; your company may require it for administrators or for everyone (you then see a reminder until it is on). *Enable* → confirm your password → scan the QR code with an authenticator app (Aegis, Microsoft Authenticator, Google Authenticator, 1Password, …) → enter the code → **save the eight recovery codes** somewhere safe. From then on, sign-in asks for the 6-digit code after the password; a recovery code works once if you lose the phone. Lost both? An administrator can reset it for you.
+- **Time format**: 24-hour (default) or 12-hour, for everything shown and typed in the app. Reports and emails always use 24-hour times.
 - **Download my data**: a JSON file with everything RESORIXtrack stores about you.
 - **Signed-in devices**: see where you are signed in and sign out any device.
 - **Recent sign-ins**: successful and failed attempts on your account. If you don't recognise one, change your password.

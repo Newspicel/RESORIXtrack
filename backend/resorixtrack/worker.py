@@ -4,9 +4,11 @@
 
 from __future__ import annotations
 
+import os
 import signal
 import time
 from datetime import datetime, timedelta
+from pathlib import Path
 
 from flask import Flask
 
@@ -67,6 +69,8 @@ def run_forever(app: Flask, interval: int = 60, backup_hour: int = 2) -> None:  
 
     signal.signal(signal.SIGTERM, _stop)
     signal.signal(signal.SIGINT, _stop)
+    # Liveness for the container health check: the file's age must stay below a few intervals.
+    heartbeat = Path(os.environ.get("WORKER_HEARTBEAT", "/tmp/resorixtrack-worker-alive"))  # noqa: S108
     last_backup_day = None
     last_cleanup: datetime | None = None
     app.logger.info("RESORIXtrack worker started (interval %ss, nightly backup at %02d:00)", interval, backup_hour)
@@ -91,6 +95,10 @@ def run_forever(app: Flask, interval: int = 60, backup_hour: int = 2) -> None:  
                 db.session.rollback()
             finally:
                 db.session.remove()
+        try:
+            heartbeat.touch()
+        except OSError:  # pragma: no cover
+            app.logger.warning("Cannot write the worker heartbeat file %s", heartbeat)
         for _ in range(interval):
             if stop["flag"]:
                 break

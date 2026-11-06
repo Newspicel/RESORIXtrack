@@ -2,13 +2,14 @@
 // SPDX-FileCopyrightText: 2026 RESORIX AG
 import { useMemo, useRef, useState } from "preact/hooks";
 import { Icon } from "../components/icons";
+import { TimeInput } from "../components/time_input";
 import { WorkLogWeek } from "./worklog";
 import { Shell } from "../components/Shell";
 import { Duration, Empty, ErrorBox, Field, Loading, Modal, PageHead, Segmented, useAction, useAsync } from "../components/ui";
 import { api } from "../lib/api";
 import { absenceLabel, holidayName, t } from "../lib/i18n";
 import { bumpData, dataVersion, me, type User } from "../lib/store";
-import {
+import { fmtHourLabel,
   addDays, addMonths, fmtDate, fmtDateTime, fmtDuration, fmtTime, localDate, minutesOfDay, monthEnd, monthStart,
   todayIn, toLocalInput, weekStart, weekdayName,
 } from "../lib/time";
@@ -187,7 +188,7 @@ function WeekTimeline({ days, entries, tz, locked, onEdit, onAdd }: {
   return (
     <div class="timeline">
       <div />
-      <div class="scale">{hours.map((h) => <span key={h} style={{ left: pos(h) }}>{String(h / 60).padStart(2, "0")}:00</span>)}</div>
+      <div class="scale">{hours.map((h) => <span key={h} style={{ left: pos(h) }}>{fmtHourLabel(h / 60)}</span>)}</div>
       <div />
       {days.map((d) => {
         const segs = segsByDay[d.date] || [];
@@ -379,10 +380,10 @@ export function EntryEditor({ user, entry, date, start, locked = {}, onClose, on
             <input type="date" class="input" required disabled={readOnly} value={day} max={todayIn(tz)} onInput={(e) => setDay((e.target as HTMLInputElement).value)} />
           </Field>
           <Field label={t("time.start")}>
-            <input type="time" class="input" required disabled={readOnly} step={60} value={from} onInput={(e) => setFrom((e.target as HTMLInputElement).value)} />
+            <TimeInput value={from} onChange={setFrom} required disabled={readOnly} ariaLabel={t("time.start")} />
           </Field>
           <Field label={t("time.end")} error={fieldErrors.end_at} help={to && to < from ? t("time.next_day") : undefined}>
-            <input type="time" class="input" required={!running} disabled={readOnly} step={60} value={to} onInput={(e) => setTo((e.target as HTMLInputElement).value)} />
+            <TimeInput value={to} onChange={setTo} required={!running} disabled={readOnly} ariaLabel={t("time.end")} />
           </Field>
         </div>
         <Field label={t("common.note")}>

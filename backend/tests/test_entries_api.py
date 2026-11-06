@@ -323,3 +323,26 @@ def test_rapid_clicks_within_one_second(make_client, org):
         assert a["end_at"] <= b["start_at"]
     # and immediately starting again works too
     assert c.post("/api/v1/clock/start", json={}).get_json()["state"] == "working"
+
+
+def test_clock_in_with_a_custom_time_in_the_past(make_client, org):
+    from datetime import timedelta
+
+    from conftest import DEFAULT_NOW
+
+    anna = make_client("anna@example.com")
+    two_hours_ago = DEFAULT_NOW - timedelta(hours=2)
+    r = anna.post("/api/v1/clock/start", json={"at": two_hours_ago.isoformat(), "custom": True})
+    assert r.status_code == 200, r.get_json()
+    assert r.get_json()["state"] == "working"
+    day = DEFAULT_NOW.date().isoformat()
+    open_entry = next(e for e in anna.get(f"/api/v1/entries?from={day}&to={day}").get_json() if e["end_at"] is None)
+    assert open_entry["source"] == "manual"  # chosen by hand: shown as edited/manual, not as a real-time punch
+    assert open_entry["start_at"].startswith(two_hours_ago.strftime("%Y-%m-%dT%H:%M"))
+    anna.post("/api/v1/clock/stop", json={})
+    # a time in the future or further back than the clock allows is refused
+    assert anna.post("/api/v1/clock/start", json={"at": (DEFAULT_NOW + timedelta(hours=1)).isoformat(), "custom": True}).status_code == 422
+    assert anna.post("/api/v1/clock/start", json={"at": (DEFAULT_NOW - timedelta(days=3)).isoformat(), "custom": True}).status_code == 422
+    # overlapping the entry just closed is refused too
+    r = anna.post("/api/v1/clock/start", json={"at": (DEFAULT_NOW - timedelta(hours=1)).isoformat(), "custom": True})
+    assert r.status_code == 409 and r.get_json()["error"]["code"] == "overlap"

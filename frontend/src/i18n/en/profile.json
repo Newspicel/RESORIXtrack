@@ -93,5 +93,9 @@
     "required": "Your company requires two-factor authentication for your account. Please enable it now."
   },
   "uses_one": "{count} call",
-  "uses_other": "{count} calls"
+  "uses_other": "{count} calls",
+  "time_format": "Time format",
+  "time_format_help": "How times are shown and entered in the app. Reports and emails always use 24-hour times.",
+  "time_format_24": "24-hour (13:30)",
+  "time_format_12": "12-hour (1:30 PM)"
 }

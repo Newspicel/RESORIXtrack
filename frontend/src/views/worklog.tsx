@@ -2,12 +2,13 @@
 // SPDX-FileCopyrightText: 2026 RESORIX AG
 import { useEffect, useMemo, useState } from "preact/hooks";
 import { Icon } from "../components/icons";
+import { TimeInput } from "../components/time_input";
 import { SearchPicker } from "../components/picker";
 import { Segmented, Confirm, ErrorBox, Field, Loading, useAction, useAsync } from "../components/ui";
 import { api } from "../lib/api";
 import { t } from "../lib/i18n";
 import { bumpData, dataVersion, me, type User } from "../lib/store";
-import { fmtDate, fmtDuration, todayIn, weekdayName } from "../lib/time";
+import { fmtDate, fmtDuration, fmtTimeOfDay, todayIn, weekdayName } from "../lib/time";
 import { DurationInput, val } from "./admin_common";
 import type { Day } from "./time";
 
@@ -97,7 +98,7 @@ export function DayWorkLog({ user, day, items, editable, onChanged, compact }: {
             <div key={w.id} class="row worklog-item">
               <span class="dot" style={{ background: w.project?.color || "var(--color-faint)" }} />
               <div class="grow">
-                <div>{w.start_time && <span class="mono small muted" style="margin-right:8px">{w.start_time}–{w.end_time}</span>}
+                <div>{w.start_time && <span class="mono small muted" style="margin-right:8px">{fmtTimeOfDay(w.start_time)}–{fmtTimeOfDay(w.end_time)}</span>}
                   {w.project && <strong>{w.project.name}</strong>}
                   {w.customer_ref && <><span class="tiny muted">{t("worklog.customer_short")}</span> <strong>{w.customer_ref}</strong></>}
                   {(w.project || w.customer_ref) && w.note && " · "}{w.note}</div>
@@ -208,9 +209,9 @@ function WorkLogForm({ user, date, item, defaultMinutes, onClose, onSaved }: {
             <Segmented value={mode} onChange={setMode} options={[{ value: "duration", label: t("worklog.mode_duration") }, { value: "times", label: t("worklog.mode_times") }]} />
             {mode === "times" ? (
               <div class="row" style="gap:8px">
-                <input class="input" type="time" required value={start} onInput={(e) => setStart(val(e))} aria-label={t("worklog.from")} />
+                <TimeInput value={start} onChange={setStart} required ariaLabel={t("worklog.from")} />
                 <span class="muted">–</span>
-                <input class="input" type="time" required value={end} onInput={(e) => setEnd(val(e))} aria-label={t("worklog.to")} />
+                <TimeInput value={end} onChange={setEnd} required ariaLabel={t("worklog.to")} />
               </div>
             ) : <DurationInput value={minutes} onChange={setMinutes} />}
           </div>

@@ -21,5 +21,8 @@
   "start_stop": "ein- / ausstempeln",
   "break_resume": "Pause beginnen / beenden",
   "queued_offline": "Du bist offline. Die Zeit wurde gespeichert und wird automatisch synchronisiert.",
-  "synced": "Offline-Stempelungen synchronisiert."
+  "synced": "Offline-Stempelungen synchronisiert.",
+  "custom_time": "Mit eigener Uhrzeit einstempeln",
+  "custom_time_label": "Startzeit",
+  "custom_time_help": "Heute, früher als jetzt (bis 48 Stunden zurück). Der Eintrag wird als manuell markiert."
 }

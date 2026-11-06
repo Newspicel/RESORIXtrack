@@ -58,6 +58,8 @@ curl -fsSI "http://localhost:$PORT/login" | grep -i "content-security-policy" | 
 curl -fsSI "http://localhost:$PORT/login" | grep -i "content-security-policy" | grep -qv "unsafe-inline'; style" || true
 curl -sS -o /dev/null -w "%{http_code}" "http://localhost:$PORT/api/openapi.json" | grep -q 401
 curl -fsS -b "$JAR" "http://localhost:$PORT/api/docs" | grep -q '/vendor/swagger-ui/'
-c_info "worker is running"
+c_info "worker is running and becomes healthy"
 dc ps worker | grep -q -i "up\|running"
+for i in $(seq 1 60); do dc ps worker | grep -q "(healthy)" && break; sleep 2; done
+dc ps worker | grep -q "(healthy)" || { dc ps worker; c_err "worker did not become healthy"; exit 1; }
 c_ok "smoke test passed"

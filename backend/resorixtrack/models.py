@@ -76,6 +76,7 @@ class User(db.Model):
         ForeignKey("holiday_calendars.id", ondelete="SET NULL"))
     timezone: Mapped[str] = mapped_column(String(64), default="Europe/Zurich")
     locale: Mapped[str] = mapped_column(String(16), default="en")
+    time_format: Mapped[str] = mapped_column(String(3), default="24h", server_default="24h")  # 24h | 12h (web UI only)
     employment_start: Mapped[date | None] = mapped_column(Date)
     employment_end: Mapped[date | None] = mapped_column(Date)
     vacation_days_per_year: Mapped[float] = mapped_column(Float, default=25.0)

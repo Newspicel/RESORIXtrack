@@ -4,7 +4,7 @@
 
 First public release.
 
-- One-click clocking (web, keyboard shortcuts, offline queue), time and vacation accounts, versioned work schedules.
+- One-click clocking (web, keyboard shortcuts, offline queue, clock in with a custom start time), time and vacation accounts, versioned work schedules; per-person 24-hour or 12-hour time format.
 - Work log: describe what was done while clocked in (free text and/or projects managed by team leads); optional or required with a configurable share of the worked time; project report.
 - Absence workflow (requests, approvals, sick self-reports with documents), public-holiday calendars with import and Swiss presets; vacation entitlement optionally pro-rated by scheduled days per week.
 - Month sign-off with four enforcement levels (UI, services, SQLite triggers, HMAC seal chain) and an integrity check.

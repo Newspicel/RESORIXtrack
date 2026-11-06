@@ -21,5 +21,8 @@
   "start_stop": "clock in / out",
   "break_resume": "start / end break",
   "queued_offline": "You're offline. The time was saved and will be synced automatically.",
-  "synced": "Offline clock actions synced."
+  "synced": "Offline clock actions synced.",
+  "custom_time": "Clock in with a custom time",
+  "custom_time_label": "Start time",
+  "custom_time_help": "Today, earlier than now (up to 48 hours back). The entry is marked as manual."
 }

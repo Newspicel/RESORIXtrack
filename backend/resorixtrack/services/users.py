@@ -60,7 +60,7 @@ def serialize_user(u: User, *, detail: bool = False) -> dict[str, Any]:
         "id": u.id, "email": u.email, "name": u.name, "role": u.role, "team_id": u.team_id,
         "team_name": u.team.name if u.team else None, "is_lead": u.is_lead, "is_active": u.is_active,
         "capabilities": sorted(u.capabilities or []),
-        "timezone": u.timezone, "locale": u.locale,
+        "timezone": u.timezone, "locale": u.locale, "time_format": u.time_format or "24h",
         "employment_start": u.employment_start.isoformat() if u.employment_start else None,
         "employment_end": u.employment_end.isoformat() if u.employment_end else None,
         "vacation_days_per_year": u.vacation_days_per_year,
@@ -105,6 +105,8 @@ def _validate_user_fields(data: dict[str, Any]) -> None:
         raise Validation("Unknown timezone", fields={"timezone": "invalid"})
     if data.get("locale") is not None and data["locale"] not in ("en", "de", "fr"):
         raise Validation("Unsupported language", fields={"locale": "invalid"})
+    if data.get("time_format") is not None and data["time_format"] not in ("24h", "12h"):
+        raise Validation("Unsupported time format", fields={"time_format": "invalid"})
     if "role" in data and data["role"] not in (ROLE_ADMIN, ROLE_EMPLOYEE):
         raise Validation("Invalid role", fields={"role": "invalid"})
     if data.get("capabilities") is not None and not set(data["capabilities"]) <= set(CAPABILITIES):
@@ -141,6 +143,7 @@ def create_user(actor: User | None, data: dict[str, Any], *, send_invite: bool =
         email=email, name=data["name"].strip()[:120], role=data.get("role", ROLE_EMPLOYEE),
         team_id=data.get("team_id"), holiday_calendar_id=data.get("holiday_calendar_id"),
         timezone=tz, locale=data.get("locale") or settings_svc.get("default_locale"),
+        time_format=data.get("time_format") or "24h",
         # Target hours and vacation start on the employment start; "unknown" means today, never
         # 1 January (which would open the account with months of minus hours).
         employment_start=data.get("employment_start") or local_today(tz),
@@ -199,7 +202,7 @@ def update_user(actor: User, u: User, data: dict[str, Any]) -> User:
             raise Conflict("You cannot deactivate yourself", code="self_deactivate")
         if u.is_admin:
             _ensure_other_admin(u)
-    for key in ("name", "role", "team_id", "holiday_calendar_id", "timezone", "locale", "employment_start",
+    for key in ("name", "role", "team_id", "holiday_calendar_id", "timezone", "locale", "time_format", "employment_start",
                 "employment_end", "vacation_days_per_year", "is_active"):
         if key in data:
             setattr(u, key, data[key].strip() if key == "name" else data[key])
@@ -239,7 +242,7 @@ def _ensure_other_admin(u: User) -> None:
 
 
 def update_profile(u: User, data: dict[str, Any]) -> User:
-    allowed = {k: v for k, v in data.items() if k in ("name", "timezone", "locale", "notify_email_on_correction")}
+    allowed = {k: v for k, v in data.items() if k in ("name", "timezone", "locale", "time_format", "notify_email_on_correction")}
     _validate_user_fields(allowed)
     for k, v in allowed.items():
         setattr(u, k, v.strip() if isinstance(v, str) else v)
