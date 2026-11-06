@@ -1,0 +1,9 @@
+{% set subject = "Invitation à RESORIXtrack" %}{% set cta_url = link %}{% set cta_label = "Définir votre mot de passe" %}Bonjour {{ user.name }},
+
+{% if actor %}{{ actor.name }} a créé un compte RESORIXtrack pour vous{% else %}Un compte RESORIXtrack a été créé pour vous{% endif %} chez {{ company }}. RESORIXtrack vous permet d'enregistrer votre temps de travail, vos pauses et vos absences.
+
+Veuillez choisir votre mot de passe via le lien ci-dessous (valable {{ hours }} heures):
+
+{{ link }}
+
+Votre e-mail de connexion est {{ user.email }}.

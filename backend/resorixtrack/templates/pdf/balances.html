@@ -1,0 +1,20 @@
+{% extends "pdf/_base.html" %}
+{% block orientation %}landscape{% endblock %}
+{% block title %}{{ L.balances }}{% endblock %}
+{% block meta %}{% if d.month %}{{ month_names[d.month] }} {% endif %}{{ d.year }}{% endblock %}
+{% block content %}
+<h1>{{ L.balances }} {% if d.month %}{{ month_names[d.month] }} {% endif %}{{ d.year }}</h1>
+<div class="sub">{{ L.balances_sub }}</div>
+<table>
+  <thead><tr><th>{{ L.name }}</th><th>{{ L.team }}</th><th class="n">{{ L.target }}</th><th class="n">{{ L.worked }}</th><th class="n">{{ L.delta }}</th><th class="n">{{ L.balance }}</th><th class="n">{{ L.taken }}</th><th class="n">{{ L.planned }}</th><th class="n">{{ L.pending }}</th><th class="n">{{ L.vacation_left }}</th></tr></thead>
+  <tbody>
+  {% for r in d.rows %}
+  <tr><td>{{ r.name }}</td><td>{{ r.team or "" }}</td><td class="n">{{ fmt(r.target_min) }}</td><td class="n">{{ fmt(r.worked_min) }}</td>
+      <td class="n {{ 'pos' if r.delta_min > 0 else 'neg' if r.delta_min < 0 else '' }}">{{ fmt(r.delta_min, True) }}</td>
+      <td class="n {{ 'pos' if r.balance_min > 0 else 'neg' if r.balance_min < 0 else '' }}"><strong>{{ fmt(r.balance_min, True) }}</strong></td>
+      <td class="n">{{ fmt_days(r.vacation_taken) }}</td><td class="n">{{ fmt_days(r.vacation_planned) }}</td><td class="n">{{ fmt_days(r.vacation_pending) }}</td><td class="n">{{ fmt_days(r.vacation_remaining) }}</td></tr>
+  {% endfor %}
+  <tr class="total"><td colspan="2">{{ L.total }}</td><td class="n">{{ fmt(d.totals.target_min) }}</td><td class="n">{{ fmt(d.totals.worked_min) }}</td><td class="n">{{ fmt(d.totals.delta_min, True) }}</td><td class="n">{{ fmt(d.totals.balance_min, True) }}</td><td colspan="4"></td></tr>
+  </tbody>
+</table>
+{% endblock %}

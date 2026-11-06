@@ -1,0 +1,71 @@
+# RESORIXtrack - production deployment
+#   cp .env.example .env                       # then edit SECRET_KEY, BACKUP_PASSWORD, BASE_URL, SMTP_*
+#   docker compose --profile tls up -d         # recommended: app + worker + Caddy with automatic HTTPS
+#   docker compose up -d                       # app + worker only, reachable on 127.0.0.1:8080 for your own proxy
+#
+# The app port is bound to localhost by default: set RESORIXTRACK_BIND=0.0.0.0 only if you really
+# want plain HTTP on the network (then also SESSION_COOKIE_SECURE=false; not recommended).
+name: resorixtrack
+
+x-app: &app
+  image: ${RESORIXTRACK_IMAGE:-resorixtrack:latest}
+  build:
+    context: .
+    dockerfile: docker/Dockerfile
+  env_file: ${RESORIXTRACK_ENV_FILE:-.env}
+  restart: unless-stopped
+  volumes:
+    - resorixtrack-data:/data
+  # ---- hardening: immutable image, no capabilities, no privilege escalation, bounded resources
+  read_only: true
+  tmpfs:
+    - /tmp:size=256m,mode=1777
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  pids_limit: 256
+  mem_limit: ${RESORIXTRACK_MEM_LIMIT:-1g}
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "5" }
+
+services:
+  app:
+    <<: *app
+    ports:
+      - "${RESORIXTRACK_BIND:-127.0.0.1}:${RESORIXTRACK_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/api/health', timeout=4).status == 200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+  worker:
+    <<: *app
+    command: ["worker"]
+    mem_limit: ${RESORIXTRACK_WORKER_MEM_LIMIT:-512m}
+    depends_on:
+      app:
+        condition: service_healthy
+
+  caddy:
+    image: caddy:2.10
+    profiles: ["tls"]
+    restart: unless-stopped
+    ports: ["80:80", "443:443", "443:443/udp"]
+    environment:
+      RESORIXTRACK_DOMAIN: ${RESORIXTRACK_DOMAIN:-localhost}
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 256
+    depends_on: [app]
+
+volumes:
+  resorixtrack-data:
+  caddy-data:
+  caddy-config:

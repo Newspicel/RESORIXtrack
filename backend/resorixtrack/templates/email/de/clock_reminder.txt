@@ -1,0 +1,7 @@
+{% set subject = "Arbeitest du noch?" %}{% set cta_url = base_url ~ "/" %}{% set cta_label = "RESORIXtrack öffnen" %}Hallo {{ user.name }}
+
+Du bist seit {{ since.strftime('%H:%M') }} Uhr ({{ since.strftime('%d.%m.%Y') }}) eingestempelt – seit mehr als {{ hours }} Stunden. Hast du vergessen auszustempeln?
+
+Du kannst die Zeit in RESORIXtrack stoppen oder korrigieren.
+
+{{ cta_url }}

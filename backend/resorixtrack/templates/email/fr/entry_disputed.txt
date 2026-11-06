@@ -1,0 +1,7 @@
+{% set subject = actor.name ~ " conteste une correction" %}{% set cta_url = base_url ~ "/team/member?id=" ~ actor.id %}{% set cta_label = "Ouvrir dans RESORIXtrack" %}Bonjour {{ user.name }},
+
+{{ actor.name }} n'est pas d'accord avec une modification de sa saisie de temps du {{ local_start.strftime('%d.%m.%Y') }}:
+
+«{{ message }}»
+
+{{ cta_url }}

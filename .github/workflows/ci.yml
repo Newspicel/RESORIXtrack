@@ -1,0 +1,31 @@
+name: CI
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.14" }
+      - uses: actions/setup-node@v4
+        with: { node-version: "24", cache: npm, cache-dependency-path: frontend/package-lock.json }
+      - name: System libraries for WeasyPrint
+        run: sudo apt-get update && sudo apt-get install -y libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b
+      - name: Setup
+        run: scripts/setup.sh
+      - name: Tests (lint, pytest, vitest, i18n, build, e2e)
+        run: scripts/test.sh all
+      - name: Dependency audit
+        run: |
+          .venv/bin/pip install pip-audit
+          .venv/bin/pip-audit -r backend/requirements.lock --disable-pip || true
+          cd frontend && npm audit --audit-level=high || true
+  docker:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image and smoke test
+        run: scripts/build.sh && scripts/smoke.sh

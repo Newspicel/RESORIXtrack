@@ -1,0 +1,9 @@
+{% set subject = actor.name ~ " hat deine Zeiterfassung geändert" %}{% set cta_url = base_url ~ "/time?date=" ~ local_start.strftime('%Y-%m-%d') %}{% set cta_label = "Änderung ansehen" %}Hallo {{ user.name }}
+
+{{ actor.name }} hat einen Zeiteintrag vom {{ local_start.strftime('%d.%m.%Y') }} ({{ local_start.strftime('%H:%M') }}{% if local_end %}–{{ local_end.strftime('%H:%M') }}{% endif %}) {% if action == "create" %}hinzugefügt{% elif action == "delete" %}gelöscht{% else %}geändert{% endif %}.
+
+Begründung: {{ reason or "–" }}
+
+Jede Änderung wird protokolliert. Du siehst den vollständigen Verlauf in RESORIXtrack und kannst die Änderung beanstanden, falls etwas nicht stimmt.
+
+{{ cta_url }}

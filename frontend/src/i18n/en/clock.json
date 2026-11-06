@@ -1,0 +1,25 @@
+{
+  "start": "Clock in",
+  "stop": "Clock out",
+  "break": "Start break",
+  "resume": "End break",
+  "start_work": "Clock in",
+  "stop_work": "Clock out",
+  "take_break": "Start break",
+  "resume_work": "End break",
+  "state": {
+    "idle": "Not clocked in",
+    "working": "Working",
+    "on_break": "On break"
+  },
+  "headline": {
+    "idle": "You're not clocked in",
+    "working": "You're clocked in",
+    "on_break": "You're on a break"
+  },
+  "shortcuts": "Shortcuts:",
+  "start_stop": "clock in / out",
+  "break_resume": "start / end break",
+  "queued_offline": "You're offline. The time was saved and will be synced automatically.",
+  "synced": "Offline clock actions synced."
+}

@@ -1,0 +1,7 @@
+{% set subject = requester.name ~ " demande: " ~ type_label %}{% set cta_url = base_url ~ "/team/approvals" %}{% set cta_label = "Examiner la demande" %}Bonjour {{ user.name }},
+
+{{ requester.name }} demande «{{ type_label }}» du {{ absence.start_date.strftime('%d.%m.%Y') }} au {{ absence.end_date.strftime('%d.%m.%Y') }} ({{ days }} jour{{ '' if days == 1 else 's' }} de travail).
+{% if absence.note %}
+Remarque: {{ absence.note }}{% endif %}
+
+{{ cta_url }}

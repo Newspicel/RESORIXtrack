@@ -1,0 +1,12 @@
+{
+  "vacation": "Ferien",
+  "sick": "Krankheit",
+  "accident": "Unfall",
+  "child_sick": "Betreuung eines kranken Kindes",
+  "military": "Militär / Zivildienst",
+  "training": "Weiterbildung",
+  "comp_time": "Kompensation",
+  "special": "Sonderurlaub",
+  "unpaid": "Unbezahlter Urlaub",
+  "absent": "Abwesend"
+}

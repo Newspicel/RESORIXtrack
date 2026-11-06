@@ -1,0 +1,9 @@
+{% set subject = "You're invited to RESORIXtrack" %}{% set cta_url = link %}{% set cta_label = "Set your password" %}Hello {{ user.name }},
+
+{% if actor %}{{ actor.name }} has created a RESORIXtrack account for you{% else %}A RESORIXtrack account has been created for you{% endif %} at {{ company }}. RESORIXtrack is where you record your working time, breaks and absences.
+
+Please choose your password using the link below (valid for {{ hours }} hours):
+
+{{ link }}
+
+Your sign-in email is {{ user.email }}.

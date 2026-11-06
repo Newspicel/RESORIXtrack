@@ -1,0 +1,13 @@
+{
+  "name": "RESORIXtrack",
+  "short_name": "RESORIXtrack",
+  "description": "Time tracking by RESORIX AG",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0b",
+  "theme_color": "#0a0a0b",
+  "icons": [
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

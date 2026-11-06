@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="{{ locale }}">
+<head>
+<meta charset="utf-8">
+<title>{% block title %}{% endblock %}</title>
+<style>
+  @page { size: A4 {% block orientation %}portrait{% endblock %}; margin: 16mm 14mm 18mm;
+    @bottom-left { content: "RESORIXtrack · {{ d.company }}"; font: 8pt Inter, sans-serif; color: #8a8d93; }
+    @bottom-right { content: "{{ L.page }} " counter(page) " / " counter(pages); font: 8pt Inter, sans-serif; color: #8a8d93; } }
+  * { box-sizing: border-box; }
+  body { font-family: Inter, "Helvetica Neue", Arial, sans-serif; font-size: 9pt; color: #1c1c1f; margin: 0; }
+  .bar { height: 4px; background: linear-gradient(135deg,#61cae2 0%,#35a1cc 45%,#14254d 100%); margin-bottom: 10mm; border-radius: 2px; }
+  header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8mm; }
+  header img { height: 11mm; }
+  header .meta { text-align: right; color: #62656b; font-size: 8pt; line-height: 1.5; }
+  h1 { font-size: 16pt; color: #14254d; margin: 0 0 1mm; font-weight: 700; letter-spacing: -.01em; }
+  h2 { font-size: 11pt; color: #14254d; margin: 7mm 0 2mm; }
+  .sub { color: #62656b; margin-bottom: 6mm; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-weight: 600; color: #ffffff; background: #14254d; padding: 2mm 2mm; font-size: 8pt; }
+  th.n, td.n { text-align: right; font-variant-numeric: tabular-nums; }
+  td { padding: 1.6mm 2mm; border-bottom: 0.3mm solid #e4e8ee; vertical-align: top; }
+  tr.we td { background: #f6f8fa; color: #8a8d93; }
+  tr.hol td { background: #fdf1f0; }
+  tr.total td { font-weight: 700; border-top: 0.5mm solid #14254d; border-bottom: none; }
+  .pos { color: #2e8b57; } .neg { color: #b8741a; }
+  .tag { display: inline-block; padding: .3mm 1.6mm; border-radius: 3mm; font-size: 7pt; color: #fff; margin-right: 1mm; }
+  .muted { color: #8a8d93; }
+  .cards { display: flex; gap: 4mm; margin: 0 0 6mm; }
+  .card { flex: 1; border: 0.3mm solid #e4e8ee; border-radius: 3mm; padding: 3mm 4mm; }
+  .card .k { color: #62656b; font-size: 7.5pt; text-transform: uppercase; letter-spacing: .04em; }
+  .card .v { font-size: 13pt; font-weight: 700; color: #14254d; margin-top: 1mm; font-variant-numeric: tabular-nums; }
+  .sign { display: flex; gap: 12mm; margin-top: 16mm; }
+  .sign div { flex: 1; border-top: 0.3mm solid #8a8d93; padding-top: 1.5mm; color: #62656b; font-size: 8pt; }
+  .foot { margin-top: 4mm; color: #8a8d93; font-size: 7.5pt; }
+</style>
+</head>
+<body>
+<div class="bar"></div>
+<header>
+  {% if logo_uri %}<img src="{{ logo_uri }}" alt="RESORIX AG">{% else %}<strong>{{ d.company }}</strong>{% endif %}
+  <div class="meta">{% block meta %}{% endblock %}<br>{{ L.generated }} {{ generated }}</div>
+</header>
+{% block content %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,7 @@
+{% set subject = "Absence annulée: " ~ type_label %}{% set cta_url = base_url ~ "/absences" %}{% set cta_label = "Voir les absences" %}Bonjour {{ user.name }},
+
+{{ actor.name }} a annulé votre absence «{{ type_label }}» du {{ absence.start_date.strftime('%d.%m.%Y') }} au {{ absence.end_date.strftime('%d.%m.%Y') }}.
+
+Motif: {{ reason or "–" }}
+
+{{ cta_url }}

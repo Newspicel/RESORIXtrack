@@ -1,0 +1,7 @@
+{% set subject = type_label ~ " approved" %}{% set cta_url = base_url ~ "/absences" %}{% set cta_label = "View absences" %}Hello {{ user.name }},
+
+{{ actor.name }} approved your {{ type_label|lower }} from {{ absence.start_date.strftime('%d.%m.%Y') }} to {{ absence.end_date.strftime('%d.%m.%Y') }} ({{ days }} working day{{ '' if days == 1 else 's' }}).{% if note %}
+
+Note: {{ note }}{% endif %}
+
+{{ cta_url }}

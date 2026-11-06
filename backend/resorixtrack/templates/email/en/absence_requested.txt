@@ -1,0 +1,7 @@
+{% set subject = requester.name ~ " requests " ~ type_label|lower %}{% set cta_url = base_url ~ "/team/approvals" %}{% set cta_label = "Review request" %}Hello {{ user.name }},
+
+{{ requester.name }} requests {{ type_label|lower }} from {{ absence.start_date.strftime('%d.%m.%Y') }} to {{ absence.end_date.strftime('%d.%m.%Y') }} ({{ days }} working day{{ '' if days == 1 else 's' }}).
+{% if absence.note %}
+Note: {{ absence.note }}{% endif %}
+
+{{ cta_url }}

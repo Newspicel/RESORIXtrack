@@ -1,0 +1,19 @@
+RESORIXtrack database migrations (Alembic via Flask-Migrate)
+==========================================================
+
+Rules (keep upgrades safe when instances skip versions):
+
+1. Migrations form ONE linear chain (0001 -> 0002 -> ...). Never edit or delete a migration
+   that has been released; add a new one instead. CI checks there is a single head.
+2. Migrations must be data-preserving: add columns with server defaults, copy data before
+   dropping/renaming columns, use batch mode (SQLite rebuilds tables). Never drop a table or
+   column holding user data in the same release that stops using it.
+3. `flask resorixtrack migrate` (run automatically on container start) creates a backup in
+   /data/backups before applying pending migrations, applies ALL pending revisions in order,
+   and refuses to start if the database is newer than the application.
+4. Create a new migration:  make migration m="describe change"
+   then review the generated file and add a test in tests/test_migrations.py if data is moved.
+5. Database guards (SQLite triggers protecting signed-off months and the change log) are defined in
+   resorixtrack/db_guards.py and frozen in the initial migration (0001). SQLite batch operations (table rebuilds) DROP the
+   triggers of the rebuilt table: re-create them at the end of such a migration. `flask resorixtrack migrate`
+   also checks all guards after upgrading and re-installs missing ones.

@@ -1,0 +1,9 @@
+{% set subject = actor.name ~ " changed your time entry" %}{% set cta_url = base_url ~ "/time?date=" ~ local_start.strftime('%Y-%m-%d') %}{% set cta_label = "Review the change" %}Hello {{ user.name }},
+
+{{ actor.name }} {% if action == "create" %}added{% elif action == "delete" %}deleted{% else %}changed{% endif %} a time entry on {{ local_start.strftime('%d.%m.%Y') }} ({{ local_start.strftime('%H:%M') }}{% if local_end %}–{{ local_end.strftime('%H:%M') }}{% endif %}).
+
+Reason: {{ reason or "–" }}
+
+Every change is logged. You can see the full history in RESORIXtrack and dispute the change if something is wrong.
+
+{{ cta_url }}

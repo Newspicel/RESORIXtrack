@@ -1,0 +1,7 @@
+{% set subject = actor.name ~ " beanstandet eine Korrektur" %}{% set cta_url = base_url ~ "/team/member?id=" ~ actor.id %}{% set cta_label = "In RESORIXtrack öffnen" %}Hallo {{ user.name }}
+
+{{ actor.name }} ist mit einer Änderung am Zeiteintrag vom {{ local_start.strftime('%d.%m.%Y') }} nicht einverstanden:
+
+«{{ message }}»
+
+{{ cta_url }}

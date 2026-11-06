@@ -1,0 +1,47 @@
+# ---- local planning notes (never published)
+PLAN*.md
+NOTES*.md
+/docs/internal/
+
+# ---- secrets & local config
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ---- runtime data
+var/
+backups/
+/data/
+*.db
+*.db-wal
+*.db-shm
+
+# ---- python
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# ---- node / frontend (public/vendor is copied from node_modules by scripts/vendor.mjs at build time)
+node_modules/
+frontend/dist/
+.astro/
+frontend/public/vendor/
+test-results/
+playwright-report/
+
+# ---- editors & OS
+.idea/
+*.swp
+.DS_Store
+Thumbs.db

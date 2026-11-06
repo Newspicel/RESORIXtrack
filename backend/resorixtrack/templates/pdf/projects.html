@@ -1,0 +1,22 @@
+{% extends "pdf/_base.html" %}
+{% block title %}{{ L.projects }} {{ d.start }} – {{ d.end }}{% endblock %}
+{% block meta %}{{ d.company }}<br>{{ d.start }} – {{ d.end }}{% endblock %}
+{% block content %}
+<h1>{{ L.projects }}</h1>
+<div class="sub">{{ L.projects_sub }}</div>
+<div class="cards">
+  <div class="card"><div class="k">{{ L.total }}</div><div class="v">{{ fmt(d.total_min) }}</div></div>
+  <div class="card"><div class="k">{{ L.projects }}</div><div class="v">{{ d.projects|length }}</div></div>
+</div>
+<table>
+  <thead><tr><th>{{ L.col_project }}</th><th>{{ L.team }}</th><th>{{ L.name }}</th><th class="n">{{ L.worked }}</th></tr></thead>
+  <tbody>
+  {% for p in d.projects %}
+    <tr class="total"><td>{% if p.color %}<span class="tag" style="background:{{ p.color }}">&nbsp;</span>{% endif %}{{ p.name or L.no_project }}{% if p.code %} <span class="muted">({{ p.code }})</span>{% endif %}</td><td>{{ p.team or "" }}</td><td class="muted">{{ p.items }} {{ L.col_items|lower }}</td><td class="n">{{ fmt(p.minutes) }}</td></tr>
+    {% for person in p.people %}
+    <tr><td></td><td></td><td>{{ person.name }}</td><td class="n">{{ fmt(person.minutes) }}</td></tr>
+    {% endfor %}
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

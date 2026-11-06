@@ -1,0 +1,5 @@
+{% set subject = requester.name ~ " meldet: " ~ type_label %}{% set cta_url = base_url ~ "/team" %}{% set cta_label = "Teamkalender öffnen" %}Hallo {{ user.name }}
+
+{{ requester.name }} hat «{{ type_label }}» vom {{ absence.start_date.strftime('%d.%m.%Y') }} bis {{ absence.end_date.strftime('%d.%m.%Y') }} gemeldet ({{ days }} Arbeitstag{{ '' if days == 1 else 'e' }}).
+
+{{ cta_url }}

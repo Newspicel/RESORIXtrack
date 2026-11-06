@@ -1,0 +1,7 @@
+{% set subject = "Toujours au travail?" %}{% set cta_url = base_url ~ "/" %}{% set cta_label = "Ouvrir RESORIXtrack" %}Bonjour {{ user.name }},
+
+Vous avez timbré l'arrivée à {{ since.strftime('%H:%M') }} ({{ since.strftime('%d.%m.%Y') }}), il y a plus de {{ hours }} heures. Avez-vous oublié de timbrer la sortie?
+
+Vous pouvez arrêter le timbrage ou corriger l'heure dans RESORIXtrack.
+
+{{ cta_url }}

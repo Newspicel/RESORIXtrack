@@ -1,0 +1,25 @@
+{
+  "start": "Einstempeln",
+  "stop": "Ausstempeln",
+  "break": "Pause beginnen",
+  "resume": "Pause beenden",
+  "start_work": "Einstempeln",
+  "stop_work": "Ausstempeln",
+  "take_break": "Pause beginnen",
+  "resume_work": "Pause beenden",
+  "state": {
+    "idle": "Nicht eingestempelt",
+    "working": "Am Arbeiten",
+    "on_break": "In der Pause"
+  },
+  "headline": {
+    "idle": "Sie sind nicht eingestempelt",
+    "working": "Sie sind eingestempelt",
+    "on_break": "Sie sind in der Pause"
+  },
+  "shortcuts": "Tastenkürzel:",
+  "start_stop": "ein- / ausstempeln",
+  "break_resume": "Pause beginnen / beenden",
+  "queued_offline": "Du bist offline. Die Zeit wurde gespeichert und wird automatisch synchronisiert.",
+  "synced": "Offline-Stempelungen synchronisiert."
+}

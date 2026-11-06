@@ -1,0 +1,7 @@
+{% set subject = type_label ~ " request declined" %}{% set cta_url = base_url ~ "/absences" %}{% set cta_label = "View absences" %}Hello {{ user.name }},
+
+{{ actor.name }} declined your {{ type_label|lower }} request from {{ absence.start_date.strftime('%d.%m.%Y') }} to {{ absence.end_date.strftime('%d.%m.%Y') }}.{% if note %}
+
+Note: {{ note }}{% endif %}
+
+{{ cta_url }}

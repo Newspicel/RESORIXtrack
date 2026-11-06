@@ -1,0 +1,7 @@
+{% set subject = actor.name ~ " disputes a correction" %}{% set cta_url = base_url ~ "/team/member?id=" ~ actor.id %}{% set cta_label = "Open in RESORIXtrack" %}Hello {{ user.name }},
+
+{{ actor.name }} disagrees with a change to their time entry on {{ local_start.strftime('%d.%m.%Y') }}:
+
+"{{ message }}"
+
+{{ cta_url }}

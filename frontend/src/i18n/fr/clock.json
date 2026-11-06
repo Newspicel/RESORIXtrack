@@ -1,0 +1,25 @@
+{
+  "start": "Timbrer l'arrivée",
+  "stop": "Timbrer la sortie",
+  "break": "Commencer la pause",
+  "resume": "Terminer la pause",
+  "start_work": "Timbrer l'arrivée",
+  "stop_work": "Timbrer la sortie",
+  "take_break": "Commencer la pause",
+  "resume_work": "Terminer la pause",
+  "state": {
+    "idle": "Non timbré",
+    "working": "Au travail",
+    "on_break": "En pause"
+  },
+  "headline": {
+    "idle": "Vous n'avez pas timbré",
+    "working": "Vous avez timbré l'arrivée",
+    "on_break": "Vous êtes en pause"
+  },
+  "shortcuts": "Raccourcis:",
+  "start_stop": "timbrer l'arrivée / la sortie",
+  "break_resume": "commencer / terminer la pause",
+  "queued_offline": "Vous êtes hors ligne. L'heure a été enregistrée et sera synchronisée automatiquement.",
+  "synced": "Timbrages hors ligne synchronisés."
+}

@@ -1,0 +1,33 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flask API (debug)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "flask",
+      "cwd": "${workspaceFolder}/backend",
+      "env": { "FLASK_APP": "resorixtrack:create_app('development')", "FLASK_DEBUG": "1", "SESSION_COOKIE_SECURE": "false", "TRUSTED_PROXIES": "0" },
+      "args": ["run", "--port", "5000", "--no-reload"],
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "justMyCode": true
+    },
+    {
+      "name": "Pytest: current file",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "cwd": "${workspaceFolder}/backend",
+      "args": ["${file}", "-x", "-p", "no:cacheprovider"],
+      "python": "${workspaceFolder}/.venv/bin/python"
+    },
+    {
+      "name": "Playwright E2E",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/frontend",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["playwright", "test", "--headed"]
+    }
+  ]
+}
