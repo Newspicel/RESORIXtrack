@@ -2,7 +2,7 @@
 
 # RESORIXtrack
 
-**Self-hosted time tracking for small and mid-sized companies.** One click to clock in, transparent time and vacation accounts, a vacation and sick-leave workflow, public-holiday calendars, monthly sign-off, reports – and a complete change history for everything. Developed and maintained by [RESORIX AG](https://resorix.ch), open source under the MIT license, for companies that prefer to keep employee data on their own server.
+**Self-hosted time tracking for small and mid-sized companies.** One click to clock in, transparent time and vacation accounts, a vacation and sick-leave workflow, public-holiday calendars, monthly sign-off, reports – and a complete change history for everything. Developed and maintained by [RESORIX AG](https://resorix.ch), free software under the AGPL-3.0 license (commercial license available), for companies that prefer to keep employee data on their own server.
 
 <p align="center">
   <img src="docs/screenshots/employee-dark-home.png" alt="Dashboard with one-click clocking, today's target, weekly overview and vacation balance" width="860">

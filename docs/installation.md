@@ -53,6 +53,17 @@ docker compose ps                      # app and worker "healthy" / "running"
 curl -s https://time.example.com/api/health
 ```
 
+### Behind an existing reverse proxy on a Docker network
+
+If a reverse proxy such as Nginx Proxy Manager or Traefik already runs on the server in its own Docker network, RESORIXtrack can join that network instead of publishing a port:
+
+```bash
+# .env: TRUSTED_PROXIES=1, BASE_URL=https://time.example.com, PROXY_NETWORK=<the proxy's network>, PORT=<port of your proxy entry>
+docker compose -f docker-compose.yml -f docker-compose.proxy.yml up -d --build
+```
+
+The proxy then reaches the app as `http://resorixtrack:<PORT>`; nothing is published on the host. Find the network with `docker network ls` or in the proxy's own compose file. Needs Docker Compose 2.24 or newer.
+
 ## 3. First-run setup
 
 Open `https://time.example.com`. The setup wizard asks for:

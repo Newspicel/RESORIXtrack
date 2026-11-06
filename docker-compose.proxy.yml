@@ -1,0 +1,23 @@
+# RESORIXtrack behind an existing reverse proxy that lives on a shared Docker network
+# (Nginx Proxy Manager, Traefik, Caddy in another stack, ...). Use it on top of docker-compose.yml:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.proxy.yml up -d --build
+#
+# In .env:  TRUSTED_PROXIES=1   BASE_URL=https://time.example.com   PROXY_NETWORK=<network your proxy is on>
+#           PORT=5007           (optional; the container port your proxy entry points at, default 8080)
+# The proxy reaches the app as http://resorixtrack:<PORT> on that network. Nothing is published on the host.
+# Needs Docker Compose 2.24 or newer (for the !override tag).
+services:
+  app:
+    environment:
+      PORT: ${PORT:-8080}
+    ports: !override []
+    networks:
+      default: {}
+      proxy:
+        aliases: [resorixtrack]
+
+networks:
+  proxy:
+    name: ${PROXY_NETWORK:-proxy}
+    external: true

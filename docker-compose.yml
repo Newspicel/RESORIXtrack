@@ -2,6 +2,7 @@
 #   cp .env.example .env                       # then edit SECRET_KEY, BACKUP_PASSWORD, BASE_URL, SMTP_*
 #   docker compose --profile tls up -d         # recommended: app + worker + Caddy with automatic HTTPS
 #   docker compose up -d                       # app + worker only, reachable on 127.0.0.1:8080 for your own proxy
+#   docker compose -f docker-compose.yml -f docker-compose.proxy.yml up -d   # proxy on a shared Docker network
 #
 # The app port is bound to localhost by default: set RESORIXTRACK_BIND=0.0.0.0 only if you really
 # want plain HTTP on the network (then also SESSION_COOKIE_SECURE=false; not recommended).
@@ -34,7 +35,7 @@ services:
     ports:
       - "${RESORIXTRACK_BIND:-127.0.0.1}:${RESORIXTRACK_PORT:-8080}:8080"
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/api/health', timeout=4).status == 200 else 1)"]
+      test: ["CMD", "python", "-c", "import os,urllib.request,sys; sys.exit(0 if urllib.request.urlopen(f\"http://127.0.0.1:{os.environ.get('PORT', '8080')}/api/health\", timeout=4).status == 200 else 1)"]
       interval: 30s
       timeout: 5s
       start_period: 20s
