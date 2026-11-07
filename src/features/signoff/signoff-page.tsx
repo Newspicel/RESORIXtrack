@@ -27,7 +27,7 @@ import { MonthNav, TeamFilter } from "@/features/reports/controls"
 import { teamScopeQuery } from "@/features/team/api"
 import { todayIn } from "@/features/time/lib"
 import { attempt } from "@/lib/attempt"
-import { addMonthsStr, fmtDateTime, fmtMinutes, fmtMonth } from "@/lib/format"
+import { addMonthsStr, dayOf, fmtDateTime, fmtDay, fmtMinutes, fmtMonth } from "@/lib/format"
 import { useI18n } from "@/lib/i18n"
 import { useMe } from "@/lib/session"
 import type { SignoffDto } from "@/server/services/signoffs"
@@ -72,9 +72,11 @@ function Status({ r, signing }: { r: Row; signing: boolean }) {
         <StatusBadge tone="positive" icon="signed">
           {t("signoff.signed")}
         </StatusBadge>
-        <span className="text-xs text-muted-foreground">
-          {r.signoff.signedBy?.name} ·{" "}
-          {fmtDateTime(r.signoff.signedAt, { intl, tz: me.timezone, hour12: me.timeFormat === "12h" })}
+        <span
+          className="text-xs text-muted-foreground"
+          title={fmtDateTime(r.signoff.signedAt, { intl, tz: me.timezone, hour12: me.timeFormat === "12h" })}
+        >
+          {r.signoff.signedBy?.name} · {fmtDay(dayOf(r.signoff.signedAt, me.timezone), intl)}
         </span>
       </span>
     )
@@ -224,7 +226,7 @@ export function SignoffPage({
       cell: (c) => <Status r={c.row.original} signing={signing.has(c.row.original.user.id)} />,
     }),
     col.display({
-      id: "reopen",
+      id: "actions",
       header: () => <span className="sr-only">{t("signoff.reopen")}</span>,
       meta: { className: "w-24 text-right" },
       cell: (c) =>

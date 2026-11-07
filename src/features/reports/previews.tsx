@@ -74,18 +74,19 @@ export function TimesheetPreview({ d, today }: { d: TimesheetData; today: string
       header: () => t("reports.times"),
       enableSorting: false,
       meta: { mobileLabel: t("reports.times"), className: "tabular" },
-      cell: (c) => (
-        <span className="flex flex-wrap gap-x-2">
-          {c.getValue().map((e) => (
-            <span key={`${e.start}-${e.end}`} className="whitespace-nowrap" title={e.note || undefined}>
-              {e.start}–{e.end ?? "…"}
-              {e.edited ? (
-                <Pencil className="ml-0.5 inline size-3 text-warning" aria-label={t("reports.edited")} />
-              ) : null}
-            </span>
-          ))}
-        </span>
-      ),
+      cell: (c) =>
+        c.getValue().length ? (
+          <span className="flex flex-wrap gap-x-2">
+            {c.getValue().map((e) => (
+              <span key={`${e.start}-${e.end}`} className="whitespace-nowrap" title={e.note || undefined}>
+                {e.start}–{e.end ?? "…"}
+                {e.edited ? (
+                  <Pencil className="ml-0.5 inline size-3 text-warning" aria-label={t("reports.edited")} />
+                ) : null}
+              </span>
+            ))}
+          </span>
+        ) : null,
     }),
     tsCol.display({
       id: "info",

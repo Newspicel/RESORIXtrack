@@ -57,7 +57,7 @@ export function AccessPanel({ user }: { user: UserDetail }) {
     at ? fmtDateTime(at, { intl, tz: me.timezone, hour12: me.timeFormat === "12h" }) : t("admin.users.never")
 
   return (
-    <div className="grid gap-8 xl:grid-cols-2 xl:items-start">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-8 xl:grid-cols-2 xl:items-start">
       <SettingsGroup title={t("admin.access.sign_in")}>
         <Row
           label={t("admin.access.status")}

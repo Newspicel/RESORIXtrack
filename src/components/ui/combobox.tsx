@@ -1,6 +1,5 @@
-import { ChevronsUpDown } from "lucide-react"
+import { ChevronDown } from "lucide-react"
 import { type ReactNode, useId, useState } from "react"
-import { Button } from "@/components/ui/button"
 import {
   Command,
   CommandEmpty,
@@ -11,6 +10,7 @@ import {
   CommandList,
 } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { FIELD_TRIGGER } from "@/components/ui/select"
 import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
@@ -60,10 +60,9 @@ export function Combobox({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         render={
-          <Button
+          <button
             id={id}
             type="button"
-            variant="outline"
             role="combobox"
             aria-haspopup="listbox"
             aria-controls={listId}
@@ -72,7 +71,7 @@ export function Combobox({
             aria-label={ariaLabel}
             aria-describedby={describedBy}
             disabled={disabled}
-            className={cn("w-full justify-between font-normal", !current && "text-muted-foreground", className)}
+            className={cn(FIELD_TRIGGER, "h-9 w-full", !current && "text-muted-foreground", className)}
           />
         }
       >
@@ -80,7 +79,7 @@ export function Combobox({
           {current?.icon}
           {current?.label ?? placeholder ?? t("common.search")}
         </span>
-        <ChevronsUpDown className="opacity-50" />
+        <ChevronDown className="size-4 text-muted-foreground" />
       </PopoverTrigger>
       <PopoverContent className="w-(--anchor-width) min-w-64 p-0" align="start">
         <Command>

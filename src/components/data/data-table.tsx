@@ -684,7 +684,8 @@ function MobileRow<T extends RowData>({
             const def = c.column.columnDef
             const label = def.meta?.mobileLabel ?? (typeof def.header === "string" ? def.header : "")
             return (
-              <div key={c.id} className="min-w-0">
+              // a field without a value (an empty day, no note) is left out instead of showing a bare label
+              <div key={c.id} className="min-w-0 has-[>dd:empty]:hidden">
                 {label ? <dt className="text-xs text-muted-foreground">{label}</dt> : null}
                 <dd className={cn("truncate", def.meta?.numeric && "tabular")}>
                   <FlexRender cell={c} />
