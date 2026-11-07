@@ -81,5 +81,6 @@
     "hex": "Hex"
   },
   "choose_file": "Choose file",
-  "remove": "Remove"
+  "remove": "Remove",
+  "results": "Results"
 }

@@ -2,7 +2,7 @@
  * Teams (port of v1 services/users.py, team part): name, colour, holiday calendar, members, and leads and
  * deputies with optional validity periods. Administrators only.
  */
-import { and, asc, count, eq, inArray, isNull, or } from "drizzle-orm"
+import { and, asc, count, desc, eq, inArray, isNull, or } from "drizzle-orm"
 import { db } from "../db"
 import { holidayCalendars, type Team, type TeamLead, teamLeads, teams, users } from "../db/schema"
 import { Conflict, NotFound, Validation } from "../errors"
@@ -39,7 +39,7 @@ export function listTeams(actor: Actor) {
     .select({ r: teamLeads, name: users.name, isActive: users.isActive })
     .from(teamLeads)
     .innerJoin(users, eq(users.id, teamLeads.userId))
-    .orderBy(asc(teamLeads.role), asc(teamLeads.validFrom), asc(teamLeads.id))
+    .orderBy(desc(teamLeads.role), asc(teamLeads.validFrom), asc(teamLeads.id)) // "lead" before "deputy"
     .all()
   const active = new Set(activeLeadRows().map((r) => r.id))
   const members = db

@@ -81,6 +81,8 @@ export interface UserRow {
   teamName: string | null
   teamColor: string | null
   isLead: boolean
+  /** leads only as a deputy today */
+  isDeputy: boolean
   isActive: boolean
   invitePending: boolean
   mfaEnabled: boolean
@@ -122,7 +124,9 @@ export function listUsers(actor: Actor, f: UserFilters = {}): UserRow[] {
     .where(conds.length ? and(...conds) : undefined)
     .orderBy(asc(users.name))
     .all()
-  const leads = new Set(activeLeadRows().map((r) => r.userId))
+  const leadRows = activeLeadRows()
+  const leads = new Set(leadRows.map((r) => r.userId))
+  const fullLeads = new Set(leadRows.filter((r) => r.role === "lead").map((r) => r.userId))
   const withPassword = credentialUserIds()
   return rows
     .map(({ u, teamName, teamColor }) => ({
@@ -135,6 +139,7 @@ export function listUsers(actor: Actor, f: UserFilters = {}): UserRow[] {
       teamName,
       teamColor,
       isLead: leads.has(u.id),
+      isDeputy: leads.has(u.id) && !fullLeads.has(u.id),
       isActive: u.isActive,
       invitePending: !withPassword.has(u.id) && u.anonymizedAt == null,
       mfaEnabled: Boolean(u.twoFactorEnabled),

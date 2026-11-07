@@ -60,7 +60,7 @@
   "blocker_help": {
     "month_not_complete": "Der Monat ist noch nicht vorbei.",
     "running_entry": "Ein Zeiteintrag läuft noch. Beende oder korrigiere ihn.",
-    "pending_absence": "Entscheide zuerst über die offenen Abwesenheitsanträge.",
+    "pending_absence": "Entscheide zuerst über die offenen Absenzanträge.",
     "not_employed": "In diesem Monat nicht angestellt.",
     "already_signed": "Bereits abgezeichnet.",
     "projects_missing": "Ein Teil der Arbeit hat kein Projekt."

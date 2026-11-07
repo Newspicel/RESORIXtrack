@@ -185,9 +185,6 @@ export function AppShell() {
   const titleKey = usePageTitleKey()
   const b = useBootstrap()
   useFocusHeadingOnNavigate()
-  useEffect(() => {
-    document.title = titleKey ? `${t(titleKey)} · RESORIXtrack` : "RESORIXtrack"
-  }, [titleKey, t])
   return (
     <SidebarProvider>
       <a

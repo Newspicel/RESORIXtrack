@@ -166,25 +166,25 @@ export const de: MailStrings = {
   "absence_reported.body": "{requester} hat «{type}» vom {start} bis {end} gemeldet ({days}).",
   "absence_reported.cta": "Team öffnen",
 
-  "absence_recorded.subject": "{actor} hat eine Abwesenheit für dich erfasst",
+  "absence_recorded.subject": "{actor} hat eine Absenz für dich erfasst",
   "absence_recorded.body": "{actor} hat für dich «{type}» vom {start} bis {end} erfasst ({days}).",
   "absence_recorded.attachments": "Du kannst in RESORIXtrack ein Arztzeugnis hochladen (freiwillig).",
-  "absence_recorded.cta": "Abwesenheiten ansehen",
+  "absence_recorded.cta": "Absenzen ansehen",
 
   "absence_approved.subject": "{type} bewilligt",
   "absence_approved.body": "{actor} hat «{type}» vom {start} bis {end} bewilligt ({days}).",
-  "absence_approved.cta": "Abwesenheiten ansehen",
+  "absence_approved.cta": "Absenzen ansehen",
 
   "absence_rejected.subject": "{type} abgelehnt",
   "absence_rejected.body": "{actor} hat deinen Antrag «{type}» vom {start} bis {end} abgelehnt.",
-  "absence_rejected.cta": "Abwesenheiten ansehen",
+  "absence_rejected.cta": "Absenzen ansehen",
 
   "absence_cancelled.subject": "{type} storniert",
   "absence_cancelled.body": "{actor} hat «{type}» vom {start} bis {end} storniert.",
-  "absence_cancelled.cta": "Abwesenheiten ansehen",
+  "absence_cancelled.cta": "Absenzen ansehen",
   "absence_changed.subject": "{type} geändert",
   "absence_changed.body": "{actor} hat «{type}» geändert: {start} bis {end}.",
-  "absence_changed.cta": "Abwesenheiten ansehen",
+  "absence_changed.cta": "Absenzen ansehen",
 
   "clock_reminder.subject": "Arbeitest du noch?",
   "clock_reminder.body":

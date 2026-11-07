@@ -46,8 +46,8 @@
   "scope": {
     "time_read": "Zeiten lesen",
     "time_write": "Zeiten erfassen",
-    "absences_read": "Abwesenheiten lesen",
-    "absences_write": "Abwesenheiten beantragen",
+    "absences_read": "Absenzen lesen",
+    "absences_write": "Absenzen beantragen",
     "reports_read": "Berichte lesen"
   },
   "login_history": "Anmeldeverlauf",

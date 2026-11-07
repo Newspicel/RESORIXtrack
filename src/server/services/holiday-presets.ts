@@ -141,9 +141,15 @@ export function checkPresetDays(key: string, presetDays: readonly string[], year
   return [...new Set(presetDays)]
 }
 
-export function presetName(key: string): string {
-  const canton = cantons().find((c) => c.code === cantonOf(key))
-  return `${key} ${canton?.name ?? ""}`.trim()
+/** A preset calendar's name: the canton in the given language ("Kanton Freiburg"). */
+export function presetName(key: string, locale?: string): string {
+  const code = cantonOf(key)
+  return cantons(locale).find((c) => c.code === code)?.name ?? key
+}
+
+/** The name earlier versions gave preset calendars ("CH-FR Canton of Fribourg"). */
+export function legacyPresetName(key: string): string {
+  return `${key} ${presetName(key)}`
 }
 
 export function holidayPresets(locale?: string, year: number = Temporal.Now.plainDateISO().year): HolidayPreset[] {

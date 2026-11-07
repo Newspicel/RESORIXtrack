@@ -25,6 +25,7 @@ import {
 import { holidayPresets, presetHolidays } from "./holiday-presets"
 import { loadActor } from "./permissions"
 import { history } from "./revisions"
+import { updateSettings } from "./settings"
 
 function signOffThrough(end: string) {
   const u = makeUser()
@@ -104,8 +105,17 @@ describe("holiday calendars", () => {
     expect(() => presetHolidays("ch-fr-fribourg", 2026, [])).toThrow(/Unknown preset/)
     const cal = createCalendarFromPreset("CH-BE", { years: [2026], makeDefault: true })
     expect(cal.isDefault).toBe(true)
-    expect(cal.name).toBe("CH-BE Canton of Bern")
+    expect(cal.name).toBe("Canton of Bern")
     expect(createCalendarFromPreset("CH-BE", { years: [2026, 2027] }).id).toBe(cal.id)
+    // named in the company language; a calendar under the earlier name is reused
+    updateSettings({ default_locale: "de" })
+    expect(createCalendarFromPreset("CH-ZH", { years: [2026] }).name).toBe("Kanton Zürich")
+    const legacy = db
+      .insert(s.holidayCalendars)
+      .values({ name: "CH-GE Canton of Geneva", regionCode: "CH-GE" })
+      .returning()
+      .get()
+    expect(createCalendarFromPreset("CH-GE", { years: [2026] }).id).toBe(legacy.id)
     expect(() => createCalendarFromPreset("XX")).toThrow(/Unknown preset/)
     expect(() => createCalendarFromPreset("CH-ZH", { presetDays: ["Boxing Day"] })).toThrow(/Unknown holiday/)
   })

@@ -103,6 +103,12 @@ function seed(hash: string): string[] {
   const year = Number(today.slice(0, 4))
 
   ensureDefaultAbsenceTypes()
+  updateSettings({
+    setup_complete: true,
+    company_name: "RESORIX AG",
+    default_timezone: "Europe/Zurich",
+    default_locale: "de",
+  })
   const cal = createCalendarFromPreset("CH-FR", {
     years: [year - 1, year, year + 1],
     presetDays: defaultPresetDays("CH-FR", year),
@@ -117,12 +123,6 @@ function seed(hash: string): string[] {
       .all()
       .map((h) => h.date),
   )
-  updateSettings({
-    setup_complete: true,
-    company_name: "RESORIX AG",
-    default_timezone: "Europe/Zurich",
-    default_locale: "de",
-  })
   lines.push(`Holiday calendar: ${cal.name}`)
 
   const teams = new Map<string, s.Team>()

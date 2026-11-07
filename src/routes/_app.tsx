@@ -1,5 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { AppShell } from "@/components/app/app-shell"
+import { liveClockQuery } from "@/features/clock/use-clock"
+import { titleHead } from "@/lib/page-title"
 
 /** Everything behind sign-in. Unauthenticated visitors go to /login (or /setup on a fresh install). */
 export const Route = createFileRoute("/_app")({
@@ -11,5 +13,8 @@ export const Route = createFileRoute("/_app")({
     }
     return { me: b.me }
   },
+  // the top bar clock is on every page: render it on the server instead of a skeleton
+  loader: ({ context }) => context.queryClient.prefetchQuery(liveClockQuery()),
+  head: ({ matches, match }) => titleHead(match.context.bootstrap.locale, matches),
   component: AppShell,
 })

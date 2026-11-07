@@ -56,7 +56,7 @@ export function AbsenceTypesSection() {
       col.accessor(f, {
         header: () => t(`admin.types.flags.${f}`),
         enableSorting: false,
-        meta: { hideOnMobile: true, className: "text-center w-24" },
+        meta: { hideOnMobile: true, className: "text-center w-24 whitespace-normal" },
         cell: (c) => (
           <span className="flex justify-center">
             <Flag on={c.getValue()} label={t(`admin.types.flags.${f}`)} />

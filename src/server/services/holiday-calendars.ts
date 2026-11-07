@@ -24,6 +24,7 @@ import {
   checkPresetDays,
   FEDERAL_DAY,
   isPresetKey,
+  legacyPresetName,
   type PresetDay,
   presetHolidays,
   presetName,
@@ -75,10 +76,14 @@ export function createCalendarFromPreset(
   if (!isPresetKey(key)) throw new Validation("Unknown preset", { fields: { preset: "invalid" } })
   const years = opts.years ?? [thisYear(), thisYear() + 1]
   const presetDays = checkPresetDays(key, opts.presetDays ?? [], thisYear())
-  const name = presetName(key)
+  const name = presetName(key, getSetting("default_locale"))
   let cal =
-    db.select().from(holidayCalendars).where(eq(holidayCalendars.name, name)).get() ??
-    db.insert(holidayCalendars).values({ name, regionCode: key, presetDays }).returning().get()
+    db
+      .select()
+      .from(holidayCalendars)
+      .where(inArray(holidayCalendars.name, [name, legacyPresetName(key)]))
+      .orderBy(holidayCalendars.id)
+      .get() ?? db.insert(holidayCalendars).values({ name, regionCode: key, presetDays }).returning().get()
   const ticked = cal.presetDays
   insertMissing(
     cal.id,

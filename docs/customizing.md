@@ -44,7 +44,7 @@ pnpm tsx scripts/i18n-set.ts --file keys.json   # { "ns.key": ["en", "de", "fr",
 pnpm i18n:check
 ```
 
-German uses Swiss spelling (ss) and "du"; French and Italian use "tu".
+German uses Swiss spelling (ss), Swiss terms (Absenz, Ferien, Pensum, Überzeit, visieren) and "du"; French and Italian use "tu".
 
 ### Add a language
 

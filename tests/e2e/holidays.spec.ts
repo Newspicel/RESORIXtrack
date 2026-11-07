@@ -14,7 +14,7 @@ test("employee: public holidays page is read-only and shows the applicable calen
   await expect(page).toHaveURL(/\/holidays$/)
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Public holidays")
   // the demo company's default calendar applies to everyone
-  await expect(page.getByRole("heading", { level: 2, name: "CH-FR Canton of Fribourg" })).toBeVisible()
+  await expect(page.getByRole("heading", { level: 2, name: "Kanton Freiburg" })).toBeVisible()
   await expect(page.getByText("company default")).toBeVisible()
   const year = String(new Date().getFullYear())
   await expect(page.getByRole("tab", { name: year })).toHaveAttribute("aria-selected", "true")

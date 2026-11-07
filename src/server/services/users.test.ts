@@ -142,6 +142,12 @@ describe("users administration", () => {
     makeUser({ name: "Old", isActive: false })
     expect(listUsers(admin, { teamId: team.id }).map((u) => u.name)).toEqual(["Lea"])
     expect(listUsers(admin, { role: "lead" }).map((u) => u.name)).toEqual(["Lea"])
+    const deputy = makeUser({ name: "Dina", teamId: team.id })
+    makeLead(team.id, deputy.id, { role: "deputy" })
+    expect(listUsers(admin, { role: "lead" }).map((u) => [u.name, u.isDeputy])).toEqual([
+      ["Dina", true],
+      ["Lea", false],
+    ])
     expect(listUsers(admin, { role: "hr" }).map((u) => u.name)).toEqual(["Hans"])
     expect(listUsers(admin, { status: "inactive" }).map((u) => u.name)).toEqual(["Old"])
     expect(listUsers(admin, { q: "HAN" }).map((u) => u.name)).toEqual(["Hans"])

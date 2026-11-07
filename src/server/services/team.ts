@@ -11,7 +11,7 @@ import { addDays, iso, localToday, monthBounds, weekStart } from "../time"
 import { absenceTypesById, serializeAbsenceType } from "./absence-types"
 import { absencesInRange, clippedDays, minDay, serializeAbsences } from "./absences"
 import { computeDays, summarize, timeBalance, vacationAccount } from "./accounts"
-import { teamComplianceSummary } from "./compliance"
+import { countFindings, periodFindings, teamComplianceSummary } from "./compliance"
 import { type Actor, canAdjustBalance, canEditSchedule, canManageUser, isManager, requireView } from "./permissions"
 import { scheduleOn, schedulesOf } from "./schedules"
 import { monthStatus, parseMonth, scopeUsers } from "./signoffs"
@@ -70,6 +70,10 @@ export function teamOverview(actor: Actor, raw: z.input<typeof overviewInput> = 
       ? teamComplianceSummary(actor, mStart, lastDay, input.teamId).map((r) => [r.userId, r.counts])
       : [],
   )
+  // the team summary leaves out the viewer; a lead in their own team still sees their own row's findings
+  const self = people.find((u) => u.id === actor.id)
+  if (self && mStart <= lastDay && !findings.has(self.id))
+    findings.set(self.id, countFindings(periodFindings(self, mStart, lastDay)))
 
   const members = people.map((u) => {
     const mine = week.filter((a) => a.userId === u.id)

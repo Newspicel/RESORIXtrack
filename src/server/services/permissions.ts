@@ -12,7 +12,7 @@
  * Rule: when an actor may not see a person, behave as if the person does not exist (NotFound), so ids
  * outside the actor's scope are not leaked.
  */
-import { and, asc, eq, gte, inArray, isNull, lte, or, sql } from "drizzle-orm"
+import { and, asc, desc, eq, gte, inArray, isNull, lte, or, sql } from "drizzle-orm"
 import { db } from "../db"
 import { type Capability, type TeamLead, teamLeads, teams, type User, users } from "../db/schema"
 import { Forbidden, NotFound } from "../errors"
@@ -45,7 +45,7 @@ export function activeLeadRows(opts: { teamId?: number; userId?: number; on?: st
     .select()
     .from(teamLeads)
     .where(and(...conds))
-    .orderBy(asc(teamLeads.role), asc(teamLeads.id))
+    .orderBy(desc(teamLeads.role), asc(teamLeads.id))
     .all()
 }
 

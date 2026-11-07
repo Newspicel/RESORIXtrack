@@ -161,7 +161,6 @@ export function WeekTimeline({
                   const label = `${t(`time.kind.${e.kind}`)} ${time}${what ? ` · ${what}` : ""}${e.note ? ` · ${e.note}` : ""}${corr ? ` · ${t("time.changed_by", { name: corr.by })}` : ""}`
                   const marked = e.edited || e.source === "manual"
                   const short = e.project ? projectShort(e.project) : ""
-                  const width = to - from
                   return (
                     <button
                       key={`${e.id}-${from}`}
@@ -170,7 +169,7 @@ export function WeekTimeline({
                       aria-label={label}
                       title={label}
                       className={cn(
-                        "absolute inset-y-1 flex items-center gap-1 overflow-hidden rounded-[5px] px-1.5 text-left text-[11px] font-medium whitespace-nowrap transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                        "@container absolute inset-y-1 flex items-center gap-1 overflow-hidden rounded-[5px] px-1.5 text-left text-[11px] font-medium whitespace-nowrap transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                         e.kind === "work"
                           ? "bg-work text-primary-foreground hover:bg-work/85"
                           : "bg-break/60 text-foreground hover:bg-break/75",
@@ -187,11 +186,19 @@ export function WeekTimeline({
                           aria-hidden
                         />
                       ) : null}
-                      {marked && width >= 45 ? <PenLine className="size-3 shrink-0 opacity-80" aria-hidden /> : null}
-                      {short && width >= 60 ? <span className="truncate">{short}</span> : null}
-                      {width >= (short ? 210 : 150) ? (
-                        <span className="hidden truncate tabular opacity-80 lg:inline">{time}</span>
+                      {/* labels by the block's rendered width, so a narrow phone timeline shows no fragments */}
+                      {marked ? (
+                        <PenLine className="hidden size-3 shrink-0 opacity-80 @min-[3rem]:block" aria-hidden />
                       ) : null}
+                      {short ? <span className="hidden truncate @min-[1.5rem]:inline">{short}</span> : null}
+                      <span
+                        className={cn(
+                          "hidden truncate tabular opacity-80",
+                          short ? "@min-[6rem]:inline" : "@min-[4.25rem]:inline",
+                        )}
+                      >
+                        {time}
+                      </span>
                     </button>
                   )
                 })}

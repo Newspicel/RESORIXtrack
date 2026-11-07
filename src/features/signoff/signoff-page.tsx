@@ -145,28 +145,31 @@ export function SignoffPage({
       return next
     })
 
+  const allSigned = ov.rows.length > 0 && ov.rows.every((r) => r.signoff || signing.has(r.user.id))
   const columns = [
-    col.display({
-      id: "select",
-      header: () =>
-        signable.length ? (
-          <Checkbox
-            checked={chosen.length === signable.length}
-            indeterminate={chosen.length > 0 && chosen.length < signable.length}
-            onCheckedChange={(v) => setSelected(v ? new Set(signable.map((r) => r.user.id)) : new Set())}
-            aria-label={t("signoff.select_all")}
-          />
-        ) : null,
-      meta: { className: "w-10", hideOnMobile: true },
-      cell: (c) =>
-        ready(c.row.original) && !signing.has(c.row.original.user.id) ? (
-          <Checkbox
-            checked={selected.has(c.row.original.user.id)}
-            onCheckedChange={(v) => toggle(c.row.original.user.id, v)}
-            aria-label={t("signoff.select_person", { name: c.row.original.user.name })}
-          />
-        ) : null,
-    }),
+    // nothing to tick in a fully signed month: no empty checkbox column
+    !allSigned &&
+      col.display({
+        id: "select",
+        header: () =>
+          signable.length ? (
+            <Checkbox
+              checked={chosen.length === signable.length}
+              indeterminate={chosen.length > 0 && chosen.length < signable.length}
+              onCheckedChange={(v) => setSelected(v ? new Set(signable.map((r) => r.user.id)) : new Set())}
+              aria-label={t("signoff.select_all")}
+            />
+          ) : null,
+        meta: { className: "w-10", hideOnMobile: true },
+        cell: (c) =>
+          ready(c.row.original) && !signing.has(c.row.original.user.id) ? (
+            <Checkbox
+              checked={selected.has(c.row.original.user.id)}
+              onCheckedChange={(v) => toggle(c.row.original.user.id, v)}
+              aria-label={t("signoff.select_person", { name: c.row.original.user.name })}
+            />
+          ) : null,
+      }),
     col.accessor((r) => r.user.name, {
       id: "name",
       header: () => t("common.name"),
@@ -225,18 +228,19 @@ export function SignoffPage({
       meta: { mobileLabel: t("common.status") },
       cell: (c) => <Status r={c.row.original} signing={signing.has(c.row.original.user.id)} />,
     }),
-    col.display({
-      id: "actions",
-      header: () => <span className="sr-only">{t("signoff.reopen")}</span>,
-      meta: { className: "w-24 text-right" },
-      cell: (c) =>
-        c.row.original.signoff && me.isHr ? (
-          <Button intent="negative" variant="ghost" size="sm" onClick={() => setReopen(c.row.original.signoff)}>
-            {t("signoff.reopen")}
-          </Button>
-        ) : null,
-    }),
-  ]
+    me.isHr &&
+      col.display({
+        id: "actions",
+        header: () => <span className="sr-only">{t("signoff.reopen")}</span>,
+        meta: { className: "w-24 text-right" },
+        cell: (c) =>
+          c.row.original.signoff ? (
+            <Button intent="negative" variant="ghost" size="sm" onClick={() => setReopen(c.row.original.signoff)}>
+              {t("signoff.reopen")}
+            </Button>
+          ) : null,
+      }),
+  ].filter((c) => c !== false)
 
   const onSign = () => {
     if (!chosen.length) {
@@ -285,10 +289,12 @@ export function SignoffPage({
       <Section
         title={t("signoff.people", { month: monthLabel })}
         actions={
-          <Button onClick={onSign}>
-            <Lock data-icon="inline-start" />
-            {chosen.length ? t("signoff.sign_selected", { count: chosen.length }) : t("signoff.sign")}
-          </Button>
+          allSigned ? null : (
+            <Button onClick={onSign}>
+              <Lock data-icon="inline-start" />
+              {chosen.length ? t("signoff.sign_selected", { count: chosen.length }) : t("signoff.sign")}
+            </Button>
+          )
         }
       >
         <PeriodContent className={q.isPlaceholderData ? "opacity-60" : undefined}>

@@ -28,7 +28,9 @@ import { VacationPanel } from "./vacation-panel"
 export function UserDetailPage({ userId, tab, onTab }: { userId: number; tab: UserTab; onTab: (t: UserTab) => void }) {
   const { t } = useI18n()
   const { data: u } = useSuspenseQuery(userDetailQuery(userId))
-  const isLead = u.leadRoles.some((r) => r.active)
+  const active = u.leadRoles.filter((r) => r.active)
+  const isLead = active.length > 0
+  const isDeputy = isLead && active.every((r) => r.role === "deputy")
   return (
     <Page>
       <div className="-mb-3">
@@ -57,7 +59,7 @@ export function UserDetailPage({ userId, tab, onTab }: { userId: number; tab: Us
             <AccountStatus
               row={{ isActive: u.isActive, invitePending: u.invitePending, anonymized: u.anonymizedAt != null }}
             />
-            <RoleBadges row={{ role: u.role, capabilities: u.capabilities, isLead }} />
+            <RoleBadges row={{ role: u.role, capabilities: u.capabilities, isLead, isDeputy }} />
           </span>
         }
       />

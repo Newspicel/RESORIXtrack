@@ -1,4 +1,5 @@
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
+import { useRouter } from "@tanstack/react-router"
 import { toast } from "sonner"
 import { z } from "zod"
 import { SettingsFooter, SettingsGroup } from "@/components/app/settings"
@@ -14,6 +15,7 @@ import { changePassword, profileQuery, saveProfile } from "./api"
 export function PersonalSection() {
   const { t, tError } = useI18n()
   const qc = useQueryClient()
+  const router = useRouter()
   const { data } = useSuspenseQuery(profileQuery)
   const p = data.profile
   const form = useAppForm({
@@ -44,6 +46,8 @@ export function PersonalSection() {
         qc.invalidateQueries({ queryKey: ["profile"] }),
         qc.invalidateQueries({ queryKey: ["bootstrap"] }),
       ])
+      // the document title is rendered from the route context, which holds the old language
+      if (value.locale !== p.locale) await router.invalidate()
     },
   })
   return (
