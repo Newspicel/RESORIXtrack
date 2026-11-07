@@ -43,6 +43,13 @@
       "when": 1794012648382,
       "tag": "0005_regular_night_work",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1794059628813,
+      "tag": "0006_scheduled_clock_out",
+      "breakpoints": true
     }
   ]
 }

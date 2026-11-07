@@ -375,7 +375,7 @@
     }
   },
   "holidays": {
-    "title": "Jours fériés",
+    "title": "Calendriers de jours fériés",
     "calendars": "Calendriers",
     "new_calendar": "Nouveau calendrier",
     "edit_calendar": "Modifier le calendrier",

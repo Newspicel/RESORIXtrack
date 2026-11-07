@@ -18,6 +18,8 @@ Complete rewrite. Migrating from 1.x: [docs/migration-from-v1.md](docs/migration
 - Security: CSP with per-request nonces, CSRF origin check, sign-off seals in RFC 8785 JSON chained onto v1 seals, weekly integrity check by the worker.
 - Backups: same encrypted RTBK1 format, now including logos and per-file checksums; `rt restore` detects v1 archives.
 - Migration: `rt import-v1` imports a v1 database with ids, passwords, documents and seals; verifies every seal chain; reports who must re-enrol two-factor, create new API keys or get a new invitation. v1 files are never modified.
+- Clocking: no pause state, a break is a clock-out (old break entries outside signed-off months are retired with a change-log entry). Clock out later: a future clock-out time keeps you clocked in until then, the worker closes the entry.
+- Public holidays page for everyone: the calendar that applies to you (personal, team or default), read-only. `GET /api/v1/holidays`.
 - Not carried over from 1.x: API tokens (replaced by API keys), sessions, TOTP secrets (re-enrolment).
 
 ## 1.0.0 – 2026-11-06

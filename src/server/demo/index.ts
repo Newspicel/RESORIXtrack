@@ -284,7 +284,7 @@ function absences(
   return absent
 }
 
-/** Clock entries (work, break, work) and work logs for every scheduled day before today. */
+/** Clock entries (morning, break gap, afternoon) and work logs for every scheduled day before today. */
 function workDays(
   r: Rng,
   u: s.User,
@@ -323,12 +323,19 @@ function workDays(
     const s1 = localToInstant(d, `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`, u.timezone)
     const e1 = plus(s1, morning)
     const s2 = plus(e1, brk)
-    for (const [a, b, kind] of [
-      [s1, e1, "work"],
-      [e1, s2, "break"],
-      [s2, plus(s2, afternoon), "work"],
-    ] as const)
-      rows.push({ userId: u.id, kind, startAt: a, endAt: b, tz: u.timezone, source: "clock", createdById: u.id })
+    for (const [a, b] of [
+      [s1, e1],
+      [s2, plus(s2, afternoon)],
+    ])
+      rows.push({
+        userId: u.id,
+        kind: "work",
+        startAt: a,
+        endAt: b,
+        tz: u.timezone,
+        source: "clock",
+        createdById: u.id,
+      })
     // most days annotated with two items, some partially, a few not at all
     const worked = morning + afternoon
     const roll = r.next()

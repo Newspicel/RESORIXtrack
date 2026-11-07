@@ -1,0 +1,12 @@
+{
+  "sub": "I giorni festivi che valgono per te. Nei tuoi giorni lavorativi riducono le ore previste.",
+  "manage": "Gestisci calendari",
+  "source": {
+    "user": "Assegnato a te",
+    "team": "Calendario del tuo team",
+    "default": "Predefinito aziendale"
+  },
+  "none": "Nessun calendario dei festivi",
+  "none_help": "La tua amministrazione non ne ha ancora configurato uno.",
+  "help": "Le mezze giornate valgono per il pomeriggio. Manca un giorno festivo? Avvisa la tua amministrazione."
+}

@@ -13,7 +13,6 @@
   "running": "running",
   "break_warning": "Break too short",
   "legend_work": "Work",
-  "legend_break": "Break",
   "legend_edited": "Edited / manual",
   "legend_corrected": "Changed by someone else",
   "kind": {
@@ -51,12 +50,14 @@
     "manual": "Manual entry",
     "api": "API",
     "desktop": "Desktop app",
-    "offline": "Offline"
+    "offline": "Offline",
+    "migration": "System upgrade"
   },
   "field": {
     "kind": "Type",
     "start_at": "Start",
     "end_at": "End",
+    "scheduled_end_at": "Scheduled clock-out",
     "note": "Note",
     "is_deleted": "Deleted"
   },

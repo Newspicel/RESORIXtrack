@@ -72,10 +72,13 @@ export const Entry = named(
   z.object({
     id,
     userId: id,
-    kind: z.enum(["work", "break"]),
+    kind: z
+      .enum(["work", "break"])
+      .meta({ description: "`break` only in old entries: a break is the gap between two entries." }),
     startAt: instant,
     endAt: instant.nullable(),
     running: z.boolean(),
+    scheduledEndAt: instant.nullable().meta({ description: "Running entry: the scheduled clock-out." }),
     minutes,
     tz: z.string(),
     note: z.string(),
@@ -91,8 +94,9 @@ export const Entry = named(
 export const ClockState = named(
   "ClockState",
   z.object({
-    state: z.enum(["idle", "working", "on_break"]),
+    state: z.enum(["idle", "working"]),
     since: instant.nullable(),
+    scheduledEnd: instant.nullable().meta({ description: '"Clock out later": the running entry closes at this time.' }),
     entry: Entry.nullable(),
     todayWorkedMin: minutes,
     todayBreakMin: minutes,
@@ -223,6 +227,29 @@ export const Vacation = named(
 )
 
 // ------------------------------------------------------------------ absences
+
+export const MyHolidays = named(
+  "MyHolidays",
+  z.object({
+    name: z.string(),
+    regionCode: z.string(),
+    description: z.string(),
+    source: z
+      .enum(["user", "team", "default"])
+      .meta({ description: "Assigned to the person, the team's calendar, or the company default." }),
+    firstYear: z.number().int().nullable(),
+    lastYear: z.number().int().nullable(),
+    holidays: z.array(
+      z.object({
+        id,
+        date: day,
+        name: z.string(),
+        fraction: z.number().meta({ description: "1 full day, 0.5 the afternoon." }),
+        kind: z.enum(["federal", "cantonal", "company"]).nullable(),
+      }),
+    ),
+  }),
+)
 
 export const AbsenceType = named(
   "AbsenceType",

@@ -251,10 +251,6 @@ function Legend() {
         {t("time.legend_work")}
       </li>
       <li className="flex items-center gap-1.5">
-        <span className="size-2.5 rounded-sm bg-break/60" aria-hidden />
-        {t("time.legend_break")}
-      </li>
-      <li className="flex items-center gap-1.5">
         <span className="size-2.5 rounded-sm ring-2 ring-warning ring-inset" aria-hidden />
         {t("time.legend_corrected")}
       </li>

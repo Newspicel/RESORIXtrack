@@ -22,10 +22,11 @@ The theme follows your device. Pick System, Light or Dark with the sun/moon butt
 
 ### Clocking
 
-- **Clock in**, **Start break**, **End break**, **Clock out**. The clock is on every page.
-- Keys: **S** clock in or out, **B** break (when no field is focused). **⌘K** / **Ctrl K** search.
+- **Clock in**, **Clock out**. The clock is on every page. A break is a clock-out: the gap between two entries is the break.
+- Keys: **S** clock in or out (when no field is focused). **⌘K** / **Ctrl K** search.
 - Offline: punches are stored and synced with their original time.
-- Forgot a punch: **Other time** clocks in up to 48 h back, or out at a chosen time. Such entries are marked manual. Future times are refused.
+- Forgot a punch: **Other time** clocks in up to 48 h back, or out at a chosen time. Such entries are marked manual.
+- **Clock out later**: while clocked in, pick a time later than now under **Other time** (at most 24 h after clocking in). You stay clocked in, the dashboard shows *Clocks out automatically at …*, and the entry closes then, even with the browser closed. **Clock out now** ends it at once, **Cancel** drops the plan.
 - Forgot to clock out: the dashboard warns you; clock out, then fix the end time under *My time*. A reminder email follows after a set number of hours.
 
 ### Report sick
@@ -39,7 +40,7 @@ The theme follows your device. Pick System, Light or Dark with the sun/moon butt
 
 Week timeline or month grid with worked, target and difference per day.
 
-- **Add entry** or click an empty part of a day: work or break, start, end, note.
+- **Add entry** or click an empty part of a day: start, end, note. Breaks are not entered: the gap between entries is the break.
 - Click an entry to edit or delete. Past days need a reason; everything is in the change history. Deleted entries can be restored.
 - **Edited / manual**: entered or changed by hand. **Changed by someone else**: corrected by your lead or HR; open *History* and *Dispute* if you disagree.
 - A **signed-off month** is read-only. Ask your lead or HR; HR can reopen it.
@@ -69,9 +70,7 @@ Vacation account for the year (entitlement, carried over, taken, planned) and yo
 
 ## Public holidays
 
-The public holidays that apply to you, year by year, and where they come from: a calendar assigned to you personally, your team's calendar or the company default. The page is read-only – on your working days the holidays reduce your target hours automatically, half-day holidays cover the afternoon. Tell your administrator if a holiday is missing.
-
-<p><img src="screenshots/employee-dark-holidays.png" alt="Public holidays" width="760"></p>
+The holidays that apply to you, year by year, read-only. The badge says where they come from: assigned to you, your team's calendar or the company default. On your working days they reduce your target; half days cover the afternoon. A holiday is missing? Tell your administration.
 
 ## Time account
 

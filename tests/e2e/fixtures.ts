@@ -148,6 +148,7 @@ export const PAGES: [Who | null, string][] = [
   ["mia", "/account"],
   ["mia", "/reports"],
   ["mia", "/calendar"],
+  ["mia", "/holidays"],
   ["mia", "/profile"],
   ["jonas", "/team"],
   ["jonas", "/team/approvals"],

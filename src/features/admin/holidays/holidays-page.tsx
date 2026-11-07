@@ -6,7 +6,6 @@ import { PeriodContent, PeriodNav } from "@/components/app/period-nav"
 import { StatusBadge } from "@/components/app/status-badge"
 import { undoToast } from "@/components/app/undo-toast"
 import { DataTable } from "@/components/data/data-table"
-import { tableHelper } from "@/components/data/table-helper"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -17,7 +16,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Empty, EmptyContent, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { fmtDay, parseDay } from "@/lib/format"
+import { useHolidayColumns } from "@/features/holidays/columns"
+import { fmtDay } from "@/lib/format"
 import { useI18n } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import type { CalendarRow } from "@/server/services/holiday-calendars"
@@ -36,8 +36,6 @@ import { type HolidayItem, HolidaySheet } from "./holiday-sheet"
 import { ImportSheet } from "./import-sheet"
 
 export type HolidaysSearch = { cal?: number; year?: number }
-
-const col = tableHelper<HolidayItem>()
 
 export function HolidaysPage({ search, onSearch }: { search: HolidaysSearch; onSearch: (s: HolidaysSearch) => void }) {
   const { t } = useI18n()
@@ -148,7 +146,7 @@ function CalendarPanel({
   onYear: (y: number) => void
   onEdit: () => void
 }) {
-  const { t, intl, holidayName } = useI18n()
+  const { t, holidayName } = useI18n()
   const { data, isLoading } = useQuery(calendarYearQuery(cal.id, year))
   const [editing, setEditing] = useState<HolidayItem | "new" | null>(null)
   const [importing, setImporting] = useState(false)
@@ -160,53 +158,7 @@ function CalendarPanel({
       data: { id: null, calendarId: h.calendarId, date: h.date, name: h.name, fraction: h.fraction === 0.5 ? 0.5 : 1 },
     }),
   )
-  const columns = [
-    col.accessor("date", {
-      header: () => t("common.date"),
-      meta: { className: "whitespace-nowrap w-72", mobileLabel: t("common.date") },
-      cell: (c) => {
-        const wd = parseDay(c.getValue()).getUTCDay()
-        // fixed columns: weekday · date · weekend badge always start at the same x; the badge never grows the row
-        return (
-          <span className="flex flex-wrap items-center gap-x-2 gap-y-1 tabular md:grid md:grid-cols-[2rem_5.5rem_auto]">
-            <span className="text-muted-foreground">{fmtDay(c.getValue(), intl, { weekday: "short" })}</span>
-            <span>{fmtDay(c.getValue(), intl, { day: "numeric", month: "short" })}</span>
-            {wd === 0 || wd === 6 ? (
-              <StatusBadge className="h-5 justify-self-start">{t("admin.holidays.weekend")}</StatusBadge>
-            ) : null}
-          </span>
-        )
-      },
-    }),
-    col.accessor("name", {
-      header: () => t("common.name"),
-      meta: { primary: true },
-      cell: (c) => holidayName(c.getValue()),
-    }),
-    col.accessor("kind", {
-      header: () => t("admin.holidays.kind_col"),
-      meta: { mobileLabel: t("admin.holidays.kind_col") },
-      cell: (c) => {
-        const kind = c.getValue()
-        if (!kind) return null
-        return kind === "company" ? (
-          <StatusBadge tone="info">{t("admin.holidays.kind.company")}</StatusBadge>
-        ) : (
-          <span className="text-muted-foreground">{t(`admin.holidays.kind.${kind}`)}</span>
-        )
-      },
-    }),
-    col.accessor("fraction", {
-      header: () => t("admin.holidays.duration"),
-      meta: { mobileLabel: t("admin.holidays.duration") },
-      cell: (c) =>
-        c.getValue() < 1 ? (
-          <StatusBadge tone="info">{t("admin.holidays.half_day")}</StatusBadge>
-        ) : (
-          <span className="text-muted-foreground">{t("admin.holidays.full_day")}</span>
-        ),
-    }),
-  ]
+  const columns = useHolidayColumns<HolidayItem>()
   return (
     <section className="flex min-w-0 flex-col gap-4" aria-label={cal.name}>
       <div className="flex flex-wrap items-center justify-between gap-3">

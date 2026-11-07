@@ -18,6 +18,7 @@ import {
 } from "@/server/db/schema"
 import { env } from "@/server/env"
 import { createBackup, rotateBackups } from "@/server/services/backups"
+import { closeDueScheduled } from "@/server/services/clock"
 import { topUpHolidays } from "@/server/services/holiday-calendars"
 import { notify } from "@/server/services/notifications"
 import { deferMail, withOutbox } from "@/server/services/outbox"
@@ -42,6 +43,11 @@ const tx = <T>(fn: () => T): T => rawSqlite().transaction(fn)()
 export async function nightlyBackup(): Promise<{ name: string; removed: number }> {
   const info = await createBackup({ includeAttachments: true, label: "auto" })
   return { name: info.name, removed: rotateBackups(env.backupKeep) }
+}
+
+/** "Clock out later": close the entries whose scheduled clock-out has passed. Logs only when it closed some. */
+export function scheduledClockOuts(): number | undefined {
+  return closeDueScheduled() || undefined
 }
 
 /**
@@ -181,6 +187,7 @@ export function holidayTopUp() {
 
 export const JOBS: Job[] = [
   { name: "backup", schedule: "0 2 * * *", run: nightlyBackup },
+  { name: "scheduled-clock-outs", schedule: "* * * * *", run: scheduledClockOuts, atStart: true },
   { name: "clock-reminders", schedule: "*/5 * * * *", run: sendClockReminders },
   { name: "cleanup", schedule: "30 3 * * *", run: retentionCleanup },
   { name: "integrity", schedule: "0 4 * * 0", run: integrityCheck },

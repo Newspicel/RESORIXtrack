@@ -43,11 +43,9 @@ export interface EntryContext {
   canEdit: boolean
 }
 
-const ENTRY_KINDS = ["work", "break"] as const
 const ENTRY_MODES = ["times", "total"] as const
 
 interface Values {
-  kind: (typeof ENTRY_KINDS)[number]
   mode: (typeof ENTRY_MODES)[number]
   date: string
   start: string
@@ -64,7 +62,6 @@ function defaults(target: EntryTarget, ctx: EntryContext): Values {
     const s = wallClock(e.startAt, tz)
     const end = e.endAt ? wallClock(e.endAt, tz).time : ""
     return {
-      kind: e.kind,
       mode: "times",
       date: s.date,
       start: s.time,
@@ -80,7 +77,6 @@ function defaults(target: EntryTarget, ctx: EntryContext): Values {
     target.start,
   )
   return {
-    kind: "work",
     mode: ctx.owner.recordingMode === "simplified" ? "total" : "times",
     date: target.date,
     start,
@@ -136,7 +132,6 @@ async function saveEntry(v: Values, initial: Values, ctx: EntryContext, entry: E
     await createEntryFn({
       data: {
         userId: ctx.self ? null : ctx.owner.id,
-        kind: v.kind,
         startAt,
         endAt: endAt ?? startAt,
         note: v.note,
@@ -150,7 +145,6 @@ async function saveEntry(v: Values, initial: Values, ctx: EntryContext, entry: E
   await updateEntryFn({
     data: {
       id: entry.id,
-      kind: v.kind !== entry.kind ? v.kind : undefined,
       startAt: startChanged ? startAt : undefined,
       endAt: endChanged && endAt ? endAt : undefined,
       note: v.note !== entry.note ? v.note : undefined,
@@ -159,7 +153,7 @@ async function saveEntry(v: Values, initial: Values, ctx: EntryContext, entry: E
   })
 }
 
-const SERVER_FIELDS: Record<string, keyof Values> = { startAt: "start", endAt: "end", reason: "reason", kind: "kind" }
+const SERVER_FIELDS: Record<string, keyof Values> = { startAt: "start", endAt: "end", reason: "reason" }
 
 /** Server field errors mapped onto the form's fields, as `[field, message key]`. */
 function serverEntryErrors(err: unknown): [keyof Values, string][] {
@@ -357,37 +351,22 @@ export function EntryDialog({
         ) : null}
 
         <fieldset disabled={readOnly} className="flex flex-col gap-5">
-          <div className="flex flex-wrap items-center gap-2">
-            <form.Field name="kind">
+          {ctx.owner.recordingMode === "simplified" && !entry?.running ? (
+            <form.Field name="mode">
               {(f) => (
                 <Segmented
                   value={f.state.value}
                   onValueChange={f.handleChange}
-                  aria-label={t("common.type")}
+                  aria-label={t("time.entry_mode")}
+                  className="self-start"
                   options={[
-                    { value: "work", label: t("time.kind.work"), dot: "bg-work" },
-                    { value: "break", label: t("time.kind.break"), dot: "bg-break" },
+                    { value: "total", label: t("time.daily_total") },
+                    { value: "times", label: t("time.from_to") },
                   ]}
                 />
               )}
             </form.Field>
-            {ctx.owner.recordingMode === "simplified" && !entry?.running ? (
-              <form.Field name="mode">
-                {(f) => (
-                  <Segmented
-                    value={f.state.value}
-                    onValueChange={f.handleChange}
-                    aria-label={t("time.entry_mode")}
-                    className="sm:ml-auto"
-                    options={[
-                      { value: "total", label: t("time.daily_total") },
-                      { value: "times", label: t("time.from_to") },
-                    ]}
-                  />
-                )}
-              </form.Field>
-            ) : null}
-          </div>
+          ) : null}
 
           <div className="grid grid-cols-2 items-start gap-3 sm:grid-cols-[1.6fr_1fr_1fr_auto]">
             <div className="col-span-2 sm:col-span-1">

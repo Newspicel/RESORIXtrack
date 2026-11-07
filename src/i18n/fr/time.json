@@ -13,7 +13,6 @@
   "running": "en cours",
   "break_warning": "Pause trop courte",
   "legend_work": "Travail",
-  "legend_break": "Pause",
   "legend_edited": "Modifié / manuel",
   "legend_corrected": "Modifié par quelqu'un d'autre",
   "kind": {
@@ -51,12 +50,14 @@
     "manual": "Saisie manuelle",
     "api": "API",
     "desktop": "Application de bureau",
-    "offline": "Hors ligne"
+    "offline": "Hors ligne",
+    "migration": "Mise à jour du système"
   },
   "field": {
     "kind": "Type",
     "start_at": "Début",
     "end_at": "Fin",
+    "scheduled_end_at": "Sortie planifiée",
     "note": "Remarque",
     "is_deleted": "Supprimé"
   },

@@ -1,16 +1,20 @@
 /**
- * The clock state machine (idle -> working <-> on_break -> idle), port of v1 services/entries.py.
+ * The clock (idle <-> working), port of v1 services/entries.py. A break is a clock-out: the gap between two
+ * work entries.
  *
  * - Actions are idempotent: repeating the current state's action is a no-op (double clicks, retries).
  * - `at` backdates an action (offline sync, or a time chosen by hand with `custom`, which marks the entry
- *   as manual): not in the future, at most 48 h back, never before the running entry started.
+ *   as manual): at most 48 h back, never before the running entry started.
+ * - "Clock out later": `stop` with a future `at` keeps the entry open and schedules its end (at most 24 h
+ *   after the start). The worker closes due entries every minute; every clock read and action closes the
+ *   person's own first, so a stopped worker never keeps someone clocked in past the chosen time.
  * - Offline sync replays queued actions with client action ids; ids already processed are skipped.
  * - The partial unique index `uq_time_entries_open` guarantees one running entry per person even under
  *   concurrent requests; a lost race answers `already_running`.
  */
-import { and, eq, gt, isNull, like, lt, max } from "drizzle-orm"
+import { and, eq, gt, isNotNull, isNull, like, lt, lte, max } from "drizzle-orm"
 import { db, rawSqlite } from "../db"
-import { appState, type TimeEntry, timeEntries, type User } from "../db/schema"
+import { appState, type TimeEntry, timeEntries, type User, users } from "../db/schema"
 import { AppError, Conflict, Validation } from "../errors"
 import { dayBoundsUtc, iso, localDateOf, localToday, nowInstant, utcnow } from "../time"
 import {
@@ -25,7 +29,7 @@ import {
   serializeEntry,
 } from "./entries"
 import { ensureOpenInstants } from "./locks"
-import type { Actor } from "./permissions"
+import { type Actor, actorFromUser } from "./permissions"
 import { record, snapshot } from "./revisions"
 
 export { CLOCK_ACTIONS } from "./clock.schemas"
@@ -33,7 +37,7 @@ export { CLOCK_ACTIONS } from "./clock.schemas"
 import { CLOCK_ACTIONS } from "./clock.schemas"
 
 export type ClockAction = (typeof CLOCK_ACTIONS)[number]
-export type ClockStateName = "idle" | "working" | "on_break"
+export type ClockStateName = "idle" | "working"
 
 const FUTURE_TOLERANCE_MS = 2 * 60_000
 const BACKDATE_NOTE_AFTER_MS = 15 * 60_000
@@ -45,6 +49,8 @@ export interface ClockState {
   state: ClockStateName
   entry: EntryView | null
   since: string | null
+  /** "Clock out later": the running entry closes at this instant. */
+  scheduledEnd: string | null
   todayWorkedMin: number
   todayBreakMin: number
   serverTime: string
@@ -58,26 +64,35 @@ export function openEntry(userId: number): TimeEntry | undefined {
     .get()
 }
 
-const stateOf = (e: TimeEntry | undefined): ClockStateName =>
-  e == null ? "idle" : e.kind === "work" ? "working" : "on_break"
-
-export function clockState(user: User): ClockState {
-  const e = openEntry(user.id)
+/** Today's work and breaks; breaks are the gaps between the work entries (as in the time account). */
+function todayTotals(user: User): { worked: number; breaks: number } {
   const [s, en] = dayBoundsUtc(localToday(user.timezone), user.timezone)
   const now = nowInstant().epochMilliseconds
   let worked = 0
-  let breaks = 0
+  let first = Number.POSITIVE_INFINITY
+  let last = Number.NEGATIVE_INFINITY
   for (const t of entriesBetween(user.id, s, en)) {
+    if (t.kind !== "work") continue
     const a = Math.max(ms(t.startAt), ms(s))
     const b = Math.min(t.endAt ? ms(t.endAt) : now, ms(en))
-    const mins = Math.max(0, (b - a) / 60000)
-    if (t.kind === "work") worked += mins
-    else breaks += mins
+    if (b <= a) continue
+    worked += (b - a) / 60000
+    first = Math.min(first, a)
+    last = Math.max(last, b)
   }
+  const breaks = last > first ? Math.max(0, (last - first) / 60000 - worked) : 0
+  return { worked, breaks }
+}
+
+export function clockState(user: User): ClockState {
+  closeDueScheduled(user.id)
+  const e = openEntry(user.id)
+  const { worked, breaks } = todayTotals(user)
   return {
-    state: stateOf(e),
+    state: e ? "working" : "idle",
     entry: e ? serializeEntry(e) : null,
     since: e ? iso(e.startAt) : null,
+    scheduledEnd: e ? iso(e.scheduledEndAt) : null,
     todayWorkedMin: Math.round(worked * 100) / 100,
     todayBreakMin: Math.round(breaks * 100) / 100,
     serverTime: iso(utcnow()),
@@ -94,13 +109,16 @@ function ensureEmployed(user: User, at: string): void {
   }
 }
 
+const isFuture = (at: string | null): at is string =>
+  at != null && ms(at) > nowInstant().epochMilliseconds + FUTURE_TOLERANCE_MS
+
 /** Effective time (epoch ms, whole seconds) of an action. */
 function clockTime(at: string | null, current: TimeEntry | undefined): number {
   const now = nowInstant().epochMilliseconds
   let t = now
   if (at != null) {
     const a = ms(at)
-    if (a > now + FUTURE_TOLERANCE_MS) throw new Validation("Clock time is in the future", { fields: { at: "future" } })
+    if (isFuture(at)) throw new Validation("Clock time is in the future", { fields: { at: "future" } })
     if (a < now - CLOCK_BACKDATE_LIMIT_MS) {
       throw new Validation("Clock time is too far in the past; add an entry instead", { fields: { at: "too_old" } })
     }
@@ -119,7 +137,7 @@ function isUniqueViolation(err: unknown): boolean {
   return err instanceof Error && /UNIQUE constraint failed: time_entries/.test(err.message)
 }
 
-function startNew(actor: Actor, kind: "work" | "break", t0: number, source: RevisionSource, note = ""): TimeEntry {
+function startNew(actor: Actor, t0: number, source: RevisionSource, note = ""): TimeEntry {
   const user = actor.user
   let t = t0
   ensureOpenInstants(user, instantOfMs(t))
@@ -159,7 +177,7 @@ function startNew(actor: Actor, kind: "work" | "break", t0: number, source: Revi
       .insert(timeEntries)
       .values({
         userId: user.id,
-        kind,
+        kind: "work",
         startAt: instantOfMs(t),
         endAt: null,
         tz: user.timezone,
@@ -189,8 +207,8 @@ function startNew(actor: Actor, kind: "work" | "break", t0: number, source: Revi
   return e
 }
 
-/** Close the open entry at `t`; returns the effective end (the next entry starts there). */
-function close(actor: Actor, e: TimeEntry, t0: number, source: RevisionSource): number {
+/** Close the open entry at `t`. */
+function close(actor: Actor, e: TimeEntry, t0: number, source: RevisionSource, reason?: string): void {
   let t = t0
   ensureOpenInstants(actor.user, instantOfMs(t))
   const backdated = nowInstant().epochMilliseconds - t > BACKDATE_NOTE_AFTER_MS
@@ -202,8 +220,9 @@ function close(actor: Actor, e: TimeEntry, t0: number, source: RevisionSource): 
     .update(timeEntries)
     .set({
       endAt: instantOfMs(t),
+      scheduledEndAt: null,
       updatedAt: utcnow(),
-      // an end chosen by hand ("clock out with a custom time") is shown as manual, not as a punch
+      // an end chosen by hand ("clock out at a chosen time") is shown as manual, not as a punch
       ...(source === "manual" ? { source: "manual" as const } : {}),
     })
     .where(eq(timeEntries.id, e.id))
@@ -216,10 +235,78 @@ function close(actor: Actor, e: TimeEntry, t0: number, source: RevisionSource): 
     actor,
     subjectUserId: actor.id,
     before,
-    reason: backdated ? "clock (offline sync: earlier time)" : "clock",
+    reason: reason ?? (backdated ? "clock (offline sync: earlier time)" : "clock"),
     source,
   })
-  return t
+}
+
+function setScheduledEnd(actor: Actor, e: TimeEntry, at: string | null, source: RevisionSource, reason: string): void {
+  const before = snapshot("time_entry", e)
+  const updated = db
+    .update(timeEntries)
+    .set({ scheduledEndAt: at, updatedAt: utcnow() })
+    .where(eq(timeEntries.id, e.id))
+    .returning()
+    .get()
+  record({
+    entity: "time_entry",
+    row: updated,
+    action: "update",
+    actor,
+    subjectUserId: actor.id,
+    before,
+    reason,
+    source,
+  })
+}
+
+/** "Clock out later": keep the entry open and close it at `at`. */
+function scheduleStop(actor: Actor, e: TimeEntry, at: string, source: RevisionSource): void {
+  const t = Math.floor(ms(at) / 1000) * 1000
+  if (t - ms(e.startAt) > MAX_ENTRY_MS)
+    throw new Validation("A clock-out can be scheduled at most 24 hours after the clock-in", {
+      fields: { at: "too_late" },
+    })
+  ensureOpenInstants(actor.user, instantOfMs(t))
+  setScheduledEnd(actor, e, instantOfMs(t), source, "clock-out scheduled")
+}
+
+/**
+ * Close running entries whose scheduled clock-out has passed, at exactly that time: everyone's (worker) or
+ * one person's. Each in its own savepoint; one that fails (e.g. the month was signed off meanwhile) stays
+ * open for the person to fix. Returns the number closed.
+ */
+export function closeDueScheduled(userId?: number): number {
+  const due = db
+    .select()
+    .from(timeEntries)
+    .where(
+      and(
+        isNull(timeEntries.endAt),
+        eq(timeEntries.isDeleted, false),
+        isNotNull(timeEntries.scheduledEndAt),
+        lte(timeEntries.scheduledEndAt, utcnow()),
+        userId == null ? undefined : eq(timeEntries.userId, userId),
+      ),
+    )
+    .all()
+  let closed = 0
+  for (const e of due) {
+    const end = e.scheduledEndAt
+    if (!end) continue
+    try {
+      rawSqlite().transaction(() => {
+        const owner = db.select().from(users).where(eq(users.id, e.userId)).get()
+        if (!owner) return
+        close(actorFromUser(owner), e, ms(end), "manual", "clock (scheduled clock-out)")
+        closed++
+      })()
+    } catch (err) {
+      if (!(err instanceof AppError)) throw err
+      console.warn(`[clock] scheduled clock-out of entry ${e.id} failed: ${err.code}`)
+    }
+  }
+  return closed
 }
 
 export interface ClockOptions {
@@ -232,26 +319,25 @@ export interface ClockOptions {
   source?: RevisionSource
 }
 
+/**
+ * `start`, `stop` and `unschedule`. A `stop` with a future `at` schedules the clock-out instead of closing
+ * the entry; `unschedule` drops that plan, a plain `stop` clocks out now.
+ */
 export function clockAction(actor: Actor, action: ClockAction, opts: ClockOptions = {}): ClockState {
   const user = actor.user
   if (!CLOCK_ACTIONS.includes(action)) throw new Validation("Unknown clock action", { fields: { action: "invalid" } })
+  closeDueScheduled(user.id)
   const current = openEntry(user.id)
-  const state = stateOf(current)
-  const noop =
-    (action === "start" && state === "working") ||
-    (action === "break" && state === "on_break") ||
-    (action === "resume" && state === "working") ||
-    (action === "stop" && state === "idle")
-  if (noop) return clockState(user)
-  if (action === "break" && state === "idle") throw new Conflict("You are not clocked in", { code: "not_working" })
-  if (action === "resume" && state === "idle") throw new Conflict("You are not on a break", { code: "not_on_break" })
   const at = opts.at ? parseInstantInput(opts.at, user.timezone) : null
   const source: RevisionSource = opts.custom && at ? "manual" : (opts.source ?? "web")
-  const t = clockTime(at, current)
-  if (action === "start" && state === "idle") startNew(actor, "work", t, source, opts.note ?? "")
-  else if (action === "stop") close(actor, current!, t, source)
-  else if (action === "break") startNew(actor, "break", close(actor, current!, t, source), source)
-  else startNew(actor, "work", close(actor, current!, t, source), source) // start/resume from a break
+  if (action === "unschedule") {
+    if (current?.scheduledEndAt) setScheduledEnd(actor, current, null, source, "scheduled clock-out cancelled")
+  } else if (action === "start") {
+    if (!current) startNew(actor, clockTime(at, undefined), source, opts.note ?? "")
+  } else if (current) {
+    if (isFuture(at)) scheduleStop(actor, current, at, source)
+    else close(actor, current, clockTime(at, current), source)
+  }
   return clockState(user)
 }
 
@@ -263,7 +349,7 @@ export function stopRunning(user: User, actor: Actor | null, reason = ""): TimeE
   const end = Math.max(Math.floor(nowInstant().epochMilliseconds / 1000) * 1000, ms(e.startAt) + 1000)
   const updated = db
     .update(timeEntries)
-    .set({ endAt: instantOfMs(end), updatedAt: utcnow() })
+    .set({ endAt: instantOfMs(end), scheduledEndAt: null, updatedAt: utcnow() })
     .where(eq(timeEntries.id, e.id))
     .returning()
     .get()

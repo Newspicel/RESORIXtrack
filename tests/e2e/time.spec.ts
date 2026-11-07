@@ -1,6 +1,6 @@
 import { expect, goto, isMobile, lastWeekday, pick, pickDate, test } from "./fixtures"
 
-test("clock in, break, resume, clock out from the bar; dashboard follows", async ({ as }, info) => {
+test("clock in, out and in again from the bar; dashboard follows", async ({ as }, info) => {
   // desktop: top bar pill; mobile: sticky clock bar above the tab bar (both are the group "Clock")
   const page = await as(pick(info, "sofia", "marc"))
   await goto(page, "/")
@@ -14,21 +14,46 @@ test("clock in, break, resume, clock out from the bar; dashboard follows", async
   await expect(hero).toHaveAccessibleName("You're clocked in")
   await expect(hero).toContainText(/since \d{2}:\d{2}/)
 
-  await bar.getByRole("button", { name: "Start break" }).click()
-  await expect(bar).toContainText("On break")
-  await expect(hero).toHaveAccessibleName("You're on a break")
-
-  await bar.getByRole("button", { name: "End break" }).click()
-  await expect(bar).toContainText("Working")
+  // a break is a clock-out
+  await bar.getByRole("button", { name: "Clock out", exact: true }).click()
+  await expect(bar).toContainText("Not clocked in")
+  await expect(hero).toHaveAccessibleName("You're not clocked in")
+  await bar.getByRole("button", { name: "Clock in", exact: true }).click()
   await expect(hero).toHaveAccessibleName("You're clocked in")
 
   await bar.getByRole("button", { name: "Clock out", exact: true }).click()
   await expect(bar).toContainText("Not clocked in")
-  await expect(hero).toHaveAccessibleName("You're not clocked in")
 
   // the punches are on My time
   await goto(page, "/time")
   await expect(page.getByRole("button", { name: /^Work \d{2}:\d{2}/ }).last()).toBeVisible()
+})
+
+test("clock out later: scheduled, shown, cancelled", async ({ as }, info) => {
+  const page = await as(pick(info, "lea", "anna"))
+  const later = new Date(Date.now() + 45 * 60_000)
+  const hhmm = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Zurich", hour: "2-digit", minute: "2-digit" })
+  const now = hhmm.format(new Date())
+  const at = hhmm.format(later)
+  test.skip(at < now, "the time 45 minutes from now is after midnight")
+  await goto(page, "/")
+  const hero = page.getByRole("region", { name: /^You're/ })
+  await hero.getByRole("button", { name: "Clock in", exact: true }).click()
+  await expect(hero).toHaveAccessibleName("You're clocked in")
+
+  await hero.getByRole("button", { name: "Other time" }).click()
+  const popover = page.getByRole("dialog")
+  await popover.getByLabel("End time").fill(at)
+  await popover.getByLabel("End time").press("Tab")
+  await popover.getByRole("button", { name: "Clock out later" }).click()
+  await expect(hero).toContainText(`Clocks out automatically at ${at}`)
+  await expect(hero).toHaveAccessibleName("You're clocked in")
+  await expect(hero.getByRole("button", { name: "Clock out now" })).toBeVisible()
+
+  await hero.getByRole("button", { name: "Cancel" }).click()
+  await expect(hero).not.toContainText("Clocks out automatically")
+  await hero.getByRole("button", { name: "Clock out", exact: true }).click()
+  await expect(hero).toHaveAccessibleName("You're not clocked in")
 })
 
 test("manual entry: add, edit, delete with undo, restore", async ({ as }, info) => {

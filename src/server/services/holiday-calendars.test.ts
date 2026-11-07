@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm"
 import { describe, expect, it } from "vitest"
-import { makeAdmin, makeCalendar, makeUser } from "@/test/factories"
+import { makeAdmin, makeCalendar, makeTeam, makeUser } from "@/test/factories"
 import { db } from "../db"
 import * as s from "../db/schema"
 import {
@@ -14,6 +14,7 @@ import {
   importPreset,
   knabenschiessen,
   listCalendars,
+  myHolidays,
   presetHolidays,
   saveCalendar,
   saveHoliday,
@@ -170,5 +171,38 @@ describe("holiday top-up", () => {
     expect(notes("holidays_missing")).toHaveLength(1)
     db.insert(s.holidays).values({ calendarId: manual.id, date: "2027-01-01", name: "New Year's Day" }).run()
     expect(topUpHolidays("2027-11-01").missing).toEqual([{ calendarId: manual.id, year: 2028 }])
+  })
+})
+
+describe("my holidays", () => {
+  it("shows the calendar that applies: personal, then team, then company default", () => {
+    const none = makeUser()
+    expect(myHolidays(loadActor(none.id), 2026)).toBeNull()
+    makeCalendar({ name: "Default" }, [{ date: "2026-08-01", name: "National Day" }])
+    const teamCal = makeCalendar({ name: "Zurich", isDefault: false, regionCode: "CH-ZH" }, [
+      { date: "2026-04-20", name: "Sechseläuten", fraction: 0.5 },
+      { date: "2027-01-01", name: "New Year's Day" },
+    ])
+    const own = makeCalendar({ name: "Ticino", isDefault: false }, [])
+    const team = makeTeam({ holidayCalendarId: teamCal.id })
+    const member = makeUser({ teamId: team.id })
+    const moved = makeUser({ teamId: team.id, holidayCalendarId: own.id })
+
+    expect(myHolidays(loadActor(none.id), 2026)).toMatchObject({ name: "Default", source: "default" })
+    const mine = myHolidays(loadActor(member.id), 2026)
+    expect(mine).toMatchObject({ name: "Zurich", source: "team", firstYear: 2026, lastYear: 2027 })
+    expect(mine?.holidays).toEqual([
+      expect.objectContaining({ date: "2026-04-20", name: "Sechseläuten", fraction: 0.5 }),
+    ])
+    expect(myHolidays(loadActor(moved.id), 2026)).toMatchObject({ name: "Ticino", source: "user", holidays: [] })
+  })
+
+  it("is open to every role, also without admin rights", () => {
+    makeCalendar({}, [{ date: "2026-12-25", name: "Christmas" }])
+    const admin = makeAdmin()
+    const employee = makeUser()
+    expect(myHolidays(loadActor(employee.id), 2026)?.holidays).toHaveLength(1)
+    expect(myHolidays(loadActor(admin.id), 2026)?.holidays).toHaveLength(1)
+    expect(() => listCalendars(loadActor(employee.id))).toThrow()
   })
 })

@@ -4,7 +4,7 @@ import { calendarsQuery, calendarYearQuery } from "@/features/admin/api/holidays
 import { HolidaysPage } from "@/features/admin/holidays/holidays-page"
 
 export const Route = createFileRoute("/_app/admin/holidays")({
-  staticData: { titleKey: "nav.holidays" },
+  staticData: { titleKey: "nav.holiday_calendars" },
   validateSearch: z.object({
     cal: z.coerce.number().int().positive().optional().catch(undefined),
     year: z.coerce.number().int().min(1990).max(2100).optional().catch(undefined),

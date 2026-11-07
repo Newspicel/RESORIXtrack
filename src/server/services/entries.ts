@@ -52,6 +52,7 @@ export type EntryView = {
   startAt: string
   endAt: string | null
   running: boolean
+  scheduledEndAt: string | null
   tz: string
   note: string
   source: EntrySource
@@ -73,6 +74,7 @@ export function serializeEntry(e: TimeEntry, flags: { edited?: boolean; correcte
     startAt: iso(e.startAt),
     endAt: iso(e.endAt),
     running: e.endAt == null,
+    scheduledEndAt: e.endAt == null ? iso(e.scheduledEndAt) : null,
     tz: e.tz,
     note: e.note,
     source: e.source,
@@ -301,7 +303,6 @@ function notifyCorrection(actor: Actor, owner: User, entry: TimeEntry, action: s
 
 export interface EntryInput {
   userId?: number | null
-  kind?: "work" | "break"
   startAt: string
   endAt: string
   note?: string
@@ -314,16 +315,10 @@ function targetFor(actor: Actor, userId: number | null | undefined): User {
   return requireView(actor, userId)
 }
 
-function checkKind(kind: string): asserts kind is "work" | "break" {
-  if (kind !== "work" && kind !== "break") throw new Validation("Invalid kind", { fields: { kind: "invalid" } })
-}
-
 /** Manual entry (forgot to clock in) or a correction by a lead/HR for a member (reason required then). */
 export function createEntry(actor: Actor, input: EntryInput): EntryView {
   const owner = targetFor(actor, input.userId)
   authorize(actor, owner)
-  const kind = input.kind ?? "work"
-  checkKind(kind)
   const start = parseInstantInput(input.startAt, owner.timezone, "startAt")
   if (!input.endAt) throw new Validation("End time is required", { fields: { endAt: "required" } })
   const end = parseInstantInput(input.endAt, owner.timezone, "endAt")
@@ -338,7 +333,7 @@ export function createEntry(actor: Actor, input: EntryInput): EntryView {
     .insert(timeEntries)
     .values({
       userId: owner.id,
-      kind,
+      kind: "work",
       startAt: start,
       endAt: end,
       tz: owner.timezone,
@@ -365,7 +360,6 @@ export function createEntry(actor: Actor, input: EntryInput): EntryView {
 }
 
 export interface EntryChanges {
-  kind?: "work" | "break"
   startAt?: string
   /** `null` keeps a running entry open; a finished entry cannot be reopened. */
   endAt?: string | null
@@ -396,17 +390,20 @@ export function updateEntry(
   ensureOpenInstants(owner, entry.startAt, entry.endAt, start, end)
   if (timesChanged) checkOverlap(owner.id, start, end, entry.id)
   const next = { ...entry, startAt: timesChanged ? start : entry.startAt, endAt: timesChanged ? end : entry.endAt }
-  if (changes.kind !== undefined) {
-    checkKind(changes.kind)
-    next.kind = changes.kind
-  }
+  if (next.endAt != null) next.scheduledEndAt = null
   if (changes.note !== undefined) next.note = (changes.note ?? "").trim().slice(0, 500)
   const before = snapshot("time_entry", entry)
   if (JSON.stringify(snapshot("time_entry", next)) === JSON.stringify(before))
     return serializeEntries([entry], owner.id)[0]
   const updated = db
     .update(timeEntries)
-    .set({ kind: next.kind, startAt: next.startAt, endAt: next.endAt, note: next.note, updatedAt: utcnow() })
+    .set({
+      startAt: next.startAt,
+      endAt: next.endAt,
+      scheduledEndAt: next.scheduledEndAt,
+      note: next.note,
+      updatedAt: utcnow(),
+    })
     .where(eq(timeEntries.id, entry.id))
     .returning()
     .get()
@@ -435,7 +432,7 @@ export function deleteEntry(actor: Actor, id: number, reason = "", source: Revis
   const endAt = entry.endAt ?? instantOfMs(Math.max(nowInstant().epochMilliseconds, ms(entry.startAt) + 1000))
   const updated = db
     .update(timeEntries)
-    .set({ isDeleted: true, endAt, updatedAt: utcnow() })
+    .set({ isDeleted: true, endAt, scheduledEndAt: null, updatedAt: utcnow() })
     .where(eq(timeEntries.id, entry.id))
     .returning()
     .get()

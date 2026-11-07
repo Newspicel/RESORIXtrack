@@ -2,18 +2,19 @@
   "label": "Timbratura",
   "start": "Timbra entrata",
   "stop": "Timbra uscita",
-  "break": "Inizia pausa",
-  "resume": "Termina pausa",
+  "stop_now": "Timbra uscita ora",
+  "stop_later": "Timbra uscita più tardi",
   "state": {
     "idle": "Non timbrato",
-    "working": "Al lavoro",
-    "on_break": "In pausa"
+    "working": "Al lavoro"
   },
   "headline": {
     "idle": "Non hai timbrato l'entrata",
-    "working": "Hai timbrato l'entrata",
-    "on_break": "Sei in pausa"
+    "working": "Hai timbrato l'entrata"
   },
+  "scheduled": "Uscita timbrata automaticamente alle {time}",
+  "scheduled_short": "fino alle {time}",
+  "cancel_scheduled": "Annulla",
   "offline": "Offline",
   "pending_one": "Offline, {count} in sospeso",
   "pending_other": "Offline, {count} in sospeso",
@@ -24,7 +25,7 @@
   "custom_time_label_in": "Ora di inizio",
   "custom_time_label_out": "Ora di fine",
   "custom_time_help_in": "Fino a 48 h indietro. Contrassegnata come manuale.",
-  "custom_time_help_out": "Un'ora successiva ad adesso vale per ieri. Contrassegnata come manuale.",
+  "custom_time_help_out": "Un'ora successiva ad adesso: l'uscita viene timbrata a quell'ora. Contrassegnata come manuale.",
   "rejected_one": "{count} timbratura offline rifiutata",
   "rejected_other": "{count} timbrature offline rifiutate",
   "custom_time": "Altra ora"

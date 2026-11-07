@@ -11,11 +11,12 @@ Self-hosted time tracking for small and mid-sized companies in Switzerland: cloc
 ## Features
 
 **Employees**
-- Clock in, break, clock out from every page; keyboard shortcuts; works offline and syncs later; custom time for a forgotten punch.
+- Clock in and out from every page; a break is a clock-out. Keyboard shortcut, works offline and syncs later, custom time for a forgotten punch, clock out later.
 - Time account (target from the work schedule, worked, balance) and vacation account (entitlement, carry-over, half days).
 - Absence requests with a calendar of holidays and existing absences; sick report in one click with optional doctor's note.
 - Work log: what was done, as free text, project or customer reference; optional or required per company.
 - Own edits are allowed and logged; corrections by others are marked and can be disputed.
+- The public holidays that apply to you, read-only.
 
 **Team leads and HR**
 - Team overview, approvals, corrections with a reason, team projects, deputies with a validity period.

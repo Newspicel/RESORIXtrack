@@ -2,18 +2,19 @@
   "label": "Stempeluhr",
   "start": "Einstempeln",
   "stop": "Ausstempeln",
-  "break": "Pause beginnen",
-  "resume": "Pause beenden",
+  "stop_now": "Jetzt ausstempeln",
+  "stop_later": "Später ausstempeln",
   "state": {
     "idle": "Nicht eingestempelt",
-    "working": "Am Arbeiten",
-    "on_break": "In der Pause"
+    "working": "Am Arbeiten"
   },
   "headline": {
     "idle": "Du bist nicht eingestempelt",
-    "working": "Du bist eingestempelt",
-    "on_break": "Du bist in der Pause"
+    "working": "Du bist eingestempelt"
   },
+  "scheduled": "Stempelt automatisch um {time} aus",
+  "scheduled_short": "bis {time}",
+  "cancel_scheduled": "Abbrechen",
   "offline": "Offline",
   "pending_one": "Offline, {count} ausstehend",
   "pending_other": "Offline, {count} ausstehend",
@@ -24,7 +25,7 @@
   "custom_time_label_in": "Startzeit",
   "custom_time_label_out": "Endzeit",
   "custom_time_help_in": "Bis 48 h zurück. Als manuell markiert.",
-  "custom_time_help_out": "Später als jetzt heisst gestern. Als manuell markiert.",
+  "custom_time_help_out": "Später als jetzt: stempelt dich dann aus. Als manuell markiert.",
   "rejected_one": "{count} Offline-Stempelung abgelehnt",
   "rejected_other": "{count} Offline-Stempelungen abgelehnt",
   "custom_time": "Andere Zeit"

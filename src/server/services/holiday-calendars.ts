@@ -20,6 +20,7 @@ import {
 import { Conflict, NotFound, Validation } from "../errors"
 import { localToday } from "../time"
 import type { CompanyDayKey } from "./holiday-calendars.schemas"
+import { applicableCalendar } from "./holidays"
 import { ensureHolidayChangeAllowed, latestSignedDate } from "./locks"
 import { notify } from "./notifications"
 import { type Actor, requireAdmin } from "./permissions"
@@ -446,6 +447,40 @@ export function calendarYearWithKinds(actor: Actor, calendarId: number, year: nu
     kind: kind(h.date),
   }))
 }
+
+/**
+ * The calendar that applies to the signed-in person, read-only, with the holidays of `year` and the years
+ * it has holidays for. `null` when no calendar is configured. Holds no other person's data.
+ */
+export function myHolidays(actor: Actor, year: number) {
+  const applied = applicableCalendar(actor.user)
+  if (!applied) return null
+  const cal = getCalendar(applied.id)
+  const rows = db
+    .select()
+    .from(holidays)
+    .where(
+      and(eq(holidays.calendarId, cal.id), gte(holidays.date, `${year}-01-01`), lte(holidays.date, `${year}-12-31`)),
+    )
+    .orderBy(asc(holidays.date))
+    .all()
+  const span = db
+    .select({ first: min(holidays.date), last: max(holidays.date) })
+    .from(holidays)
+    .where(eq(holidays.calendarId, cal.id))
+    .get()
+  const kind = holidayKinds(cal, rows)
+  return {
+    name: cal.name,
+    regionCode: cal.regionCode,
+    description: cal.description,
+    source: applied.source,
+    firstYear: span?.first ? Number(span.first.slice(0, 4)) : null,
+    lastYear: span?.last ? Number(span.last.slice(0, 4)) : null,
+    holidays: rows.map((h) => ({ id: h.id, date: h.date, name: h.name, fraction: h.fraction, kind: kind(h.date) })),
+  }
+}
+export type MyHolidays = NonNullable<ReturnType<typeof myHolidays>>
 
 // ------------------------------------------------------------------ optional company days
 

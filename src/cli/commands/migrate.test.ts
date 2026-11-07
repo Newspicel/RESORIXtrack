@@ -22,6 +22,7 @@ import {
   rawSqlite,
   runMigrations,
 } from "@/server/db"
+import { RETIRE_LEGACY_BREAKS } from "@/server/db/legacy-breaks"
 import { env } from "@/server/env"
 import { migrateDatabase } from "./migrate"
 
@@ -90,12 +91,14 @@ describe("rt migrate", () => {
     const file = path.join(dir, "rt.db")
     olderDatabase(file, true)
     expect(await migrateDatabase({ file, check: true, log })).toBe(1)
-    expect(lines.at(-1)).toMatch(/^pending: 0002_passkeys, 0003_guards_v2, 0004_arg_exempt, 0005_regular_night_work$/)
+    expect(lines.at(-1)).toMatch(
+      /^pending: 0002_passkeys, 0003_guards_v2, 0004_arg_exempt, 0005_regular_night_work, 0006_scheduled_clock_out$/,
+    )
     expect(await migrateDatabase({ file, log })).toBe(0)
     const backups = readdirSync(path.join(dir, "backups"))
     expect(backups).toHaveLength(1)
     expect(backups[0]).toMatch(/-premigrate\.zip\.enc$/)
-    expect(lines.some((l) => l.startsWith("applying 4 migration(s)"))).toBe(true)
+    expect(lines.some((l) => l.startsWith("applying 5 migration(s)"))).toBe(true)
     expect(migrationStatus(rawSqlite()).pending).toEqual([])
     // a user exists: no setup code
     expect(lines.join("\n")).not.toContain("first-run setup")
@@ -123,6 +126,49 @@ describe("rt migrate", () => {
     const none = settingsAfter(null)
     expect(none.rows).toEqual([{ key: "holiday_work_surcharge_percent", value: "0" }])
     expect(none.cal).toEqual({ r: "ch-fr-fribourg" })
+  })
+
+  it("retires break entries with a revision each, except in signed-off months", () => {
+    const sqlite = openSqlite(path.join(dir, "breaks.db"))
+    runMigrations(createDb(sqlite), olderFolder(6))
+    sqlite.prepare("INSERT INTO users (id, email, name) VALUES (1, 'ada@example.nomail', 'Ada')").run()
+    const entry = sqlite.prepare("INSERT INTO time_entries (user_id, kind, start_at, end_at) VALUES (1, ?, ?, ?)")
+    entry.run("break", "2026-10-02T10:00:00.000000Z", "2026-10-02T10:30:00.000000Z")
+    entry.run("work", "2026-11-03T07:00:00.000000Z", "2026-11-03T11:00:00.000000Z")
+    entry.run("break", "2026-11-03T11:00:00.000000Z", "2026-11-03T11:45:30.123456Z")
+    entry.run("break", "2026-11-04T11:00:00.000000Z", null)
+    sqlite
+      .prepare(
+        "INSERT INTO month_signoffs (user_id, month, period_start_date, period_end_date, period_start_utc, period_end_utc, digest, seal) VALUES (1, '2026-10', '2026-10-01', '2026-10-31', '2026-09-30T22:00:00.000000Z', '2026-10-31T23:00:00.000000Z', 'd', 's')",
+      )
+      .run()
+    runMigrations(createDb(sqlite))
+    const rows = sqlite.prepare("SELECT id, kind, is_deleted AS d, end_at IS NOT NULL AS ended FROM time_entries").all()
+    expect(rows).toEqual([
+      { id: 1, kind: "break", d: 0, ended: 1 },
+      { id: 2, kind: "work", d: 0, ended: 1 },
+      { id: 3, kind: "break", d: 1, ended: 1 },
+      { id: 4, kind: "break", d: 1, ended: 1 },
+    ])
+    const revs = sqlite
+      .prepare<[], { entity_id: number; action: string; source: string; before: string; after: string }>(
+        "SELECT entity_id, action, source, before, after FROM revisions ORDER BY entity_id",
+      )
+      .all()
+    expect(revs.map((r) => [r.entity_id, r.action, r.source])).toEqual([
+      [3, "delete", "migration"],
+      [4, "delete", "migration"],
+    ])
+    expect(JSON.parse(revs[0].before)).toMatchObject({ end_at: "2026-11-03T11:45:30.123Z", is_deleted: false })
+    expect(JSON.parse(revs[0].after)).toMatchObject({ is_deleted: true, scheduled_end_at: null })
+    expect(JSON.parse(revs[1].before).end_at).toBeNull()
+    expect(JSON.parse(revs[1].after).end_at).toMatch(/Z$/)
+    sqlite.close()
+  })
+
+  it("migration 0006 runs the same statements as retireLegacyBreaks", () => {
+    const sql = readFileSync(path.join(MIGRATIONS_DIR, "0006_scheduled_clock_out.sql"), "utf8")
+    for (const statement of RETIRE_LEGACY_BREAKS) expect(sql).toContain(statement)
   })
 
   it("skips the backup on request", async () => {

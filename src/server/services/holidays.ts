@@ -6,20 +6,29 @@ import { and, eq, gte, lte } from "drizzle-orm"
 import { db } from "../db"
 import { type Holiday, holidayCalendars, holidays, teams, type User } from "../db/schema"
 
-export function resolveCalendarId(user: Pick<User, "holidayCalendarId" | "teamId">): number | null {
-  if (user.holidayCalendarId != null) return user.holidayCalendarId
+/** Where a person's calendar comes from: assigned to them, their team's, or the company default. */
+export type CalendarSource = "user" | "team" | "default"
+
+export function applicableCalendar(
+  user: Pick<User, "holidayCalendarId" | "teamId">,
+): { id: number; source: CalendarSource } | null {
+  if (user.holidayCalendarId != null) return { id: user.holidayCalendarId, source: "user" }
   if (user.teamId != null) {
     const team = db.select({ cal: teams.holidayCalendarId }).from(teams).where(eq(teams.id, user.teamId)).get()
-    if (team?.cal != null) return team.cal
+    if (team?.cal != null) return { id: team.cal, source: "team" }
   }
-  return (
-    db
-      .select({ id: holidayCalendars.id })
-      .from(holidayCalendars)
-      .where(eq(holidayCalendars.isDefault, true))
-      .limit(1)
-      .get()?.id ?? null
-  )
+  const def = db
+    .select({ id: holidayCalendars.id })
+    .from(holidayCalendars)
+    .where(eq(holidayCalendars.isDefault, true))
+    .limit(1)
+    .get()
+  return def ? { id: def.id, source: "default" } : null
+}
+
+/** The same order reduces the target hours, so what people see on their holidays page is what counts. */
+export function resolveCalendarId(user: Pick<User, "holidayCalendarId" | "teamId">): number | null {
+  return applicableCalendar(user)?.id ?? null
 }
 
 /** Holidays of a calendar in [start, end], keyed by date. */

@@ -39,8 +39,8 @@ function Presence({ m }: { m: Member }) {
   if (m.presence.state !== "off") {
     const since = fmtTime(m.presence.since, { intl: i.intl, tz: me.timezone, hour12: me.timeFormat === "12h" })
     return (
-      <StatusBadge tone={m.presence.state === "working" ? "positive" : "warning"} icon="dot">
-        {i.t(m.presence.state === "working" ? "team.working_since" : "team.break_since", { time: since })}
+      <StatusBadge tone="positive" icon="dot">
+        {i.t("team.working_since", { time: since })}
       </StatusBadge>
     )
   }

@@ -13,7 +13,6 @@
   "running": "in corso",
   "break_warning": "Pausa troppo breve",
   "legend_work": "Lavoro",
-  "legend_break": "Pausa",
   "legend_edited": "Modificata / manuale",
   "legend_corrected": "Modificata da un'altra persona",
   "kind": {
@@ -51,12 +50,14 @@
     "manual": "Inserimento manuale",
     "api": "API",
     "desktop": "App desktop",
-    "offline": "Offline"
+    "offline": "Offline",
+    "migration": "Aggiornamento di sistema"
   },
   "field": {
     "kind": "Tipo",
     "start_at": "Inizio",
     "end_at": "Fine",
+    "scheduled_end_at": "Uscita pianificata",
     "note": "Nota",
     "is_deleted": "Eliminata"
   },

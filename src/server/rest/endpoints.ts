@@ -18,6 +18,7 @@ import { cancelAbsence, createAbsence, getAbsenceDto, listAbsences, serializeAbs
 import { computeDaysFrom, loadContext, summarize, timeBalance, vacationAccount } from "../services/accounts"
 import { type ClockAction, clockAction, clockState, syncOffline } from "../services/clock"
 import { createEntry, deleteEntry, getEntry, listEntries, updateEntry } from "../services/entries"
+import { myHolidays } from "../services/holiday-calendars"
 import { withOutbox } from "../services/outbox"
 import { type Actor, isManager, requireView, visibleUserIds } from "../services/permissions"
 import { timesheet } from "../services/reports"
@@ -142,7 +143,9 @@ const listUsers = endpoint({
 // ------------------------------------------------------------------ clock
 
 const clockBody = z.object({
-  at: instantInput.optional().meta({ description: "When it happened (offline clients); at most 48 h back." }),
+  at: instantInput
+    .optional()
+    .meta({ description: "When it happened (offline clients), at most 48 h back; for `out` also a future time." }),
   clientId: z
     .string()
     .min(1)
@@ -169,21 +172,27 @@ function clockWithId(ctx: Ctx<unknown, z.output<typeof clockBody>>, action: Cloc
   })
 }
 
+const CLOCK_RULES =
+  "Idempotent: repeating an action changes nothing. There is no break action: a break is a clock-out followed by a clock-in. Refused outside the employment period (409 employment_ended) and in signed-off months (409 period_signed_off)."
+
 const CLOCK_PATHS = [
-  ["in", "start", "Clock in"],
-  ["break", "break", "Start a break"],
-  ["resume", "resume", "End the break"],
-  ["out", "stop", "Clock out"],
+  ["in", "start", "Clock in", ""],
+  [
+    "out",
+    "stop",
+    "Clock out",
+    " An `at` in the future (at most 24 h after the clock-in) schedules the clock-out: the entry stays open, `scheduledEnd` shows the time, and the server closes it then.",
+  ],
+  ["unschedule", "unschedule", "Cancel a scheduled clock-out", " The person stays clocked in."],
 ] as const
 
-const clockActions = CLOCK_PATHS.map(([path, action, summary]) =>
+const clockActions = CLOCK_PATHS.map(([path, action, summary, extra]) =>
   endpoint({
     method: "POST",
     path: `/clock/${path}`,
     tag: "Clock",
     summary,
-    description:
-      "Idempotent: repeating the current state's action changes nothing. Refused outside the employment period (409 employment_ended) and in signed-off months (409 period_signed_off).",
+    description: CLOCK_RULES + extra,
     scope: "time:write",
     body: clockBody,
     response: S.ClockResult,
@@ -191,12 +200,11 @@ const clockActions = CLOCK_PATHS.map(([path, action, summary]) =>
   }),
 )
 
-const clockSyncAction = z.enum(["in", "break", "resume", "out"])
+const clockSyncAction = z.enum(["in", "out", "unschedule"])
 const ACTION_OF: Record<z.output<typeof clockSyncAction>, ClockAction> = {
   in: "start",
-  break: "break",
-  resume: "resume",
   out: "stop",
+  unschedule: "unschedule",
 }
 
 const clockSync = endpoint({
@@ -321,7 +329,6 @@ const createEntryEp = endpoint({
   summary: "Add a time entry (forgot to clock)",
   scope: "time:write",
   body: z.object({
-    kind: z.enum(["work", "break"]).default("work"),
     startAt: instantInput,
     endAt: instantInput,
     note: z.string().max(500).default(""),
@@ -340,7 +347,6 @@ const updateEntryEp = endpoint({
   summary: "Change an own time entry",
   scope: "time:write",
   body: z.object({
-    kind: z.enum(["work", "break"]).optional(),
     startAt: instantInput.optional(),
     endAt: instantInput.optional(),
     note: z.string().max(500).optional(),
@@ -405,6 +411,19 @@ const vacation = endpoint({
 })
 
 // ------------------------------------------------------------------ absences
+
+const myHolidaysEp = endpoint({
+  method: "GET",
+  path: "/holidays",
+  tag: "Absences",
+  summary: "Public holidays that apply to me",
+  description:
+    "The calendar assigned to the key's owner, else the team's, else the company default; `null` when none is set up. On working days these holidays reduce the target.",
+  scope: "absences:read",
+  query: z.object({ year: S.qYear.optional().meta({ description: "Default: current year" }) }),
+  response: S.MyHolidays.nullable(),
+  handler: ({ actor, query }) => myHolidays(actor, query.year ?? Number(localToday(actor.user.timezone).slice(0, 4))),
+})
 
 const absenceTypes = endpoint({
   method: "GET",
@@ -550,6 +569,7 @@ export const ENDPOINTS: Endpoint[] = [
   balance,
   vacation,
   absenceTypes,
+  myHolidaysEp,
   listAbsencesEp,
   getAbsenceEp,
   createAbsenceEp,

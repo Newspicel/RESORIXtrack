@@ -13,7 +13,6 @@
   "running": "läuft",
   "break_warning": "Pause zu kurz",
   "legend_work": "Arbeit",
-  "legend_break": "Pause",
   "legend_edited": "Bearbeitet / manuell",
   "legend_corrected": "Von jemand anderem geändert",
   "kind": {
@@ -51,12 +50,14 @@
     "manual": "Manuell erfasst",
     "api": "API",
     "desktop": "Desktop-App",
-    "offline": "Offline"
+    "offline": "Offline",
+    "migration": "System-Update"
   },
   "field": {
     "kind": "Art",
     "start_at": "Beginn",
     "end_at": "Ende",
+    "scheduled_end_at": "Geplantes Ausstempeln",
     "note": "Notiz",
     "is_deleted": "Gelöscht"
   },

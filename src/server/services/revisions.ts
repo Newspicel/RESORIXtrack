@@ -12,7 +12,7 @@ import { iso } from "../time"
 import type { Actor } from "./permissions"
 
 export const SNAPSHOT_KEYS = {
-  time_entry: ["kind", "start_at", "end_at", "tz", "note", "source", "is_deleted"],
+  time_entry: ["kind", "start_at", "end_at", "scheduled_end_at", "tz", "note", "source", "is_deleted"],
   absence: [
     "type_id",
     "start_date",
@@ -57,7 +57,7 @@ export const SNAPSHOT_KEYS = {
 export type RevisionEntity = keyof typeof SNAPSHOT_KEYS
 
 const camel = (k: string) => k.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase())
-const INSTANT_KEYS = new Set(["start_at", "end_at"])
+const INSTANT_KEYS = new Set(["start_at", "end_at", "scheduled_end_at"])
 
 /** Snapshot of a row (camelCase drizzle object) in the stored snake_case form. */
 export function snapshot(entity: RevisionEntity, row: Record<string, unknown>): JsonObject {

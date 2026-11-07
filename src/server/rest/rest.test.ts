@@ -180,18 +180,21 @@ describe("me and people", () => {
 })
 
 describe("clock", () => {
-  it("clocks in, takes a break, resumes and clocks out; actions are idempotent", async () => {
+  it("clocks in and out; actions are idempotent; a future out schedules the clock-out", async () => {
     const key = await keyFor(org.anna.id)
     const a = await call(key, "POST", "/clock/in")
     expect(a.status).toBe(200)
-    expect(a.json).toMatchObject({ state: "working", replayed: false })
+    expect(a.json).toMatchObject({ state: "working", replayed: false, scheduledEnd: null })
     expect((await call(key, "POST", "/clock/in")).json.state).toBe("working")
-    expect((await call(key, "POST", "/clock/break", {})).json.state).toBe("on_break")
-    expect((await call(key, "POST", "/clock/resume")).json.state).toBe("working")
+    const later = await call(key, "POST", "/clock/out", { at: "2026-11-05T16:00:00Z" })
+    expect(later.json).toMatchObject({ state: "working", scheduledEnd: "2026-11-05T16:00:00.000Z" })
+    expect((await call(key, "GET", "/clock")).json.scheduledEnd).toBe("2026-11-05T16:00:00.000Z")
+    expect((await call(key, "POST", "/clock/unschedule")).json).toMatchObject({ state: "working", scheduledEnd: null })
     expect((await call(key, "POST", "/clock/out")).json.state).toBe("idle")
     expect((await call(key, "GET", "/clock")).json).toMatchObject({ state: "idle", entry: null })
     const rows = db.select().from(timeEntries).where(eq(timeEntries.userId, org.anna.id)).all()
-    expect(rows.map((r) => r.source)).toEqual(["api", "api", "api"])
+    expect(rows.map((r) => r.source)).toEqual(["api"])
+    expect((await call(key, "POST", "/clock/break")).status).toBe(404)
   })
 
   it("replays a clientId without changing anything and marks desktop clients", async () => {
@@ -212,7 +215,10 @@ describe("clock", () => {
     const future = await call(key, "POST", "/clock/in", { at: "2026-11-06T08:00:00Z" })
     expect(future.status).toBe(422)
     expect(future.json.error.fields.at).toBe("future")
-    expect((await call(key, "POST", "/clock/break")).json.error.code).toBe("not_working")
+    await call(key, "POST", "/clock/in")
+    const late = await call(key, "POST", "/clock/out", { at: "2026-11-06T09:00:00Z" })
+    expect(late.status).toBe(422)
+    expect(late.json.error.fields.at).toBe("too_late")
     expect((await call(key, "POST", "/clock/in", { at: 5 })).status).toBe(422)
     expect((await call(key, "POST", "/clock/in", "{")).status).toBe(422)
     const bad = await handleRest(
@@ -348,6 +354,15 @@ describe("absences and accounts", () => {
     const ben = await keyFor(org.ben.id)
     expect((await call(ben, "GET", `/absences/${a.id}`)).status).toBe(404)
     expect((await call(ben, "GET", `/absences?from=2026-11-01&to=2026-11-30&userId=${org.anna.id}`)).status).toBe(404)
+  })
+
+  it("GET /holidays: the caller's calendar only", async () => {
+    const key = await keyFor(org.anna.id)
+    const h = await call(key, "GET", "/holidays?year=2026")
+    expect(h.status).toBe(200)
+    expect(h.json).toMatchObject({ source: "default", firstYear: 2026, lastYear: 2026 })
+    expect(h.json.holidays.map((d: { date: string }) => d.date)).toEqual(["2026-12-08", "2026-12-25"])
+    expect((await call(key, "GET", "/holidays?year=2027")).json.holidays).toEqual([])
   })
 
   it("GET /balance and /vacation", async () => {

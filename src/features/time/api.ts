@@ -126,14 +126,11 @@ export const timeOverviewQuery = () =>
 
 // ------------------------------------------------------------------ entries
 
-const kind = z.enum(["work", "break"])
-
 export const createEntryFn = createServerFn({ method: "POST" })
   .middleware([authed])
   .validator(
     z.object({
       userId: id.nullish(),
-      kind: kind.default("work"),
       startAt: instant,
       endAt: instant,
       note: z.string().max(500).default(""),
@@ -147,7 +144,6 @@ export const updateEntryFn = createServerFn({ method: "POST" })
   .validator(
     z.object({
       id,
-      kind: kind.optional(),
       startAt: instant.optional(),
       endAt: instant.nullish(),
       note: z.string().max(500).optional(),

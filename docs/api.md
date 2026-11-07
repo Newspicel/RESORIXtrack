@@ -33,13 +33,16 @@ B=https://time.example.com/api/v1
 curl -H "$H" $B/me
 curl -H "$H" $B/clock
 curl -X POST -H "$H" -H "X-Client: desktop/1.0" $B/clock/in
+curl -X POST -H "$H" -d '{"at":"2026-11-05T16:00:00Z"}' $B/clock/out   # clock out later
+curl -H "$H" "$B/holidays?year=2026"
 curl -H "$H" "$B/entries?from=2026-11-01&to=2026-11-30"
 ```
 
 ## Conventions
 
 - Dates `YYYY-MM-DD` in the person's timezone; instants ISO 8601 UTC (`…Z`); durations in minutes.
-- Clock actions are idempotent and accept an optional past time for offline sync; future times are refused.
+- Clock actions (`/clock/in`, `/clock/out`, `/clock/unschedule`) are idempotent and accept an optional past time for offline sync. There is no break action: a break is a clock-out.
+- `/clock/out` with a future `at` (at most 24 h after the clock-in) schedules the clock-out: the entry stays open, `scheduledEnd` shows the time, the server closes it then. `/clock/unschedule` drops the plan. Future times on `/clock/in` are refused.
 - Out-of-scope ids answer `404`.
 
 ## Errors

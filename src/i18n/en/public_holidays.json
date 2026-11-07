@@ -1,0 +1,12 @@
+{
+  "sub": "The holidays that apply to you. On your working days they reduce your target.",
+  "manage": "Manage calendars",
+  "source": {
+    "user": "Assigned to you",
+    "team": "Your team's calendar",
+    "default": "Company default"
+  },
+  "none": "No holiday calendar yet",
+  "none_help": "Your administration has not set one up yet.",
+  "help": "Half days cover the afternoon. A holiday is missing? Tell your administration."
+}

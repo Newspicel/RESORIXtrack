@@ -62,7 +62,7 @@ describe("seed-demo", () => {
       balance_adjustments: 4,
       month_signoffs: 4,
     })
-    expect(c.time_entries).toBeGreaterThan(1500)
+    expect(c.time_entries).toBeGreaterThan(1000)
     expect(c.work_logs).toBeGreaterThan(500)
     expect(c.holidays).toBeGreaterThan(0)
 

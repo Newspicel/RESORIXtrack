@@ -58,7 +58,6 @@
   "now": "Jetzt",
   "off": "Nicht da",
   "working_since": "Da seit {time}",
-  "break_since": "Pause seit {time}",
   "worked_target": "Ist / Soll",
   "signoff": "Abzeichnung",
   "not_signed": "Offen",

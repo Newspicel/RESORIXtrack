@@ -1,19 +1,19 @@
 /**
  * The dashboard's clock card: a ring that fills towards today's target, the live time, the state and
- * the actions (clock in/out, break, custom time, add time manually, report sick).
+ * the actions (clock in/out, custom time, add time manually, report sick) and a scheduled clock-out.
  */
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import { AlertTriangle, History, Plus, Thermometer } from "lucide-react"
+import { AlertTriangle, Clock3, History, Plus, Thermometer } from "lucide-react"
 import { useId, useState } from "react"
 import { toast } from "sonner"
 import { ConfirmDialog } from "@/components/app/confirm"
 import { Button, ButtonLink } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { reportSickTodayFn, sickCheckQuery } from "@/features/absences/api"
-import { type Clock, ClockActions, OfflineBadge } from "@/features/clock/clock-control"
+import { type Clock, ClockActions, OfflineBadge, useScheduledTime } from "@/features/clock/clock-control"
 import { CustomTimeButton } from "@/features/clock/custom-time"
-import { type LiveClock, liveBreakMin, liveWorkedMin } from "@/features/clock/use-clock"
+import { type LiveClock, liveWorkedMin } from "@/features/clock/use-clock"
 import { useNow } from "@/features/clock/use-now"
 import { invalidateTimeData } from "@/features/time/invalidate"
 import { fmtClockTime, wallClock } from "@/features/time/lib"
@@ -21,7 +21,6 @@ import { Notice } from "@/features/time/notice"
 import { fmtDay, fmtMinutes } from "@/lib/format"
 import { useI18n } from "@/lib/i18n"
 import { useMe } from "@/lib/session"
-import { cn } from "@/lib/utils"
 
 const R = 76
 const C = 2 * Math.PI * R
@@ -46,10 +45,7 @@ function Ring({ c, targetMin }: { c: LiveClock; targetMin: number }) {
             strokeLinecap="round"
             strokeDasharray={C}
             strokeDashoffset={C * (1 - pct)}
-            className={cn(
-              "transition-[stroke-dashoffset] duration-500 ease-out",
-              c.state === "on_break" ? "stroke-break" : "stroke-work",
-            )}
+            className="stroke-work transition-[stroke-dashoffset] duration-500 ease-out"
           />
         ) : null}
       </svg>
@@ -80,7 +76,7 @@ export function HeroClock({
   const sick = useQuery(sickCheckQuery())
   const [confirmSick, setConfirmSick] = useState(false)
   const c = clock.data
-  const now = useNow(c ? c.state === "on_break" : false)
+  const scheduled = useScheduledTime(c)
   if (!c) return <Skeleton className="h-60 rounded-xl" />
   const hour12 = me.timeFormat === "12h"
   const tz = me.timezone
@@ -88,7 +84,7 @@ export function HeroClock({
   // still running from a previous day (forgot to clock out)
   const overnight = c.state !== "idle" && since && since.date < today.date ? since : null
   const isSick = today.absences.some((a) => a.category === "sick" && a.status === "approved")
-  const breakMin = liveBreakMin(c, now)
+  const breakMin = c.todayBreakMin
   const meta = [
     c.since && c.state !== "idle"
       ? t("dashboard.since", { time: fmtClockTime(wallClock(c.since, tz).time, hour12) })
@@ -138,11 +134,21 @@ export function HeroClock({
             <p className="text-sm text-muted-foreground tabular" suppressHydrationWarning>
               {meta.join(" · ")}
             </p>
+            {scheduled ? (
+              <p className="flex items-center justify-center gap-1.5 text-sm sm:justify-start">
+                <Clock3 className="size-4 text-muted-foreground" aria-hidden />
+                {t("clock.scheduled", { time: scheduled })}
+                <Button variant="ghost" size="sm" disabled={clock.acting} onClick={() => void clock.act("unschedule")}>
+                  {t("clock.cancel_scheduled")}
+                </Button>
+              </p>
+            ) : null}
           </div>
           <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
             <ClockActions clock={clock} size="lg" className="gap-2" custom={false} />
             <CustomTimeButton
               state={c.state}
+              since={c.since}
               onSubmit={(at) => void clock.act(c.state === "idle" ? "start" : "stop", { at, custom: true })}
               trigger={
                 <Button variant="ghost" size="lg">
@@ -155,7 +161,7 @@ export function HeroClock({
               <Plus data-icon="inline-start" />
               {t("dashboard.forgot_clock")}
             </ButtonLink>
-            {sick.data?.allowed && c.state !== "on_break" ? (
+            {sick.data?.allowed ? (
               <Button variant="ghost" size="lg" onClick={() => setConfirmSick(true)}>
                 <Thermometer data-icon="inline-start" />
                 {t("dashboard.report_sick")}

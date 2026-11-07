@@ -90,9 +90,7 @@ describe("manual entries", () => {
     expect(() => createEntry(A, { startAt: local(TODAY, "11:00"), endAt: local(TODAY, "13:00") })).toThrow(
       expect.objectContaining({ code: "overlap" }),
     )
-    expect(createEntry(A, { startAt: local(TODAY, "12:00"), endAt: local(TODAY, "12:30"), kind: "break" }).kind).toBe(
-      "break",
-    )
+    expect(createEntry(A, { startAt: local(TODAY, "12:30"), endAt: local(TODAY, "13:00") }).kind).toBe("work")
   })
 
   it("own edits are logged, soft delete keeps history, restore brings it back", () => {

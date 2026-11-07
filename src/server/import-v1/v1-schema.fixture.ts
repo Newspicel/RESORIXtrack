@@ -372,3 +372,6 @@ CREATE INDEX ix_work_logs_user_date ON work_logs (user_id, date);
 
 /** Alembic 0002: users.time_format. */
 export const V1_MIGRATION_0002 = `ALTER TABLE users ADD COLUMN time_format VARCHAR(3) DEFAULT '24h' NOT NULL;`
+
+/** Alembic 0003: time_entries.scheduled_end_at ("clock out later"); break entries were retired. */
+export const V1_MIGRATION_0003 = `ALTER TABLE time_entries ADD COLUMN scheduled_end_at DATETIME;`

@@ -10,7 +10,7 @@ import * as s from "@/server/db/schema"
 import { computeDigest, computeSeal, PyFloat, sealKey } from "@/server/services/seals"
 import { makeUser } from "@/test/factories"
 import { formatReport, ImportError, importV1 } from "."
-import { V1_MIGRATION_0002, V1_SCHEMA_0001 } from "./v1-schema.fixture"
+import { V1_MIGRATION_0002, V1_MIGRATION_0003, V1_SCHEMA_0001 } from "./v1-schema.fixture"
 
 const KEY = "v1-test-signoff-key"
 const TS = "2026-01-05 08:00:00.123456"
@@ -390,6 +390,34 @@ describe("import-v1", () => {
     old.close()
     expect(report.revision).toBe("0001")
     expect(db.select().from(s.users).where(eq(s.users.id, 12)).get()!.timeFormat).toBe("24h")
+  })
+
+  it("supports Alembic revision 0003 (scheduled clock-out)", () => {
+    const src = buildV1("0002")
+    src.exec(V1_MIGRATION_0003)
+    src.prepare("UPDATE alembic_version SET version_num = '0003'").run()
+    src.prepare("UPDATE time_entries SET scheduled_end_at = '2026-11-05 16:00:00.000000' WHERE id = 102").run()
+    expect(run(src).revision).toBe("0003")
+    src.close()
+    expect(db.select().from(s.timeEntries).where(eq(s.timeEntries.id, 102)).get()!.scheduledEndAt).toBe(
+      "2026-11-05T16:00:00.000000Z",
+    )
+  })
+
+  it("retires break entries of older v1 databases outside signed-off months", () => {
+    insert(v1, "time_entries", [
+      [103, 12, "break", "2026-10-02 10:00:00", "2026-10-02 10:30:00", "Europe/Zurich", "", "clock", 0, 12, TS, TS],
+    ])
+    const report = run()
+    expect(report.retiredBreaks).toBe(1)
+    expect(formatReport(report)).toContain("Break entries retired")
+    const kept = db.select().from(s.timeEntries).where(eq(s.timeEntries.id, 101)).get()!
+    expect(kept).toMatchObject({ kind: "break", isDeleted: false })
+    expect(db.select().from(s.timeEntries).where(eq(s.timeEntries.id, 103)).get()!.isDeleted).toBe(true)
+    const rev = rawSqlite()
+      .prepare("SELECT action, source FROM revisions WHERE entity = 'time_entry' AND entity_id = 103")
+      .all()
+    expect(rev).toEqual([{ action: "delete", source: "migration" }])
   })
 
   it("keeps a v1 holiday surcharge as a time credit", () => {

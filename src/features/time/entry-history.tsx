@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils"
 import { disputeEntryFn, entryHistoryQuery } from "./api"
 import type { Entry } from "./entry-dialog"
 
-const FIELDS = ["kind", "start_at", "end_at", "note", "is_deleted"] as const
+const FIELDS = ["kind", "start_at", "end_at", "scheduled_end_at", "note", "is_deleted"] as const
 /** Reasons the app writes itself for clocking; not worth showing as a reason. */
 export const HIDDEN_REASONS = new Set(["clock", "clock (offline sync: earlier time)"])
 
@@ -49,7 +49,7 @@ export function EntryHistoryDialog({
     if (v == null || v === "") return "–"
     if (k === "is_deleted") return v ? t("common.yes") : t("common.no")
     const s = typeof v === "string" || typeof v === "number" ? String(v) : JSON.stringify(v)
-    if (k === "start_at" || k === "end_at") return fmtDateTime(s, { intl, tz, hour12 })
+    if (k === "start_at" || k === "end_at" || k === "scheduled_end_at") return fmtDateTime(s, { intl, tz, hour12 })
     if (k === "kind") return t(`time.kind.${s}`)
     return s
   }

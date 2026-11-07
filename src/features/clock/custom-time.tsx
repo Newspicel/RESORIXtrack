@@ -1,6 +1,7 @@
 /**
- * "Clock in/out at a chosen time": a small popover with a time input. A time later than now means the
- * previous day (forgot to clock out last night). The server marks such entries as manual.
+ * "Clock in/out at a chosen time": a small popover with a time input. The server marks such entries as
+ * manual. A time later than now means the previous day (forgot to clock out last night), except a clock-out
+ * within 24 h of the clock-in: that is "clock out later", the server closes the entry then.
  */
 import { History } from "lucide-react"
 import { type ReactElement, useId, useState } from "react"
@@ -12,16 +13,31 @@ import { addDaysStr } from "@/lib/format"
 import { useT } from "@/lib/i18n"
 import { useMe } from "@/lib/session"
 import type { ClockStateName } from "@/server/services/clock"
-import { minutesOfDay, todayIn, wallClock, wallToInstant } from "../time/lib"
+import { todayIn, wallClock, wallToInstant } from "../time/lib"
 import { TimeInput } from "../time/time-input"
+import { useNow } from "./use-now"
+
+const MAX_ENTRY_MS = 24 * 3600_000
+
+/** The instant a chosen wall-clock time stands for (see the module comment). */
+export function customInstant(time: string, tz: string, now: number, since: string | null): string {
+  const today = todayIn(tz)
+  const at = wallToInstant(today, time, tz)
+  if (Date.parse(at) <= now) return at
+  if (since && Date.parse(at) - Date.parse(since) <= MAX_ENTRY_MS) return at
+  return wallToInstant(addDaysStr(today, -1), time, tz)
+}
 
 export function CustomTimeButton({
   state,
+  since,
   onSubmit,
   size = "icon-sm",
   trigger,
 }: {
   state: ClockStateName
+  /** Start of the running entry. */
+  since: string | null
   onSubmit: (at: string) => void
   size?: "icon-sm" | "icon" | "icon-lg"
   trigger?: ReactElement
@@ -40,13 +56,7 @@ export function CustomTimeButton({
       setError(true)
       return
     }
-    const tz = me.timezone
-    const today = todayIn(tz)
-    const date =
-      minutesOfDay(Date.now(), tz) < Number(time.slice(0, 2)) * 60 + Number(time.slice(3))
-        ? addDaysStr(today, -1)
-        : today
-    onSubmit(wallToInstant(date, time, tz))
+    onSubmit(customInstant(time, me.timezone, Date.now(), dir === "out" ? since : null))
     setOpen(false)
   }
 
@@ -98,9 +108,18 @@ export function CustomTimeButton({
             />
             <FieldDescription>{t(`clock.custom_time_help_${dir}`)}</FieldDescription>
           </Field>
-          <Button type="submit">{t(dir === "in" ? "clock.start" : "clock.stop")}</Button>
+          <SubmitButton dir={dir} time={time} since={since} />
         </form>
       </PopoverContent>
     </Popover>
   )
+}
+
+function SubmitButton({ dir, time, since }: { dir: "in" | "out"; time: string; since: string | null }) {
+  const t = useT()
+  const me = useMe()
+  const now = useNow(dir === "out")
+  const later =
+    dir === "out" && /^\d{2}:\d{2}$/.test(time) && Date.parse(customInstant(time, me.timezone, now, since)) > now
+  return <Button type="submit">{t(dir === "in" ? "clock.start" : later ? "clock.stop_later" : "clock.stop")}</Button>
 }

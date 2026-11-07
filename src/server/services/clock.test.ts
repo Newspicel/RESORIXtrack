@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it } from "vitest"
 import { rawSqlite } from "@/server/db"
 import { freeze } from "@/server/time"
 import { loadActor, lockMonth, makeEntry, makeSchedule, makeUser } from "@/test/factories"
-import { clockAction, clockState, openEntry, stopRunning, syncOffline } from "./clock"
-import { listEntries } from "./entries"
+import { clockAction, clockState, closeDueScheduled, openEntry, stopRunning, syncOffline } from "./clock"
+import { deleteEntry, listEntries, updateEntry } from "./entries"
 
 const NOW = Date.parse("2026-11-05T14:00:00Z") // Thu 15:00 Zurich
 const TODAY = "2026-11-05"
@@ -19,30 +19,28 @@ function anna() {
 beforeEach(() => setNow(0))
 
 describe("clock", () => {
-  it("runs the state machine idempotently", () => {
+  it("clocks in and out idempotently; a break is the gap between two entries", () => {
     const A = anna()
     expect(clockState(A.user).state).toBe("idle")
-    expect(() => clockAction(A, "break")).toThrow(expect.objectContaining({ code: "not_working" }))
-    expect(() => clockAction(A, "resume")).toThrow(expect.objectContaining({ code: "not_on_break" }))
     expect(clockAction(A, "start").state).toBe("working")
     expect(clockAction(A, "start").state).toBe("working")
     setNow(60)
-    expect(clockAction(A, "break").state).toBe("on_break")
+    expect(clockAction(A, "stop").state).toBe("idle")
     setNow(90)
-    expect(clockAction(A, "resume").state).toBe("working")
+    expect(clockAction(A, "start").state).toBe("working")
     setNow(120)
     const s = clockAction(A, "stop")
-    expect(s).toMatchObject({ state: "idle", todayWorkedMin: 90, todayBreakMin: 30 })
+    expect(s).toMatchObject({ state: "idle", todayWorkedMin: 90, todayBreakMin: 30, scheduledEnd: null })
     const entries = listEntries(A, A.id, TODAY, TODAY)
-    expect(entries.map((e) => e.kind)).toEqual(["work", "break", "work"])
+    expect(entries.map((e) => e.kind)).toEqual(["work", "work"])
     expect(entries.every((e) => e.source === "clock")).toBe(true)
     expect(clockAction(A, "stop").state).toBe("idle")
+    expect(clockAction(A, "unschedule").state).toBe("idle")
   })
 
   it("accepts backdated times within limits", () => {
     const A = anna()
     expect(clockAction(A, "start", { at: t(-20) }).since).toMatch(/^2026-11-05T13:40/)
-    expect(() => clockAction(A, "stop", { at: t(60) })).toThrow(expect.objectContaining({ fields: { at: "future" } }))
     expect(() => clockAction(A, "stop", { at: t(-3 * 24 * 60) })).toThrow(
       expect.objectContaining({ fields: { at: "too_old" } }),
     )
@@ -78,14 +76,14 @@ describe("clock", () => {
     const A = anna()
     for (const [action, state] of [
       ["start", "working"],
-      ["break", "on_break"],
-      ["resume", "working"],
+      ["stop", "idle"],
+      ["start", "working"],
       ["stop", "idle"],
     ] as const) {
       expect(clockAction(A, action).state).toBe(state)
     }
     const entries = listEntries(A, A.id, TODAY, TODAY)
-    expect(entries.map((e) => e.kind)).toEqual(["work", "break", "work"])
+    expect(entries.map((e) => e.kind)).toEqual(["work", "work"])
     for (let i = 1; i < entries.length; i++) expect(entries[i - 1].endAt! <= entries[i].startAt).toBe(true)
     expect(entries.every((e) => e.endAt! > e.startAt)).toBe(true)
     expect(clockAction(A, "start").state).toBe("working")
@@ -129,13 +127,88 @@ describe("clock", () => {
   })
 })
 
+const history = (id: number) =>
+  rawSqlite()
+    .prepare<[number], { action: string; reason: string; source: string; actor_id: number | null }>(
+      "SELECT action, reason, source, actor_id FROM revisions WHERE entity = 'time_entry' AND entity_id = ? ORDER BY id",
+    )
+    .all(id)
+
+describe("clock out later", () => {
+  it("a future stop keeps the entry open and closes it at that time, logged", () => {
+    const A = anna()
+    clockAction(A, "start", { at: t(-60) })
+    const s = clockAction(A, "stop", { at: t(90), custom: true })
+    expect(s).toMatchObject({ state: "working", scheduledEnd: "2026-11-05T15:30:00.000Z" })
+    const id = openEntry(A.id)!.id
+    expect(listEntries(A, A.id, TODAY, TODAY)[0]).toMatchObject({ running: true, scheduledEndAt: s.scheduledEnd })
+    setNow(30)
+    expect(clockState(A.user).state).toBe("working")
+    setNow(95)
+    expect(clockState(A.user)).toMatchObject({ state: "idle", todayWorkedMin: 150, scheduledEnd: null })
+    const [e] = listEntries(A, A.id, TODAY, TODAY)
+    expect(e).toMatchObject({ endAt: "2026-11-05T15:30:00.000Z", source: "manual", scheduledEndAt: null })
+    expect(history(id).map((r) => [r.reason, r.source, r.actor_id])).toEqual([
+      ["offline sync: clocked with an earlier time", "web", A.id],
+      ["clock-out scheduled", "manual", A.id],
+      ["clock (scheduled clock-out)", "manual", A.id],
+    ])
+  })
+
+  it("the worker closes everyone's due entries; a plain stop or unschedule drops the plan", () => {
+    const A = anna()
+    const B = anna()
+    clockAction(A, "start", { at: t(-60) })
+    clockAction(B, "start", { at: t(-60) })
+    clockAction(A, "stop", { at: t(30) })
+    clockAction(B, "stop", { at: t(30) })
+    expect(clockAction(B, "unschedule")).toMatchObject({ state: "working", scheduledEnd: null })
+    setNow(31)
+    expect(closeDueScheduled()).toBe(1)
+    expect(closeDueScheduled()).toBe(0)
+    expect(openEntry(A.id)).toBeUndefined()
+    expect(openEntry(B.id)?.scheduledEndAt).toBeNull()
+
+    clockAction(B, "stop", { at: t(60) })
+    expect(clockAction(B, "stop")).toMatchObject({ state: "idle", scheduledEnd: null })
+    expect(listEntries(B, B.id, TODAY, TODAY)[0].endAt).toBe(new Date(NOW + 31 * 60_000).toISOString())
+  })
+
+  it("at most 24 h after the clock-in; closing or deleting the entry drops the plan", () => {
+    const A = anna()
+    clockAction(A, "start", { at: t(-60) })
+    expect(() => clockAction(A, "stop", { at: t(23 * 60 + 30) })).toThrow(
+      expect.objectContaining({ fields: { at: "too_late" } }),
+    )
+    clockAction(A, "stop", { at: t(60) })
+    const id = openEntry(A.id)!.id
+    updateEntry(A, id, { endAt: t(-10) })
+    expect(listEntries(A, A.id, TODAY, TODAY)[0]).toMatchObject({ scheduledEndAt: null, running: false })
+    clockAction(A, "start")
+    clockAction(A, "stop", { at: t(60) })
+    deleteEntry(A, openEntry(A.id)!.id)
+    setNow(61)
+    expect(closeDueScheduled()).toBe(0)
+  })
+
+  it("a month signed off meanwhile keeps the entry open for the person to fix", () => {
+    const A = anna()
+    clockAction(A, "start", { at: t(-60) })
+    clockAction(A, "stop", { at: t(60) })
+    lockMonth(A.id, "2026-11")
+    setNow(61)
+    expect(closeDueScheduled()).toBe(0)
+    expect(openEntry(A.id)?.scheduledEndAt).not.toBeNull()
+  })
+})
+
 describe("offline sync", () => {
   it("applies queued actions once, marks them offline and reports rejects", () => {
     const A = anna()
     const actions = [
       { id: "a1", action: "start" as const, at: t(-90) },
-      { id: "a2", action: "break" as const, at: t(-60) },
-      { id: "a3", action: "resume" as const, at: t(-45) },
+      { id: "a2", action: "stop" as const, at: t(-60) },
+      { id: "a3", action: "start" as const, at: t(-45) },
       { id: "a4", action: "stop" as const, at: t(-10) },
     ]
     const first = syncOffline(A, actions)
@@ -144,12 +217,11 @@ describe("offline sync", () => {
     const entries = listEntries(A, A.id, TODAY, TODAY)
     expect(entries.map((e) => [e.kind, e.source])).toEqual([
       ["work", "offline"],
-      ["break", "offline"],
       ["work", "offline"],
     ])
     const again = syncOffline(A, [...actions, { id: "a5", action: "stop", at: t(-5) }])
     expect(again.results.map((r) => r.status)).toEqual(["duplicate", "duplicate", "duplicate", "duplicate", "applied"])
-    expect(listEntries(A, A.id, TODAY, TODAY)).toHaveLength(3)
+    expect(listEntries(A, A.id, TODAY, TODAY)).toHaveLength(2)
 
     const bad = syncOffline(A, [{ id: "b1", action: "start", at: t(-30) }])
     expect(bad.results[0]).toEqual({ id: "b1", status: "rejected", code: "overlap" })

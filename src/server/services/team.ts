@@ -20,19 +20,17 @@ export { overviewInput } from "./team.schemas"
 
 import { overviewInput } from "./team.schemas"
 
-export type PresenceState = "working" | "break" | "off"
+export type PresenceState = "working" | "off"
 
 /** Running entries of these people: one query. */
 function presence(userIds: number[]): Map<number, { state: PresenceState; since: string }> {
   if (!userIds.length) return new Map()
   const rows = db
-    .select({ userId: timeEntries.userId, kind: timeEntries.kind, startAt: timeEntries.startAt })
+    .select({ userId: timeEntries.userId, startAt: timeEntries.startAt })
     .from(timeEntries)
     .where(and(inArray(timeEntries.userId, userIds), isNull(timeEntries.endAt), eq(timeEntries.isDeleted, false)))
     .all()
-  return new Map(
-    rows.map((r) => [r.userId, { state: r.kind === "break" ? "break" : "working", since: iso(r.startAt) }]),
-  )
+  return new Map(rows.map((r) => [r.userId, { state: "working" as const, since: iso(r.startAt) }]))
 }
 
 function teamNames(people: User[]): Map<number, string> {

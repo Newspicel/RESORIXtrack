@@ -1,10 +1,9 @@
 /**
- * Clock in / break / clock out control: a compact pill in the desktop top bar and a sticky bar above the
- * tab bar on phones. One primary action per state; break and "custom time" are secondary. Keyboard: S
- * clocks in/out, B starts/ends a break (only when no input has focus). Offline clicks queue and show as
- * pending until they are synced.
+ * Clock in / clock out control: a compact pill in the desktop top bar and a sticky bar above the tab bar on
+ * phones. One primary action per state, "custom time" is secondary. A break is a clock-out. Keyboard: S
+ * clocks in/out (only when no input has focus). Offline clicks queue and show as pending until synced.
  */
-import { CloudOff, Coffee, Play, Square } from "lucide-react"
+import { CloudOff, Play, Square } from "lucide-react"
 import { type ReactElement, useEffect, useEffectEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { Kbd } from "@/components/ui/kbd"
@@ -12,11 +11,13 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { fmtMinutes } from "@/lib/format"
 import { useT } from "@/lib/i18n"
+import { useMe } from "@/lib/session"
 import { cn } from "@/lib/utils"
-import type { ClockAction, ClockStateName } from "@/server/services/clock"
+import type { ClockStateName } from "@/server/services/clock"
+import { fmtClockTime, wallClock } from "../time/lib"
 import { CustomTimeButton } from "./custom-time"
 import { registerServiceWorker } from "./register-sw"
-import { type LiveClock, liveSinceSec, liveWorkedMin, primaryAction, useClock } from "./use-clock"
+import { type LiveClock, liveWorkedMin, primaryAction, useClock } from "./use-clock"
 import { useNow } from "./use-now"
 
 export type Clock = ReturnType<typeof useClock>
@@ -30,13 +31,26 @@ export function ClockControl({ variant }: { variant: "topbar" | "bar" }) {
 const STATE_DOT: Record<ClockStateName, string> = {
   idle: "bg-faint-foreground",
   working: "bg-work",
-  on_break: "bg-break",
 }
 
-/** h:mm for the bars: today's work while working or idle, the running break while on a break. */
+/** The scheduled clock-out as a wall-clock time of the signed-in person. */
+export function useScheduledTime(c: LiveClock | undefined): string | null {
+  const me = useMe()
+  if (!c?.scheduledEnd || c.state !== "working") return null
+  return fmtClockTime(wallClock(c.scheduledEnd, me.timezone).time, me.timeFormat === "12h")
+}
+
+/** State text for the bars: "Working", "until 17:00" with a scheduled clock-out, "Not clocked in". */
+function StateLabel({ c }: { c: LiveClock }) {
+  const t = useT()
+  const scheduled = useScheduledTime(c)
+  return scheduled ? t("clock.scheduled_short", { time: scheduled }) : t(`clock.state.${c.state}`)
+}
+
+/** h:mm of today's work for the bars. */
 function LiveFigure({ c, className }: { c: LiveClock; className?: string }) {
   const now = useNow(c.state !== "idle")
-  const min = c.state === "on_break" ? liveSinceSec(c, now) / 60 : liveWorkedMin(c, now)
+  const min = liveWorkedMin(c, now)
   return (
     <span className={cn("tabular", className)} suppressHydrationWarning>
       {fmtMinutes(Math.floor(min))}
@@ -44,9 +58,7 @@ function LiveFigure({ c, className }: { c: LiveClock; className?: string }) {
   )
 }
 
-const ACTION_ICON: Record<ClockAction, typeof Play> = { start: Play, resume: Play, stop: Square, break: Coffee }
-
-/** S: clock in/out, B: start/end a break. Ignored while typing or while an overlay is open. */
+/** S: clock in/out. Ignored while typing or while an overlay is open. */
 function useShortcuts(clock: Clock) {
   const onKey = useEffectEvent((e: KeyboardEvent) => {
     const state = clock.data?.state
@@ -59,9 +71,6 @@ function useShortcuts(clock: Clock) {
     if (key === "s") {
       e.preventDefault()
       void clock.act(state === "idle" ? "start" : "stop")
-    } else if (key === "b" && state !== "idle") {
-      e.preventDefault()
-      void clock.act(state === "working" ? "break" : "resume")
     }
   })
   useEffect(() => {
@@ -82,7 +91,7 @@ function ShortcutTip({ label, keyName, children }: { label: string; keyName?: st
   )
 }
 
-/** Primary and secondary actions for the current state (both bars and the dashboard card). */
+/** The action for the current state, plus "custom time" (both bars and the dashboard card). */
 export function ClockActions({
   clock,
   size = "sm",
@@ -100,43 +109,20 @@ export function ClockActions({
   const c = clock.data
   if (!c) return null
   const primary = primaryAction(c.state)
-  const PrimaryIcon = ACTION_ICON[primary]
+  const PrimaryIcon = primary === "start" ? Play : Square
   const iconSize = size === "lg" ? "icon-lg" : size === "default" ? "icon" : "icon-sm"
-  const primaryLabel = t(`clock.${primary}`)
-  const secondary: ClockAction | null = c.state === "working" ? "break" : c.state === "on_break" ? "stop" : null
+  const primaryLabel = t(primary === "stop" && c.scheduledEnd ? "clock.stop_now" : `clock.${primary}`)
   return (
     <div className={cn("flex items-center gap-1", className)}>
       {custom ? (
         <CustomTimeButton
           state={c.state}
+          since={c.since}
           size={iconSize}
           onSubmit={(at) => void clock.act(c.state === "idle" ? "start" : "stop", { at, custom: true })}
         />
       ) : null}
-      {secondary ? (
-        <ShortcutTip label={t(`clock.${secondary}`)} keyName={secondary === "break" ? "B" : "S"}>
-          {size === "lg" && labels ? (
-            <Button variant="outline" size="lg" onClick={() => void clock.act(secondary)}>
-              {secondary === "break" ? (
-                <Coffee data-icon="inline-start" />
-              ) : (
-                <Square data-icon="inline-start" className="fill-current" />
-              )}
-              {t(`clock.${secondary}`)}
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              size={iconSize}
-              aria-label={t(`clock.${secondary}`)}
-              onClick={() => void clock.act(secondary)}
-            >
-              {secondary === "break" ? <Coffee /> : <Square className="fill-current" />}
-            </Button>
-          )}
-        </ShortcutTip>
-      ) : null}
-      <ShortcutTip label={primaryLabel} keyName={primary === "resume" ? "B" : "S"}>
+      <ShortcutTip label={primaryLabel} keyName="S">
         <Button
           size={labels ? size : iconSize}
           aria-label={labels ? undefined : primaryLabel}
@@ -186,8 +172,12 @@ function TopbarClock({ clock }: { clock: Clock }) {
     >
       <span className={cn("size-2 shrink-0 rounded-full", STATE_DOT[c.state])} aria-hidden />
       <LiveFigure c={c} className="text-sm font-semibold" />
-      <span className="hidden text-xs text-muted-foreground xl:inline">{t(`clock.state.${c.state}`)}</span>
-      <span className="sr-only xl:hidden">{t(`clock.state.${c.state}`)}</span>
+      <span className="hidden text-xs text-muted-foreground xl:inline">
+        <StateLabel c={c} />
+      </span>
+      <span className="sr-only xl:hidden">
+        <StateLabel c={c} />
+      </span>
       <OfflineBadge clock={clock} compact />
       <ClockActions clock={clock} className="[&_[data-slot=button]]:rounded-sm" />
     </fieldset>
@@ -207,7 +197,7 @@ function MobileClockBar({ clock }: { clock: Clock }) {
       <div className="flex min-w-0 flex-1 flex-col leading-tight">
         <LiveFigure c={c} className="text-base font-semibold" />
         <span className="flex items-center gap-1.5 truncate text-xs text-muted-foreground">
-          {t(`clock.state.${c.state}`)}
+          <StateLabel c={c} />
           <OfflineBadge clock={clock} compact />
         </span>
       </div>

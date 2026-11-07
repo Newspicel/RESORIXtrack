@@ -9,6 +9,7 @@ import { constants, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSy
 import path from "node:path"
 import Database from "better-sqlite3"
 import { setDatabase } from "../db"
+import { retireLegacyBreaks } from "../db/legacy-breaks"
 import { env } from "../env"
 import { checkUserChain, sealKey } from "../services/seals"
 import { DEFAULTS, RETIRED_SETTINGS } from "../services/settings"
@@ -17,7 +18,7 @@ import { v1Instant } from "./convert"
 import { type ImportContext, SKIPPED, TABLES, type V1Row } from "./tables"
 
 /** Alembic revisions of released v1 versions this importer understands. */
-export const V1_REVISIONS = ["0001", "0002"] as const
+export const V1_REVISIONS = ["0001", "0002", "0003"] as const
 
 export class ImportError extends Error {
   /** What was found before the import was aborted. */
@@ -51,6 +52,8 @@ export interface ImportReport {
   branding: string[]
   people: { invite: Person[]; apiKeys: (Person & { tokens: number })[]; twoFactor: Person[] }
   warnings: string[]
+  /** Break entries outside signed-off months, deleted with a revision (v1 before Alembic 0003). */
+  retiredBreaks: number
 }
 
 export interface ImportOptions {
@@ -296,6 +299,7 @@ export function importV1(v1: Database.Database, target: Database.Database, opts:
     branding: [],
     people: collectPeople(v1, tables, utcnow()),
     warnings: [],
+    retiredBreaks: 0,
   }
   for (const [table, why] of Object.entries(SKIPPED)) {
     if (tables.has(table)) report.skipped.push({ table, rows: count(v1, table), why })
@@ -351,6 +355,7 @@ function run(v1: Database.Database, target: Database.Database, opts: ImportOptio
       throw new ImportError(
         `${report.seals.problems.length} sign-off seal(s) do not verify; check --signoff-key (v1 SIGNOFF_KEY or SECRET_KEY)`,
       )
+    report.retiredBreaks = retireLegacyBreaks(target)
   })()
 
   if (opts.targetDataDir && opts.sourceDataDir) {
@@ -407,6 +412,7 @@ export function formatReport(r: ImportReport): string {
   if (a.missing.length) out.push(...list("  missing", a.missing))
   if (a.mismatched.length) out.push(...list("  changed", a.mismatched))
   out.push(`Branding: ${r.branding.length ? r.branding.join(", ") : "default logos"}`)
+  if (r.retiredBreaks) out.push(`Break entries retired (a break is the gap between entries): ${r.retiredBreaks}`)
   const s = r.seals
   if (s.error) out.push(`Seals: NOT VERIFIED (${s.error})`)
   else out.push(`Seals: ${s.signoffs - s.problems.length}/${s.signoffs} sign-offs of ${s.people} people verified`)

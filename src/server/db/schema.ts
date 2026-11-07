@@ -131,9 +131,12 @@ export const timeEntries = sqliteTable(
     userId: integer()
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    // "break" only in legacy rows: a break is the gap between two work entries
     kind: text().$type<"work" | "break">().notNull().default("work"),
     startAt: instant().notNull(),
     endAt: instant(),
+    /** "Clock out later": the running entry is closed at this instant. */
+    scheduledEndAt: instant(),
     tz: text().notNull().default("Europe/Zurich"),
     note: text().notNull().default(""),
     source: text().$type<"clock" | "manual" | "api" | "desktop" | "offline">().notNull().default("clock"),

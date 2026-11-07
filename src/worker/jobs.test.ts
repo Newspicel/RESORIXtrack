@@ -24,7 +24,14 @@ const notes = (userId: number, kind: string) =>
 
 describe("job table", () => {
   it("schedules every job with a valid cron expression", () => {
-    expect(JOBS.map((j) => j.name)).toEqual(["backup", "clock-reminders", "cleanup", "integrity", "holiday-top-up"])
+    expect(JOBS.map((j) => j.name)).toEqual([
+      "backup",
+      "scheduled-clock-outs",
+      "clock-reminders",
+      "cleanup",
+      "integrity",
+      "holiday-top-up",
+    ])
     for (const j of JOBS) expect(j.schedule.split(" ")).toHaveLength(5)
   })
 })

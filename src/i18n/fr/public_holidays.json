@@ -1,0 +1,12 @@
+{
+  "sub": "Les jours fériés qui s'appliquent à toi. Les jours où tu travailles, ils réduisent ton temps dû.",
+  "manage": "Gérer les calendriers",
+  "source": {
+    "user": "Attribué à toi",
+    "team": "Calendrier de ton équipe",
+    "default": "Standard de l'entreprise"
+  },
+  "none": "Pas encore de calendrier",
+  "none_help": "Ton administration n'en a pas encore configuré.",
+  "help": "Les demi-journées couvrent l'après-midi. Il manque un jour férié ? Informe ton administration."
+}

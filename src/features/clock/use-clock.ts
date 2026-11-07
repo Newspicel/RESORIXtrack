@@ -28,16 +28,12 @@ export const liveClockQuery = () =>
     refetchInterval: 5 * 60_000,
   })
 
-const NEXT: Record<ClockAction, ClockStateName> = {
-  start: "working",
-  resume: "working",
-  break: "on_break",
-  stop: "idle",
-}
+/** Same tolerance as the server: a later `stop` schedules the clock-out instead of closing the entry. */
+const FUTURE_TOLERANCE_MS = 2 * 60_000
 
-/** The primary action for a state: clock in, clock out, or end the break. */
+/** The primary action for a state: clock in or clock out. */
 export function primaryAction(state: ClockStateName): ClockAction {
-  return state === "idle" ? "start" : state === "working" ? "stop" : "resume"
+  return state === "idle" ? "start" : "stop"
 }
 
 /** `now` 0 (SSR, hydration) means "as received": the figures the server rendered. */
@@ -46,13 +42,15 @@ const atTime = (c: LiveClock, now: number) => (now > 0 ? now : c.receivedAt)
 /** Server time estimate: the server clock at `receivedAt` plus elapsed local time. */
 const serverNow = (c: LiveClock, now: number) => Date.parse(c.serverTime) + (atTime(c, now) - c.receivedAt)
 
-/** Minutes worked today, ticking while working. */
-export function liveWorkedMin(c: LiveClock, now: number): number {
-  return c.todayWorkedMin + (c.state === "working" ? Math.max(0, atTime(c, now) - c.receivedAt) / 60000 : 0)
-}
+/** Local time at which a scheduled clock-out happens (server clock mapped to this device). */
+const scheduledAtLocal = (c: LiveClock) =>
+  c.scheduledEnd ? c.receivedAt + (Date.parse(c.scheduledEnd) - Date.parse(c.serverTime)) : Number.POSITIVE_INFINITY
 
-export function liveBreakMin(c: LiveClock, now: number): number {
-  return c.todayBreakMin + (c.state === "on_break" ? Math.max(0, atTime(c, now) - c.receivedAt) / 60000 : 0)
+/** Minutes worked today, ticking while working, stopping at a scheduled clock-out. */
+export function liveWorkedMin(c: LiveClock, now: number): number {
+  if (c.state !== "working") return c.todayWorkedMin
+  const until = Math.min(atTime(c, now), scheduledAtLocal(c))
+  return c.todayWorkedMin + Math.max(0, until - c.receivedAt) / 60000
 }
 
 /** Seconds since the current state started (0 when idle). */
@@ -69,15 +67,18 @@ function withPending(c: LiveClock, pending: QueuedAction[]): LiveClock {
 }
 
 function advance(c: LiveClock, action: ClockAction, at: string, now: number): LiveClock {
-  const state = NEXT[action]
+  if (action === "unschedule") return { ...c, scheduledEnd: null }
+  if (action === "stop" && c.state === "working" && Date.parse(at) > now + FUTURE_TOLERANCE_MS)
+    return { ...c, scheduledEnd: at }
+  const state: ClockStateName = action === "start" ? "working" : "idle"
   const t = Math.min(now, c.receivedAt + 24 * 3600_000)
   return {
     ...c,
     state,
     since: state === "idle" ? null : at,
+    scheduledEnd: null,
     entry: null,
     todayWorkedMin: liveWorkedMin(c, t),
-    todayBreakMin: liveBreakMin(c, t),
     serverTime: new Date(serverNow(c, t)).toISOString(),
     receivedAt: t,
   }
@@ -203,8 +204,9 @@ async function runAction(
     try {
       setServer(qc, await clockActionFn({ data: { action, at: opts.at ?? null, custom: Boolean(opts.custom) } }))
       refreshTimeData(qc)
+      const result = qc.getQueryData<LiveClock>(liveClockQuery().queryKey)
       // clocking out is the moment to describe the day when the company requires a work log
-      if (action === "stop" && deps.worklogMode === "required") {
+      if (action === "stop" && result?.state === "idle" && deps.worklogMode === "required") {
         toast.info(t("worklog.clock_out_prompt"), {
           duration: 8000,
           action: {
@@ -247,6 +249,20 @@ export function useClock() {
   useEffect(() => {
     if (online && pending.length) replay()
   }, [online, pending.length])
+
+  // a scheduled clock-out: fetch the closed entry once it is due
+  const dueAt = query.data?.scheduledEnd ? scheduledAtLocal(query.data) : null
+  useEffect(() => {
+    if (dueAt == null) return undefined
+    const timer = setTimeout(
+      () => {
+        void qc.invalidateQueries({ queryKey: liveClockQuery().queryKey })
+        refreshTimeData(qc)
+      },
+      Math.max(0, dueAt - Date.now() + 2000),
+    )
+    return () => clearTimeout(timer)
+  }, [dueAt, qc])
 
   const act = (action: ClockAction, opts: { at?: string; custom?: boolean } = {}) =>
     runAction(deps, action, opts, setActing)

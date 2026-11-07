@@ -4,6 +4,7 @@
  */
 import {
   BarChart3,
+  CalendarCog,
   CalendarDays,
   Clock,
   DatabaseBackup,
@@ -47,6 +48,7 @@ export function buildNav(me: Me, b: Bootstrap): NavGroup[] {
         { to: "/account", labelKey: "nav.account", tabKey: "nav.tab.account", icon: Wallet },
         { to: "/reports", labelKey: "nav.reports", icon: BarChart3 },
         ...(!me.isManager && me.teamId ? [{ to: "/calendar", labelKey: "nav.team_calendar", icon: CalendarDays }] : []),
+        { to: "/holidays", labelKey: "nav.holidays", icon: Flag },
       ],
     },
   ]
@@ -69,7 +71,7 @@ export function buildNav(me: Me, b: Bootstrap): NavGroup[] {
       items: [
         { to: "/admin/users", labelKey: "nav.users", icon: UserCog },
         { to: "/admin/teams", labelKey: "nav.teams", icon: Users },
-        { to: "/admin/holidays", labelKey: "nav.holidays", icon: Flag },
+        { to: "/admin/holidays", labelKey: "nav.holiday_calendars", icon: CalendarCog },
         { to: "/admin/settings", labelKey: "nav.settings", icon: Settings },
         { to: "/admin/backups", labelKey: "nav.backups", icon: DatabaseBackup },
       ],

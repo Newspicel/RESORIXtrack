@@ -698,6 +698,7 @@ interface Spec {
 
 const SPECS: Record<string, Spec> = {
   "features/absences/api#fetchAbsenceTypes": {},
+  "features/holidays/api#fetchMyHolidays": { data: () => ({ year: 2026 }) },
   "features/absences/api#fetchAbsences": {},
   "features/absences/api#fetchAbsence": { id: "absence" },
   "features/absences/api#fetchAbsenceHistory": { id: "absence" },
@@ -1079,7 +1080,7 @@ describe("isolation", () => {
   }, 120_000)
 })
 
-const REST_NO_SUCCESS: Record<string, string> = { "POST /clock/resume": "nobody is on a break" }
+const REST_NO_SUCCESS: Record<string, string> = {}
 
 function restRecords(ep: Endpoint, t: Key): number[] {
   if (!ep.path.includes("{id}")) return [0]

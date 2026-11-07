@@ -1,0 +1,12 @@
+{
+  "sub": "Die Feiertage, die für dich gelten. An deinen Arbeitstagen senken sie dein Soll.",
+  "manage": "Kalender verwalten",
+  "source": {
+    "user": "Dir zugewiesen",
+    "team": "Kalender deines Teams",
+    "default": "Firmenstandard"
+  },
+  "none": "Noch kein Feiertagskalender",
+  "none_help": "Deine Administration hat noch keinen eingerichtet.",
+  "help": "Halbe Tage gelten für den Nachmittag. Fehlt ein Feiertag? Melde es deiner Administration."
+}
