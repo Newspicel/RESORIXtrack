@@ -70,9 +70,19 @@ test("admin: settings save a switch", async ({ as }, info) => {
   const panel = page.getByRole("tabpanel", { name: "Working time" })
   const toggle = panel.getByRole("switch", { name: label })
   const before = (await toggle.getAttribute("aria-checked")) === "true"
+  const unsaved = panel.getByText("Unsaved changes")
+  const discard = panel.getByRole("button", { name: "Discard" })
+
+  // reverting by hand clears the unsaved state
+  await toggle.click()
+  await expect(unsaved).toBeVisible()
+  await toggle.click()
+  await expect(unsaved).toBeHidden()
+  await expect(discard).toBeHidden()
 
   await toggle.click()
   await panel.getByRole("button", { name: "Save" }).click()
+  await expect(unsaved).toBeHidden()
   await expect(toast(page, "Saved")).toBeVisible()
   await page.reload()
   await page.getByRole("tab", { name: "Working time" }).click()
