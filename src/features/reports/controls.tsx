@@ -105,6 +105,7 @@ export function RangePicker({
       {preset === "custom" ? (
         <>
           <DatePicker
+            icon
             className="w-44"
             aria-label={t("common.from")}
             value={from}
@@ -112,6 +113,7 @@ export function RangePicker({
             onChange={(v) => v && onChange({ from: v, to: to < v ? v : to })}
           />
           <DatePicker
+            icon
             className="w-44"
             aria-label={t("common.to")}
             value={to}

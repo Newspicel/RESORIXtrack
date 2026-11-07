@@ -21,7 +21,7 @@ import { errorFields } from "@/lib/guards"
 import { useI18n } from "@/lib/i18n"
 import { type Correction, createEntryFn, deleteEntryFn, type PeriodView, restoreEntryFn, updateEntryFn } from "./api"
 import { invalidateTimeData } from "./invalidate"
-import { hhmmToMin, minToHhmm, parseDuration, wallClock } from "./lib"
+import { hhmmToMin, minToHhmm, newEntryTimes, parseDuration, wallClock } from "./lib"
 import { Notice } from "./notice"
 import { TimeField } from "./time-input"
 
@@ -74,8 +74,11 @@ function defaults(target: EntryTarget, ctx: EntryContext): Values {
       reason: "",
     }
   }
-  const start = target.start ?? "08:00"
-  const end = minToHhmm(Math.min(hhmmToMin(start) + (target.start ? 60 : 240), 23 * 60 + 59))
+  const { start, end } = newEntryTimes(
+    hhmmToMin(wallClock(Date.now(), tz).time),
+    target.date === ctx.today,
+    target.start,
+  )
   return {
     kind: "work",
     mode: ctx.owner.recordingMode === "simplified" ? "total" : "times",
@@ -399,6 +402,7 @@ export function EntryDialog({
                   {() => (
                     <TimeField
                       label={t("time.end")}
+                      from={values.start}
                       description={
                         nextDay ? t("time.next_day") : entry?.running && !values.end ? t("time.running") : undefined
                       }
