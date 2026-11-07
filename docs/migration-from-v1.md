@@ -20,7 +20,7 @@ v2 never upgrades a v1 database in place. Pointed at one (the same data director
 
 ## Before you start
 
-- v1 must run the **latest 1.x release** (the importer accepts schema revisions `0001` and `0002`).
+- v1 must run the **latest 1.x release** (the importer accepts schema revisions `0001`, `0002` and `0003`). A pending "clock out later" is carried over and executed by v2.
 - Have the v1 `.env` at hand: you need `SIGNOFF_KEY`, or `SECRET_KEY` if `SIGNOFF_KEY` was not set.
 - Both versions use the Compose project name `resorixtrack` and the volume `resorixtrack-data`. Install v2 in its **own directory with its own project name** so the v1 volume stays untouched.
 - Plan a short downtime. Entries made in v1 after the copy are not imported.

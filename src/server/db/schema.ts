@@ -131,9 +131,12 @@ export const timeEntries = sqliteTable(
     userId: integer()
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    // "break" only on legacy rows: a break is a clock-out (migration 0006 retires old break entries)
     kind: text().$type<"work" | "break">().notNull().default("work"),
     startAt: instant().notNull(),
     endAt: instant(),
+    // "Clock out later": while set, the open entry is closed at this time (worker, or the next clock request)
+    scheduledEndAt: instant(),
     tz: text().notNull().default("Europe/Zurich"),
     note: text().notNull().default(""),
     source: text().$type<"clock" | "manual" | "api" | "desktop" | "offline">().notNull().default("clock"),

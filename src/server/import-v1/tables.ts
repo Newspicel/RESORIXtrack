@@ -126,6 +126,7 @@ export const TABLES: TableSpec[] = [
       ...plain("id", "user_id", "kind"),
       instantReq("start_at"),
       instant("end_at"),
+      instant("scheduled_end_at"), // v1 0003+: pending "clock out later"
       ...plain("tz", "note", "source"),
       bool("is_deleted"),
       same("created_by_id"),

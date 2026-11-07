@@ -9,6 +9,7 @@ import { constants, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSy
 import path from "node:path"
 import Database from "better-sqlite3"
 import { setDatabase } from "../db"
+import { retireLegacyBreaks } from "../db/legacy-breaks"
 import { env } from "../env"
 import { checkUserChain, sealKey } from "../services/seals"
 import { DEFAULTS, RETIRED_SETTINGS } from "../services/settings"
@@ -17,7 +18,7 @@ import { v1Instant } from "./convert"
 import { type ImportContext, SKIPPED, TABLES, type V1Row } from "./tables"
 
 /** Alembic revisions of released v1 versions this importer understands. */
-export const V1_REVISIONS = ["0001", "0002"] as const
+export const V1_REVISIONS = ["0001", "0002", "0003"] as const
 
 export class ImportError extends Error {
   /** What was found before the import was aborted. */
@@ -45,6 +46,8 @@ export interface ImportReport {
   tables: { table: string; v1: number; v2: number }[]
   skipped: { table: string; rows: number; why: string }[]
   credentials: number
+  /** legacy break entries retired during the import (a break is a clock-out) */
+  breaksRetired: number
   settingsSkipped: string[]
   seals: { people: number; signoffs: number; problems: SealProblem[]; error?: string }
   attachments: { files: number; purged: number; missing: string[]; mismatched: string[]; copied: number }
@@ -290,6 +293,7 @@ export function importV1(v1: Database.Database, target: Database.Database, opts:
     tables: [],
     skipped: [],
     credentials: 0,
+    breaksRetired: 0,
     settingsSkipped: [],
     seals: { people: 0, signoffs: 0, problems: [] },
     attachments: { files: 0, purged: 0, missing: [], mismatched: [], copied: 0 },
@@ -344,6 +348,8 @@ function run(v1: Database.Database, target: Database.Database, opts: ImportOptio
     for (const spec of TABLES)
       report.tables.push({ table: spec.table, v1: count(v1, spec.from), v2: count(target, spec.table) })
     keepV1Surcharge(target)
+    // v1 before its revision 0003 still has break entries; a break is a clock-out now
+    report.breaksRetired = retireLegacyBreaks(target)
 
     verifySeals(v1, report, opts.signoffKey)
     if (report.seals.error && !opts.force) throw new ImportError(`seal verification failed: ${report.seals.error}`)
@@ -354,12 +360,19 @@ function run(v1: Database.Database, target: Database.Database, opts: ImportOptio
   })()
 
   if (opts.targetDataDir && opts.sourceDataDir) {
-    report.attachments.copied = copyFiles(
-      path.join(opts.sourceDataDir, "attachments"),
-      path.join(opts.targetDataDir, "attachments"),
-      attachmentFiles,
-    )
-    copyFiles(path.join(opts.sourceDataDir, "branding"), path.join(opts.targetDataDir, "branding"), report.branding)
+    // the database is committed at this point: a file problem must not read as "nothing imported"
+    try {
+      report.attachments.copied = copyFiles(
+        path.join(opts.sourceDataDir, "attachments"),
+        path.join(opts.targetDataDir, "attachments"),
+        attachmentFiles,
+      )
+      copyFiles(path.join(opts.sourceDataDir, "branding"), path.join(opts.targetDataDir, "branding"), report.branding)
+    } catch (err) {
+      report.warnings.push(
+        `database imported, but copying files failed: ${message(err)}. Copy the v1 attachments/ and branding/ folders into the v2 data directory by hand.`,
+      )
+    }
   }
   if (opts.signoffKey && opts.signoffKey !== env.signoffKey)
     report.warnings.push(
@@ -410,6 +423,7 @@ export function formatReport(r: ImportReport): string {
   const s = r.seals
   if (s.error) out.push(`Seals: NOT VERIFIED (${s.error})`)
   else out.push(`Seals: ${s.signoffs - s.problems.length}/${s.signoffs} sign-offs of ${s.people} people verified`)
+  if (r.breaksRetired) out.push(`Breaks: ${r.breaksRetired} legacy break entries retired (a break is a clock-out)`)
   for (const p of s.problems) out.push(`  - ${p.name} ${p.month} (#${p.signoffId}): ${p.status}`)
   out.push("")
   out.push(...list("Send an invitation (no password or open v1 invite)", r.people.invite.map(who)))
