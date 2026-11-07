@@ -30,10 +30,11 @@ import { MAX_LOGO_BYTES } from "./admin-settings.schemas"
 // ------------------------------------------------------------------ settings
 
 export const SETTING_GROUPS = {
-  company: ["company_name", "default_timezone", "default_locale", "default_vacation_days"],
+  company: ["company_name", "default_timezone", "default_locale"],
   time: [
     "fulltime_weekly_minutes",
     "holiday_mode",
+    "default_vacation_days",
     "vacation_prorate_workdays",
     "lead_can_edit_schedules",
     "lead_can_adjust_balances",

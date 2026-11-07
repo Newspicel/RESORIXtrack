@@ -501,6 +501,7 @@
       "company": "Firma",
       "defaults": "Standards für neue Personen",
       "hours": "Stunden und Feiertage",
+      "vacation": "Ferien",
       "corrections": "Korrekturen und Leitung",
       "sick": "Krankmeldungen",
       "worklog": "Tätigkeiten",
@@ -551,6 +552,7 @@
       "holiday_work_surcharge_mode": "Zuschlag als"
     },
     "help": {
+      "default_vacation_days": "Standard für neue Personen",
       "fulltime_weekly_minutes": "Standardmodell, z. B. 42:00",
       "holiday_work_surcharge_percent": "ArG Art. 19: 50 % bei vorübergehender Arbeit",
       "clock_reminder_hours": "0 = aus",

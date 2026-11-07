@@ -501,6 +501,7 @@
       "company": "Company",
       "defaults": "Defaults for new people",
       "hours": "Hours and holidays",
+      "vacation": "Vacation",
       "corrections": "Corrections and leads",
       "sick": "Sick reports",
       "worklog": "Work log",
@@ -551,6 +552,7 @@
       "holiday_work_surcharge_mode": "Surcharge as"
     },
     "help": {
+      "default_vacation_days": "Default for new people",
       "fulltime_weekly_minutes": "Default schedule, e.g. 42:00",
       "holiday_work_surcharge_percent": "ArG Art. 19: 50 % for temporary work",
       "clock_reminder_hours": "0 = off",

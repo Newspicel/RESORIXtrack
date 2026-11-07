@@ -13,6 +13,7 @@ The dashboard shows a **Getting started** checklist (company name, public holida
 1. **Working time**: Settings → Working time.
    - *Full-time hours per week*: basis for schedules and pro-rata holidays.
    - *Public holidays*: **Scheduled days** reduces the target only on a person's working day; **Pro rata** credits every Mon to Fri holiday by pensum.
+   - *Vacation days per year*: default for new people; each person's own value is on their profile.
    - *Pro-rate vacation by days per week*: off means you enter each person's own days; on means you enter full-time days and they are scaled.
    - Reason required for past edits, lead permissions (schedules, balances), clock-out reminder after N hours, sick self-report limits.
    - *Work log*: Off, Optional or Required (share of worked time per day, project required). Required blocks sign-off until days are described.
@@ -83,7 +84,7 @@ See step 4. Deleting a calendar in use makes teams and people fall back to the n
 | Tab | Contents |
 |---|---|
 | Company | Name, defaults for new people, logos, accent colour |
-| Working time | Hours and holidays, corrections and leads, sick reports, work log |
+| Working time | Hours and holidays, vacation, corrections and leads, sick reports, work log |
 | Swiss law | Checks, permits, retention |
 | Security | Two-factor required for administrators or everyone, API keys on or off, sign-in log retention (session lengths: `.env`) |
 | Privacy | Privacy notice text |

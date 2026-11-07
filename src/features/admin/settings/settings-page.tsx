@@ -20,7 +20,6 @@ const TAB_GROUPS: Partial<Record<SettingsTab, Group[]>> = {
       fields: [
         { key: "default_timezone", kind: "timezone" },
         { key: "default_locale", kind: "locale" },
-        { key: "default_vacation_days", kind: "number", min: 0, max: 366, step: 0.5, unit: "days" },
       ],
     },
   ],
@@ -30,6 +29,12 @@ const TAB_GROUPS: Partial<Record<SettingsTab, Group[]>> = {
       fields: [
         { key: "fulltime_weekly_minutes", kind: "hours" },
         { key: "holiday_mode", kind: "toggle", options: ["scheduled", "prorata"] },
+      ],
+    },
+    {
+      title: "vacation",
+      fields: [
+        { key: "default_vacation_days", kind: "number", min: 0, max: 366, step: 0.5, unit: "days" },
         { key: "vacation_prorate_workdays", kind: "switch" },
       ],
     },

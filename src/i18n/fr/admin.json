@@ -501,6 +501,7 @@
       "company": "Entreprise",
       "defaults": "Valeurs par défaut",
       "hours": "Heures et jours fériés",
+      "vacation": "Vacances",
       "corrections": "Corrections et responsables",
       "sick": "Annonces de maladie",
       "worklog": "Journal de travail",
@@ -551,6 +552,7 @@
       "holiday_work_surcharge_mode": "Majoration en"
     },
     "help": {
+      "default_vacation_days": "Par défaut pour les nouvelles personnes",
       "fulltime_weekly_minutes": "Horaire par défaut, p. ex. 42:00",
       "holiday_work_surcharge_percent": "LTr art. 19 : 50 % pour le travail temporaire",
       "clock_reminder_hours": "0 = désactivé",

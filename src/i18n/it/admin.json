@@ -501,6 +501,7 @@
       "company": "Azienda",
       "defaults": "Standard per nuove persone",
       "hours": "Ore e giorni festivi",
+      "vacation": "Vacanze",
       "corrections": "Correzioni e responsabili",
       "sick": "Annunci di malattia",
       "worklog": "Diario di lavoro",
@@ -551,6 +552,7 @@
       "holiday_work_surcharge_mode": "Supplemento come"
     },
     "help": {
+      "default_vacation_days": "Standard per nuove persone",
       "fulltime_weekly_minutes": "Modello standard, p. es. 42:00",
       "holiday_work_surcharge_percent": "LL art. 19: 50 % per il lavoro temporaneo",
       "clock_reminder_hours": "0 = disattivato",
