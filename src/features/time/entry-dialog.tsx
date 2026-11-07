@@ -435,7 +435,12 @@ export function EntryDialog({
 
           <form.AppField name="note">
             {(f) => (
-              <f.TextareaField label={t("common.note")} maxLength={500} placeholder={t("time.note_placeholder")} />
+              <f.TextareaField
+                label={t("common.note")}
+                maxLength={500}
+                placeholder={t("time.note_placeholder")}
+                className="min-h-32"
+              />
             )}
           </form.AppField>
 
