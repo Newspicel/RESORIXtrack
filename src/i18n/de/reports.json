@@ -148,7 +148,7 @@
     "severity": "Schwere",
     "ref": "Rechtsgrundlage",
     "no_findings": "Keine Befunde in diesem Zeitraum.",
-    "in_progress": "läuft",
+    "in_progress": "offen",
     "plus_today": "+ {time} heute",
     "sunday_work": "Sonntag",
     "holiday_work": "Feiertag",

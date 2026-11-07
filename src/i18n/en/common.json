@@ -64,7 +64,7 @@
   "type_to_confirm": "Type “{text}” to confirm",
   "irreversible": "This cannot be undone.",
   "undo": "Undo",
-  "in_progress": "in progress",
+  "in_progress": "open",
   "plus_today": "+ {time} today",
   "pick_date": "Pick a date",
   "discard": "Discard",

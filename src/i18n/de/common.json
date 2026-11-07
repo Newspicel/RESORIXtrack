@@ -64,7 +64,7 @@
   "type_to_confirm": "Zum Bestätigen „{text}“ eingeben",
   "irreversible": "Das kann nicht rückgängig gemacht werden.",
   "undo": "Rückgängig",
-  "in_progress": "läuft",
+  "in_progress": "offen",
   "plus_today": "+ {time} heute",
   "pick_date": "Datum wählen",
   "discard": "Verwerfen",
