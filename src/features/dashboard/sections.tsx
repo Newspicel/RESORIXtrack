@@ -17,7 +17,7 @@ import { useNow } from "@/features/clock/use-now"
 import { findingsQuery, yearFindingsQuery } from "@/features/compliance/api"
 import type { fetchTimeOverview } from "@/features/time/api"
 import { Notice } from "@/features/time/notice"
-import { addDaysStr, fmtDay, fmtDays, fmtMinutes, fmtWeekdayShort } from "@/lib/format"
+import { addDaysStr, fmtDay, fmtDayRange, fmtDays, fmtMinutes, fmtWeekdayShort } from "@/lib/format"
 import { useI18n } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
@@ -65,7 +65,7 @@ function TileLink({ to, children }: { to: string; children: ReactNode }) {
   )
 }
 
-export function StatTiles({ overview, clock }: { overview: Overview; clock: Clock }) {
+export function StatTiles({ overview, clock, className }: { overview: Overview; clock: Clock; className?: string }) {
   const { t, intl } = useI18n()
   const c = clock.data
   const now = useNow(c?.state === "working")
@@ -75,7 +75,7 @@ export function StatTiles({ overview, clock }: { overview: Overview; clock: Cloc
   const weekWorked = week.workedMin + extra
   const v = overview.vacation
   return (
-    <StatGrid>
+    <StatGrid className={className}>
       <StatCard
         label={t("dashboard.today")}
         value={<span suppressHydrationWarning>{fmtMinutes(Math.floor(todayWorked))}</span>}
@@ -170,8 +170,7 @@ function UpcomingList({ userId, today }: { userId: number; today: string }) {
     absencesQuery({ userId, from: today, to: addDaysStr(today, 365), status: ["pending", "approved"] }),
   )
   const list = data.filter((a) => a.endDate >= today).slice(0, 4)
-  const span = (a: { startDate: string; endDate: string }) =>
-    a.startDate === a.endDate ? fmtDay(a.startDate, intl) : `${fmtDay(a.startDate, intl)} – ${fmtDay(a.endDate, intl)}`
+  const span = (a: { startDate: string; endDate: string }) => fmtDayRange(a.startDate, a.endDate, intl)
   if (!list.length) return <p className="text-sm text-muted-foreground">{t("dashboard.no_upcoming")}</p>
   return (
     <ul className="flex flex-col">

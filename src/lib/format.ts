@@ -53,6 +53,23 @@ export function fmtDay(
   return dateFormat(intl, { ...opts, timeZone: "UTC" }).format(parseDay(d))
 }
 
+/**
+ * A range of days with what both ends share written once: "2.–8. Nov. 2026", "Mo., 18. – Mi., 20. Jan. 2027".
+ * ICU's thin spaces become plain ones and Italian's zero-padded days ("02–08 nov") lose the zero.
+ */
+export function fmtDayRange(
+  from: string,
+  to: string,
+  intl: string,
+  opts: Intl.DateTimeFormatOptions = { day: "numeric", month: "short" },
+): string {
+  if (from === to) return fmtDay(from, intl, opts)
+  return dateFormat(intl, { ...opts, timeZone: "UTC" })
+    .formatRange(parseDay(from), parseDay(to))
+    .replace(/\u2009/gu, " ")
+    .replace(/\b0(\d)/gu, "$1")
+}
+
 export function fmtDayLong(d: string, intl: string): string {
   return fmtDay(d, intl, { weekday: "long", day: "numeric", month: "long" })
 }

@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
-import { addDaysStr, addMonthsStr, fmtDay, fmtMinutes, fmtMonth, mondayOf } from "@/lib/format"
+import { addDaysStr, addMonthsStr, fmtDay, fmtDayRange, fmtMinutes, fmtMonth, mondayOf } from "@/lib/format"
 import { useI18n } from "@/lib/i18n"
 import { useMe } from "@/lib/session"
 import { correctionsQuery, periodQuery, restoreEntryFn } from "./api"
@@ -113,7 +113,7 @@ export function TimeView({
     mode === "week" ? mondayOf(anchor) === mondayOf(view.today) : anchor.slice(0, 7) === view.today.slice(0, 7)
   const label =
     mode === "week"
-      ? `${fmtDay(view.from, intl)} – ${fmtDay(view.to, intl, { day: "numeric", month: "short", year: "numeric" })}`
+      ? fmtDayRange(view.from, view.to, intl, { day: "numeric", month: "short", year: "numeric" })
       : fmtMonth(anchor.slice(0, 7), intl)
   const weekFindings = view.findings.filter((f) => f.week && !f.date)
   const locks = Object.entries(view.lockedMonths)

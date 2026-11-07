@@ -1,5 +1,5 @@
 /** Client helpers for absences: half-day labels, date ranges, the range picker and list grouping. */
-import { addDaysStr, dateFormat, fmtDay, parseDay } from "@/lib/format"
+import { addDaysStr, fmtDay, fmtDayRange } from "@/lib/format"
 import type { I18n } from "@/lib/i18n-core"
 import type { AbsenceDto } from "@/server/services/absences"
 
@@ -31,8 +31,7 @@ export function formatSpan(
   }
   if (a.startHalf === "full" && a.endHalf === "full") {
     // "Mo., 18. – Mi., 20. Jan. 2027": shared month and year show once
-    const range = dateFormat(i.intl, { ...f, timeZone: "UTC" }).formatRange(parseDay(a.startDate), parseDay(a.endDate))
-    return range.replace(/\u2009/gu, " ").replace(/ *– */u, " – ") // ICU uses thin spaces in ranges
+    return fmtDayRange(a.startDate, a.endDate, i.intl, f)
   }
   // within one year the year shows once, at the end
   const start = fmtDay(

@@ -49,10 +49,13 @@ export function Dashboard() {
         }
       />
       <GettingStartedCard />
-      <HeroClock clock={clock} today={overview.today} />
+      {/* wide screens: clock and figures side by side */}
+      <div className="grid gap-6 2xl:grid-cols-2 2xl:gap-4">
+        <HeroClock clock={clock} today={overview.today} />
+        <StatTiles overview={overview} clock={clock} className="2xl:grid-cols-2" />
+      </div>
       <ComplianceHints today={overview.today.date} />
       <WorklogReminder day={overview.worklogMissingDay} />
-      <StatTiles overview={overview} clock={clock} />
       <div className="grid gap-4 lg:grid-cols-3">
         <WeekCard overview={overview} />
         <UpcomingCard userId={me.id} today={overview.today.date} />

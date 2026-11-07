@@ -12,7 +12,7 @@ import { StatCard, StatGrid } from "@/components/data/stat"
 import { tableHelper } from "@/components/data/table-helper"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { fmtDateTime, fmtDay, fmtDays, fmtMinutes } from "@/lib/format"
+import { fmtDateTime, fmtDay, fmtDayRange, fmtDays, fmtMinutes } from "@/lib/format"
 import { useI18n } from "@/lib/i18n"
 import { useMe } from "@/lib/session"
 import { cn } from "@/lib/utils"
@@ -358,9 +358,10 @@ export function AbsencesPreview({ d, link }: { d: AbsencesReportData; link: bool
       meta: { mobileLabel: t("reports.period"), className: "whitespace-nowrap" },
       cell: (c) => {
         const r = c.row.original
-        return r.startDate === r.endDate
-          ? `${fmtDay(r.startDate, intl, { day: "numeric", month: "short", year: "numeric" })}${half(r.startHalf)}`
-          : `${fmtDay(r.startDate, intl)}${half(r.startHalf)} – ${fmtDay(r.endDate, intl, { day: "numeric", month: "short", year: "numeric" })}${half(r.endHalf)}`
+        const withYear = { day: "numeric", month: "short", year: "numeric" } as const
+        if (r.startDate === r.endDate) return `${fmtDay(r.startDate, intl, withYear)}${half(r.startHalf)}`
+        if (r.startHalf === "full" && r.endHalf === "full") return fmtDayRange(r.startDate, r.endDate, intl, withYear)
+        return `${fmtDay(r.startDate, intl)}${half(r.startHalf)} – ${fmtDay(r.endDate, intl, withYear)}${half(r.endHalf)}`
       },
     }),
     absCol.accessor("days", {
