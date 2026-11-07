@@ -1,7 +1,0 @@
-{% set subject = actor.name ~ " a saisi une absence pour vous" %}{% set cta_url = base_url ~ "/absences" %}{% set cta_label = "Voir les absences" %}Bonjour {{ user.name }},
-
-{{ actor.name }} a saisi pour vous «{{ type_label }}» du {{ absence.start_date.strftime('%d.%m.%Y') }} au {{ absence.end_date.strftime('%d.%m.%Y') }} ({{ days }} jour{{ '' if days == 1 else 's' }} de travail).
-{% if type.allows_attachments %}
-Vous pouvez joindre un certificat médical ou d'autres documents dans RESORIXtrack (facultatif).{% endif %}
-
-{{ cta_url }}

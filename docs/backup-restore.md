@@ -1,111 +1,113 @@
 # Backup and restore
 
-All data of a RESORIXtrack installation lives in one Docker volume, `resorixtrack-data`, mounted at `/data` in the containers:
+All data lives in the Docker volume `resorixtrack-data`, mounted at `/data`:
 
 ```
-/data/resorixtrack.db      SQLite database (WAL mode): everything except files
-/data/attachments/      uploaded documents (sick notes), random file names
-/data/branding/         uploaded company logos
-/data/backups/          backup archives created by RESORIXtrack
+/data/resorixtrack.db   SQLite database (WAL)
+/data/attachments/      documents (sick notes), random file names
+/data/branding/         uploaded logos
+/data/backups/          encrypted backups
 ```
 
-Your `.env` file (with `SECRET_KEY`, `SIGNOFF_KEY`, `BACKUP_PASSWORD`, SMTP credentials) lives outside the volume. Keep a copy of it in your password manager: without `BACKUP_PASSWORD` no backup can be restored at all, and without `SECRET_KEY`/`SIGNOFF_KEY` the sign-off seals of a restored database would show as invalid (the data itself is fine).
+`.env` lives outside the volume. Keep `BACKUP_PASSWORD`, `SECRET_KEY` and `SIGNOFF_KEY` in your password manager: without `BACKUP_PASSWORD` no backup can be opened; without the original `SIGNOFF_KEY` restored sign-offs show "seal invalid" (the data is intact).
 
-## What a backup contains
+## What a backup is
 
-A backup is a file `resorixtrack-YYYYMMDD-HHMMSS[-label].zip.enc`: a ZIP archive, **encrypted** with the server's backup password. Decrypted, the ZIP holds:
+`resorixtrack-YYYYMMDD-HHMMSS[-label].zip.enc`: an encrypted ZIP with
 
-- `resorixtrack.db` – a consistent copy made with SQLite's online backup API, so it is safe to take while people are working;
-- `attachments/` – the current (non-deleted) documents, when included;
-- `manifest.json` – version, timestamp and options.
+- `resorixtrack.db`: a consistent snapshot, safe while people work,
+- `attachments/`: current documents (optional),
+- `branding/`: logos,
+- `manifest.json`: version, time, SHA-256 of every file (checked on restore).
 
-### Encryption
+**Encryption** (format RTBK1, same as v1): a key derived from `BACKUP_PASSWORD` with Argon2id (64 MiB, 3 passes, random salt per archive), ChaCha20-Poly1305 in 1 MiB chunks, header authenticated in every chunk, truncation detected. The ZIP is streamed into the encryptor; no unencrypted archive touches the disk. Changing `BACKUP_PASSWORD` affects new backups only; restore older ones with `--ask-password`. Format details: `src/server/services/backup-crypto.ts`.
 
-- Every backup – nightly, pre-migration, manual, downloaded – is encrypted; no unencrypted archive is ever written to disk. Downloads deliver the encrypted file as is.
-- `BACKUP_PASSWORD` in `.env` (or `BACKUP_PASSWORD_FILE`) is **mandatory** (≥ 12 characters); the app refuses to start without it. **Keep it in your password manager**: without it no backup can be opened or restored, and nobody can recover it for you.
-- Format "RTBK1": a 256-bit key is derived from the password with **Argon2id** (64 MiB, 3 passes, random 16-byte salt per archive) and the ZIP is encrypted in 1 MiB chunks with **ChaCha20-Poly1305**; the header is authenticated with every chunk and a last-chunk flag makes truncation detectable. A wrong password or any modification is rejected.
-- Changing the password affects new backups only. Old archives still need the password they were made with – keep the old one until those archives are rotated away, and use `--ask-password` to restore them.
-- Decrypting outside RESORIXtrack: `scripts/decrypt-backup.py` (needs `pip install cryptography argon2-cffi`), or `flask resorixtrack decrypt-backup <file> -o plain.zip` in the container.
+## When backups are made
 
-## How backups are created
+| Trigger | Notes |
+|---|---|
+| Nightly 02:00 (worker) | `-auto`, with documents; the last `BACKUP_KEEP` (14) are kept |
+| Administration → Backups & logs → Create backup | Choose whether to include documents; download from the list |
+| `docker compose exec app rt backup [--label x] [--no-attachments]` | Manual |
+| Update with pending migrations (`rt migrate` on start) | `-premigrate`, without documents (migrations do not touch them) |
 
-| Trigger | Where | Notes |
-|---|---|---|
-| **Nightly** at 02:00 (company timezone), by the `worker` container | `/data/backups/…-auto.zip.enc` | includes documents; the last `BACKUP_KEEP` (default 14) are kept |
-| **Before every schema migration** on start of a new version | `/data/backups/…-premigrate.zip.enc` | database only; never rotated automatically |
-| **Administration → Backups & logs → Create backup** | `/data/backups/` | choose whether to include documents |
-| **Download a fresh backup** (same page) | your browser | creates and downloads in one step |
-| `make backup` on the Docker host | `./backups/` | runs `flask resorixtrack backup` in the container and copies the file out |
-| API: `POST /api/v1/admin/backups`, `GET /api/v1/admin/backups`, `GET /api/v1/admin/backups/<name>`, `POST /api/v1/admin/backups/download` | scripts | needs an `admin`-scoped token or an admin session |
-
-Manual and pre-migration backups are never deleted automatically; remove old ones in the web UI or on disk.
+Only `-auto` backups are rotated. Delete others in the web UI.
 
 ## Off-site copies
 
-A backup on the same disk as the database only protects against mistakes, not against disk failure, ransomware or a lost server. Copy backups elsewhere at least daily. Two simple approaches:
-
-**A. Pull the latest backup with a cron job on another machine**
+A backup on the same disk does not survive disk failure, ransomware or a lost server. Copy at least daily, for example:
 
 ```bash
-# on the backup host; needs SSH access to the Docker host
-0 3 * * * ssh resorixtrack-host 'docker compose -f /srv/resorixtrack/docker-compose.yml exec -T app sh -c "ls -t /data/backups/*-auto.zip.enc | head -1 | xargs cat"' > /backups/resorixtrack-$(date +\%F).zip.enc
+# from another machine, via SSH
+0 3 * * * ssh rt-host 'cd /srv/resorixtrack && docker compose exec -T app sh -c "ls -t /data/backups/*-auto.zip.enc | head -1 | xargs cat"' > /backups/resorixtrack-$(date +\%F).zip.enc
+
+# or on the host, into a folder your backup tool (restic, borg, rclone) syncs
+docker run --rm -v resorixtrack_resorixtrack-data:/data:ro -v /srv/offsite:/out alpine sh -c 'cp /data/backups/*-auto.zip.enc /out/'
 ```
 
-**B. Sync the backups folder with your existing backup tool** (restic, borg, rclone, …)
-
-```bash
-docker run --rm -v resorixtrack_resorixtrack-data:/data:ro -v /srv/offsite:/out alpine \
-  sh -c 'cp /data/backups/*-auto.zip.enc /out/'
-```
-
-The archives are already encrypted, so any destination will do – as long as the backup password is stored somewhere else (never next to the backups).
+The archives are encrypted, so any destination works, as long as the password is stored elsewhere. The volume name is `<project>_resorixtrack-data` (`docker volume ls`).
 
 ## Restore
 
-Restoring replaces the database and the documents with the content of a backup. The current database is kept as a safety copy.
+Replaces the database, documents and logos. The current database is kept as `resorixtrack.db.before-restore-<time>`.
+
+1. Stop the app and worker:
+   ```bash
+   docker compose stop app worker
+   ```
+2. Restore (a file in `/data/backups`, or mount one with `-v /path/to/file.zip.enc:/restore.zip.enc:ro`):
+   ```bash
+   docker compose run --rm --no-deps app rt restore /data/backups/<file>.zip.enc
+   ```
+   It prints the backup's date and version and asks before replacing. `--yes` skips the question; `--ask-password` asks for an older backup password.
+3. Start:
+   ```bash
+   docker compose up -d
+   ```
+   Pending migrations run on start, so a backup from an older 2.x release restores fine. Restore into the same or a newer release.
+4. Check:
+   - sign in; Administration → Backups & logs shows the expected audit log;
+   - `docker compose exec app rt verify-signoffs` reports all sign-offs intact;
+   - tell people to re-enter anything recorded after the backup time.
+
+A v1 backup is detected and not restored; import it instead: [migration-from-v1.md](migration-from-v1.md#from-a-v1-backup).
+
+## Decrypt without restoring
+
+To look inside a backup (v1 or v2) without replacing anything:
 
 ```bash
-make restore f=backups/resorixtrack-20261105-020000-auto.zip.enc
+docker compose exec app rt decrypt-backup /data/backups/<file>.zip.enc --out /tmp/inspect
 ```
 
-The script stops the stack, mounts the archive into a one-off container, runs `flask resorixtrack restore` (which decrypts with `BACKUP_PASSWORD` from `.env`), and starts everything again. For an archive made with an earlier password, run the manual command below with `--ask-password`. Migrations run automatically on start, so a backup from an **older** version restores fine; a backup from a **newer** version is refused ("database is newer than the application") – install the matching version first.
+It writes the files into the empty directory `--out` and nowhere else, and checks the checksums. Delete the directory afterwards: it holds decrypted personal data.
 
-Manual restore without the script:
+Disaster recovery without RESORIXtrack: `scripts/decrypt-backup.mjs` needs only Node.js and `@node-rs/argon2` and writes the plain ZIP:
 
 ```bash
-docker compose stop
-docker compose run --rm --no-deps app flask resorixtrack restore /data/backups/<file>.zip.enc --yes   # add --ask-password for an older password
-docker compose up -d
+npm install @node-rs/argon2
+BACKUP_PASSWORD=... node decrypt-backup.mjs <file>.zip.enc backup.zip
 ```
-
-After a restore:
-
-1. Sign in and check **Administration → Backups & logs** – the backup list and the audit log should look as expected.
-2. Run the **integrity check** under Team → Month sign-off (as an administrator). All sign-offs must be "intact". If they show "seal invalid", the `SIGNOFF_KEY`/`SECRET_KEY` differs from the one used when they were signed.
-3. Tell your team if entries made after the backup time have to be re-entered.
 
 ## Moving to another server
 
-1. On the old server: `make backup` (or download a fresh backup), and copy `.env` (it holds the backup password).
-2. On the new server: install RESORIXtrack as described in [installation.md](installation.md), using the **same `.env`** (at least the same `SECRET_KEY` and `SIGNOFF_KEY`), start it once so the volume exists, then restore the backup as above.
+1. Old server: `rt backup`, copy the archive and `.env`.
+2. New server: install as in [installation.md](installation.md) with the **same `.env`** (at least `SECRET_KEY`, `SIGNOFF_KEY`, `BACKUP_PASSWORD`), restore as above.
 3. Switch DNS.
 
 ## Test your restore
 
-Once a quarter, restore the latest backup into a throwaway stack and open it:
+Once a quarter, into a throwaway stack:
 
 ```bash
-RESORIXTRACK_ENV_FILE=.env.test RESORIXTRACK_PORT=18080 docker compose -p resorixtrack-test up -d
-docker compose -p resorixtrack-test run --rm --no-deps app flask resorixtrack restore /data/backups/<file>.zip.enc --yes
+cp .env .env.test   # keep BACKUP_PASSWORD; set SESSION_COOKIE_SECURE=false, TRUSTED_PROXIES=0, BASE_URL=http://localhost:18080
+export RESORIXTRACK_ENV_FILE=.env.test RESORIXTRACK_PORT=18080
+docker compose -p rt-test run --rm --no-deps -v "$PWD/backups/<file>.zip.enc:/restore.zip.enc:ro" app rt restore /restore.zip.enc --yes
+docker compose -p rt-test up -d app
 # open http://localhost:18080, check, then:
-docker compose -p resorixtrack-test down -v
+docker compose -p rt-test down -v
 ```
 
-(`.env.test` needs the same `BACKUP_PASSWORD`, plus `SESSION_COOKIE_SECURE=false` and `TRUSTED_PROXIES=0` for a plain-HTTP local test.)
+## Personal data in backups
 
-## Retention of personal data
-
-- Records are soft-deleted and kept for the statutory period; the change log is append-only.
-- `flask resorixtrack purge-attachments --older-than 365` removes the files of deleted documents and of documents on cancelled/declined absences older than a year (the records and checksums remain). Run it from a cron job if you want it automated:
-  `docker compose exec app flask resorixtrack purge-attachments --older-than 365`
-- Backups never contain deleted documents, but they do contain everything else as of their date. Apply the same retention to your off-site copies.
+Backups contain everything as of their date, including data later anonymised. Apply your retention rules to off-site copies too. Removed documents are not included.

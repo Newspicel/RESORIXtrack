@@ -1,7 +1,0 @@
-{% set subject = type_label ~ " bewilligt" %}{% set cta_url = base_url ~ "/absences" %}{% set cta_label = "Abwesenheiten ansehen" %}Hallo {{ user.name }}
-
-{{ actor.name }} hat deinen Antrag «{{ type_label }}» vom {{ absence.start_date.strftime('%d.%m.%Y') }} bis {{ absence.end_date.strftime('%d.%m.%Y') }} bewilligt ({{ days }} Arbeitstag{{ '' if days == 1 else 'e' }}).{% if note %}
-
-Notiz: {{ note }}{% endif %}
-
-{{ cta_url }}

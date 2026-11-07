@@ -1,0 +1,15 @@
+{
+  "placeholder": "Rechercher…",
+  "title": "Recherche",
+  "description": "Trouver des pages, des personnes et des projets, ou lancer une action.",
+  "input_placeholder": "Saisir un nom, un projet ou une page…",
+  "empty": "Aucun résultat.",
+  "people": "Personnes",
+  "projects": "Projets",
+  "teams": "Équipes",
+  "actions": "Actions",
+  "pages": "Pages",
+  "add_time": "Saisir du temps",
+  "request_absence": "Demander une absence",
+  "clock": "Pointer l'arrivée / le départ"
+}

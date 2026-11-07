@@ -1,7 +1,0 @@
-{% set subject = type_label ~ " cancelled" %}{% set cta_url = base_url ~ "/absences" %}{% set cta_label = "View absences" %}Hello {{ user.name }},
-
-{{ actor.name }} cancelled your {{ type_label|lower }} from {{ absence.start_date.strftime('%d.%m.%Y') }} to {{ absence.end_date.strftime('%d.%m.%Y') }}.
-
-Reason: {{ reason or "–" }}
-
-{{ cta_url }}

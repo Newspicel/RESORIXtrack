@@ -1,64 +1,62 @@
 # Customizing
 
-## Logo and colours (no rebuild)
+## Branding (no rebuild)
 
-**Administration → Settings → Branding**
+**Administration → Settings → Company**
 
-- **Company name**: shown in the browser title, emails, reports.
-- **Accent colour**: one colour (`#rrggbb`) for buttons, links and highlights. Lighter and darker shades are derived automatically. Leave empty for the default blue.
-- **Logos**: one for dark backgrounds (light artwork) and one for light backgrounds. SVG or PNG, up to 512 KB, transparent background, at least 64 px tall. They are used on the sign-in page, in the sidebar, on PDF reports and – **PNG only**, because mail clients don't render SVG – in emails. If you upload only SVG, emails show the company name as text instead.
+| Setting | Effect |
+|---|---|
+| Company name | Browser title, emails, reports |
+| Accent colour | `#rrggbb`; replaces `--brand`, all brand shades derive from it. Empty: RESORIX blue. |
+| Logo on dark, logo on light | SVG, PNG or WebP, up to 1 MB, transparent background. Used on the sign-in page, in the app and on PDF reports. Emails use the PNG only (mail clients do not render SVG); with custom logos but no PNG, emails show the company name as text. |
 
-Uploaded files live in `/data/branding/` (inside the Docker volume) and are included in backups. Uploaded SVG is checked for scripts, event handlers and external references and refused if it contains any.
+Logos are stored in `/data/branding/` and included in backups. SVG files with scripts, event handlers or external references are refused.
 
-## Theme (one file)
+A modified or rebranded version must replace the RESORIX logos, see [LICENSING.md](../LICENSING.md#trademarks).
 
-Everything visual that isn't the logo is defined as CSS custom properties in **`frontend/src/styles/theme.css`**: background and surface colours for the dark and the light theme, the brand/accent colours, the semantic colours (work, break, absence, holiday, positive/negative balance, danger), border radii, shadows, fonts and layout sizes (sidebar width, top bar height).
+## Theme tokens
 
-```css
-:root {
-  --color-brand: #35a1cc;          /* primary buttons, active states, links */
-  --color-brand-bright: #61cae2;   /* lighter accent for dark backgrounds */
-  --color-brand-ink: #207aaa;      /* darker accent for light backgrounds / hover */
-  --color-break: #e0a23b;
-  --radius-lg: 14px;
-  --sidebar-w: 248px;
-  ...
-}
-:root[data-theme="light"] { ... }
-```
+All colours, radii and shadows are CSS custom properties in **`src/styles.css`**, authored in OKLCH. Dark tokens are the base; the `light` variant swaps them. The theme follows the device (`prefers-color-scheme`) unless the person picks Light or Dark in the top bar: then `<html>` gets `.light` or `.dark` (cookie `rt_theme`). Use the `light:` and `dark:` utilities, they cover both cases.
 
-Change the values, rebuild (`make build-frontend` for a local check, `docker compose up -d --build` for production). The accent colour set in Branding overrides the three `--color-brand*` values at runtime, so operators can change it without a rebuild.
+| Token group | Examples |
+|---|---|
+| Brand | `--brand`, `--brand-bright`, `--brand-ink`, `--navy`, `--gradient-brand` |
+| Surfaces | `--background`, `--card`, `--popover`, `--muted`, `--border` |
+| Status (one lightness and chroma, hue varies) | `--work`, `--break`, `--absent`, `--holiday`, `--positive`, `--negative`, `--warning`, `--info` |
+| Charts | `--chart-1` … `--chart-5` |
+| Sidebar | `--sidebar` and friends |
 
-Component styles are in `frontend/src/styles/global.css` (app shell, cards, buttons, forms, tables, calendar, timeline) and `admin.css` (administration pages). They only reference the tokens from `theme.css`.
+Change values, then rebuild (`pnpm build`, or `docker compose up -d --build`). Components use only these tokens through Tailwind classes; rules in [design.md](design.md).
 
-## Favicon and app icon
+## Icons
 
-`frontend/public/favicon.svg` and `frontend/public/apple-touch-icon.png`, plus `manifest.webmanifest` for the installable app. Replace the files and rebuild.
+`public/favicon.svg`, `public/apple-touch-icon.png`, `public/manifest.webmanifest` (installable app). Default artwork in `public/brand/`. Replace and rebuild.
 
 ## Languages
 
-The UI ships in English, German and French. To add a language:
+English, German, French and Italian ship. UI strings are JSON files in `src/i18n/<locale>/<namespace>.json`; placeholders `{name}`, plurals with `_one` / `_other` (`_few`, `_many` where needed). Email texts are in `src/server/mail/strings.ts`; PDF and spreadsheet labels come from the `reports.pdf` keys; holiday names from `holidays.json`.
 
-1. Copy `frontend/src/i18n/en/` to `frontend/src/i18n/<code>/` and translate the JSON files. Keep the keys and the `{placeholders}`; plural forms use `_one` / `_other` suffixes (`_few`/`_many` where the language needs them).
-2. Add the language to `LOCALES` in `frontend/src/lib/i18n.ts` (code, label, Intl locale for date and number formatting).
-3. Add `<code>` to the allowed locales in `backend/resorixtrack/api/schemas.py` and `backend/resorixtrack/services/users.py`.
-4. Optional but recommended: email templates in `backend/resorixtrack/templates/email/<code>/` (one text file per message, same structure as `en/`), and the PDF/XLSX labels (`LABELS`, `HOLIDAY_NAMES_*` in `backend/resorixtrack/services/reports.py`, `ABSENCE_LABELS_*` in `services/mail.py`). English is the fallback for anything missing.
-5. Run `node frontend/scripts/i18n-check.mjs`: it lists missing keys and placeholder mismatches.
+### Change a string
 
-Holiday names are stored in English as data and translated for display through `i18n/<code>/holidays.json`.
+```bash
+pnpm tsx scripts/i18n-set.ts time.add_entry "Add entry" "Eintrag hinzufügen" "Ajouter une entrée" "Aggiungi registrazione"
+pnpm tsx scripts/i18n-set.ts --file keys.json   # { "ns.key": ["en", "de", "fr", "it"] }
+pnpm i18n:check
+```
 
-## Email templates
+German uses Swiss spelling (ss) and "du"; French and Italian use "tu".
 
-`backend/resorixtrack/templates/email/<locale>/<message>.txt`: plain-text Jinja templates with a `{% set subject = "…" %}` line and optional `cta_url` / `cta_label`. The HTML version is generated from the paragraphs inside the branded layout `templates/email/base.html` (colours and footer can be edited there).
+### Add a language
 
-## PDF reports
-
-`backend/resorixtrack/templates/pdf/_base.html` holds the page layout and styles of all PDF reports (A4, header with logo, footer with page numbers); the individual reports are `timesheet.html`, `balances.html`, `absences.html`.
+1. Copy `src/i18n/en` to `src/i18n/<code>` and translate. Keep keys and placeholders.
+2. Add `{ code, label, intl }` to `LOCALES` in `src/lib/locales.ts`. Validators, profile, setup, emails and `scripts/i18n-set.ts` all read it.
+3. Add a locale object to `src/server/mail/strings.ts` and to `MAIL_STRINGS` (the type check and `mail.test.ts` fail until it is complete).
+4. Run `pnpm i18n:check` (missing keys, placeholder mismatches) and `pnpm test`.
 
 ## Public-holiday presets
 
-Built-in calendars are defined in `backend/resorixtrack/services/presets.py`. Add a preset with a key, name, region code and the list of `(date, name, fraction)` entries; it then appears in the setup wizard and under Public holidays → Install preset.
+Calendars come from Swiss presets only: the 26 cantons (`CH-ZH` …) and local presets (`ch-fr-fribourg`), built on `date-holidays`; see `src/server/services/holiday-calendars.ts`. A calendar keeps its preset key in `region_code`; the worker adds next year's holidays every 1 October.
 
 ## Absence types
 
-Custom absence types don't need code: **Settings → Absence types → New absence type**. Built-in types can be renamed per language through `i18n/<code>/absence_types.json`.
+No code needed: **Settings → Absence types**. Built-in type names are translated in `src/i18n/<locale>/absence_types.json`.

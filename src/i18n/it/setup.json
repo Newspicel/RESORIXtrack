@@ -1,0 +1,20 @@
+{
+  "step_company": "Azienda",
+  "step_time": "Orario di lavoro",
+  "step_holidays": "Giorni festivi",
+  "step_admin": "Il tuo account",
+  "progress": "Passo {step} di {total}",
+  "code": "Codice di configurazione",
+  "code_help": "Nel log del server o con rt setup-code",
+  "company": "Nome dell'azienda",
+  "weekly_hours": "Ore settimanali a tempo pieno",
+  "hours_range": "Tra 1 e 100",
+  "vacation_days": "Giorni di vacanza all'anno",
+  "days_range": "Tra 0 e 366",
+  "holidays": "Calendario",
+  "holidays_help": "Standard per tutti",
+  "no_holidays": "Configura più tardi",
+  "holidays_failed": "Giorni festivi non installati. Aggiungili in Amministrazione.",
+  "no_smtp": "Nessun server e-mail: gli inviti partono solo quando SMTP_HOST è configurato.",
+  "finish": "Completa la configurazione"
+}

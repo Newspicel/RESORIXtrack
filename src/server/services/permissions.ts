@@ -1,0 +1,199 @@
+/**
+ * Who may see and change whose data (port of v1 services/permissions.py).
+ *
+ * - Employee: own data.
+ * - Team lead / deputy (rows in `team_leads`, optionally limited to a period): members of that team –
+ *   entries, absences, accounts, corrections, approvals, sign-off, team projects.
+ * - HR capability: everyone's time data, reports for all, sign-off of any month, reopening, integrity check.
+ * - Administrator (role): users, teams, roles, settings, holidays, branding, backups, logs – but NO time
+ *   data of others unless they also hold HR.
+ * - Projects capability: creates and maintains all projects.
+ *
+ * Rule: when an actor may not see a person, behave as if the person does not exist (NotFound), so ids
+ * outside the actor's scope are not leaked.
+ */
+import { and, asc, eq, gte, inArray, isNull, lte, or, sql } from "drizzle-orm"
+import { db } from "../db"
+import { type Capability, type TeamLead, teamLeads, teams, type User, users } from "../db/schema"
+import { Forbidden, NotFound } from "../errors"
+import { localToday } from "../time"
+import { getSetting } from "./settings"
+
+export interface Actor {
+  user: User
+  id: number
+  isAdmin: boolean
+  isHr: boolean
+  caps: ReadonlySet<Capability>
+  /** Teams led today (lead or deputy within the period). */
+  ledTeamIds: ReadonlySet<number>
+}
+
+function today(): string {
+  return localToday(getSetting("default_timezone"))
+}
+
+export function activeLeadRows(opts: { teamId?: number; userId?: number; on?: string } = {}): TeamLead[] {
+  const on = opts.on ?? today()
+  const conds = [
+    or(isNull(teamLeads.validFrom), lte(teamLeads.validFrom, on)),
+    or(isNull(teamLeads.validTo), gte(teamLeads.validTo, on)),
+  ]
+  if (opts.teamId != null) conds.push(eq(teamLeads.teamId, opts.teamId))
+  if (opts.userId != null) conds.push(eq(teamLeads.userId, opts.userId))
+  return db
+    .select()
+    .from(teamLeads)
+    .where(and(...conds))
+    .orderBy(asc(teamLeads.role), asc(teamLeads.id))
+    .all()
+}
+
+export function ledTeamIds(userId: number): Set<number> {
+  return new Set(activeLeadRows({ userId }).map((r) => r.teamId))
+}
+
+export function actorFromUser(user: User): Actor {
+  const caps = new Set<Capability>(user.capabilities ?? [])
+  return {
+    user,
+    id: user.id,
+    isAdmin: user.role === "admin",
+    isHr: caps.has("hr"),
+    caps,
+    ledTeamIds: ledTeamIds(user.id),
+  }
+}
+
+export function getUserOr404(userId: number): User {
+  const u = db.select().from(users).where(eq(users.id, userId)).get()
+  if (!u) throw new NotFound("User not found")
+  return u
+}
+
+export function loadActor(userId: number): Actor {
+  return actorFromUser(getUserOr404(userId))
+}
+
+/** Active leads and deputies of a team (active accounts only). */
+export function teamLeaders(teamId: number, on?: string): User[] {
+  const ids = activeLeadRows({ teamId, on }).map((r) => r.userId)
+  if (!ids.length) return []
+  return db
+    .select()
+    .from(users)
+    .where(and(inArray(users.id, ids), eq(users.isActive, true)))
+    .all()
+}
+
+export function leadsUser(actor: Actor, target: User): boolean {
+  if (target.teamId == null || target.id === actor.id) return false
+  return actor.ledTeamIds.has(target.teamId)
+}
+
+/** Time data (entries, absences, accounts, work log, reports) of `target`. */
+export function canViewUser(actor: Actor, target: User): boolean {
+  return actor.id === target.id || actor.isHr || leadsUser(actor, target)
+}
+
+/** Profile and contract data (no times): additionally administrators. */
+export function canViewProfile(actor: Actor, target: User): boolean {
+  return actor.isAdmin || canViewUser(actor, target)
+}
+
+export function requireProfile(actor: Actor, userId: number): User {
+  const target = getUserOr404(userId)
+  if (!canViewProfile(actor, target)) throw new NotFound("User not found")
+  return target
+}
+
+/** Correct entries, mark sick, approve/cancel absences, log work of `target` (never oneself). */
+export function canManageUser(actor: Actor, target: User): boolean {
+  if (actor.id === target.id) return false
+  return actor.isHr || leadsUser(actor, target)
+}
+
+export function canEditSchedule(actor: Actor, target: User): boolean {
+  if (actor.isHr) return true
+  return leadsUser(actor, target) && getSetting("lead_can_edit_schedules")
+}
+
+export function canAdjustBalance(actor: Actor, target: User): boolean {
+  if (actor.isHr) return true
+  return leadsUser(actor, target) && getSetting("lead_can_adjust_balances")
+}
+
+export function hrUsers(): User[] {
+  return db
+    .select()
+    .from(users)
+    .where(
+      and(eq(users.isActive, true), sql`exists (select 1 from json_each(${users.capabilities}) where value = 'hr')`),
+    )
+    .all()
+}
+
+/**
+ * Who decides on `target`'s requests: the active leads/deputies of their team (never the person themselves);
+ * otherwise HR; as a last resort the administrators, so nothing gets stuck.
+ */
+export function approversFor(target: User): User[] {
+  if (target.teamId != null) {
+    const team = db.select().from(teams).where(eq(teams.id, target.teamId)).get()
+    const leads = team ? teamLeaders(team.id).filter((u) => u.id !== target.id) : []
+    if (leads.length) return leads
+  }
+  const hr = hrUsers().filter((u) => u.id !== target.id)
+  if (hr.length) return hr
+  return db
+    .select()
+    .from(users)
+    .where(and(eq(users.role, "admin"), eq(users.isActive, true)))
+    .all()
+    .filter((u) => u.id !== target.id)
+}
+
+export const canDecideAbsence = canManageUser
+
+export function canManageProjects(actor: Actor, teamId: number | null): boolean {
+  if (actor.caps.has("projects")) return true
+  return teamId != null && actor.ledTeamIds.has(teamId)
+}
+
+export function requireView(actor: Actor, userId: number): User {
+  const target = getUserOr404(userId)
+  if (!canViewUser(actor, target)) throw new NotFound("User not found")
+  return target
+}
+
+export function requireManage(actor: Actor, target: User): void {
+  if (!canManageUser(actor, target)) throw new Forbidden("You can only manage members of teams you lead")
+}
+
+export function requireAdmin(actor: Actor): void {
+  if (!actor.isAdmin) throw new Forbidden("Administrators only")
+}
+
+export function requireHr(actor: Actor): void {
+  if (!actor.isHr) throw new Forbidden("HR only")
+}
+
+/** Ids of people whose time data the actor sees; `null` means everyone (HR). */
+export function visibleUserIds(actor: Actor): number[] | null {
+  if (actor.isHr) return null
+  const ids = new Set<number>([actor.id])
+  if (actor.ledTeamIds.size) {
+    for (const r of db
+      .select({ id: users.id })
+      .from(users)
+      .where(inArray(users.teamId, [...actor.ledTeamIds]))
+      .all())
+      ids.add(r.id)
+  }
+  return [...ids].sort((a, b) => a - b)
+}
+
+/** Sees the Team section: leads/deputies and HR. */
+export function isManager(actor: Actor): boolean {
+  return actor.isHr || actor.ledTeamIds.size > 0
+}

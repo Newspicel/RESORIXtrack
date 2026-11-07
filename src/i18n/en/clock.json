@@ -1,0 +1,31 @@
+{
+  "label": "Clock",
+  "start": "Clock in",
+  "stop": "Clock out",
+  "break": "Start break",
+  "resume": "End break",
+  "state": {
+    "idle": "Not clocked in",
+    "working": "Working",
+    "on_break": "On break"
+  },
+  "headline": {
+    "idle": "You're not clocked in",
+    "working": "You're clocked in",
+    "on_break": "You're on a break"
+  },
+  "offline": "Offline",
+  "pending_one": "Offline, {count} pending",
+  "pending_other": "Offline, {count} pending",
+  "queued_offline": "Offline. Saved, will sync.",
+  "synced": "Offline punches synced",
+  "custom_time_in": "Clock in at a chosen time",
+  "custom_time_out": "Clock out at a chosen time",
+  "custom_time_label_in": "Start time",
+  "custom_time_label_out": "End time",
+  "custom_time_help_in": "Up to 48 h back. Marked as manual.",
+  "custom_time_help_out": "Later than now means yesterday. Marked as manual.",
+  "rejected_one": "{count} offline punch rejected",
+  "rejected_other": "{count} offline punches rejected",
+  "custom_time": "Other time"
+}

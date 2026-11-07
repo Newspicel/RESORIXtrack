@@ -1,0 +1,20 @@
+{
+  "step_company": "Entreprise",
+  "step_time": "Temps de travail",
+  "step_holidays": "Jours fériés",
+  "step_admin": "Ton compte",
+  "progress": "Étape {step} sur {total}",
+  "code": "Code de configuration",
+  "code_help": "Dans le journal du serveur ou via rt setup-code",
+  "company": "Nom de l'entreprise",
+  "weekly_hours": "Heures par semaine (plein temps)",
+  "hours_range": "Entre 1 et 100",
+  "vacation_days": "Jours de vacances par an",
+  "days_range": "Entre 0 et 366",
+  "holidays": "Calendrier",
+  "holidays_help": "Par défaut pour tous",
+  "no_holidays": "Plus tard",
+  "holidays_failed": "Jours fériés non installés. Ajoute-les sous Administration.",
+  "no_smtp": "Pas de serveur e-mail : les invitations ne partent qu'avec SMTP_HOST.",
+  "finish": "Terminer"
+}

@@ -1,0 +1,28 @@
+{
+  "title": "Labour law",
+  "none": "No findings",
+  "rule": {
+    "break_min": "Break too short",
+    "daily_rest": "Rest under 11 h",
+    "day_span": "Day over 14 h",
+    "night_work": "Night work",
+    "sunday_work": "Sunday work",
+    "weekly_max": "Weekly maximum exceeded",
+    "overtime_daily": "Over 2 h Überzeit a day",
+    "overtime_yearly": "Yearly Überzeit limit",
+    "consecutive_days": "Over 6 days in a row",
+    "vacation_minimum": "Vacation below minimum",
+    "vacation_block": "No 2-week vacation",
+    "compensatory_rest": "Compensatory rest"
+  },
+  "severity": {
+    "violation": "Violation",
+    "warning": "Warning",
+    "info": "Note"
+  },
+  "overtime": "Overtime",
+  "ueberzeit": "Überzeit",
+  "ueberzeit_year": "Überzeit {year}",
+  "of_limit": "{value} of {limit}",
+  "team": "Findings"
+}

@@ -1,0 +1,31 @@
+{
+  "label": "Pointeuse",
+  "start": "Timbrer l'arrivée",
+  "stop": "Timbrer la sortie",
+  "break": "Commencer la pause",
+  "resume": "Terminer la pause",
+  "state": {
+    "idle": "Non timbré",
+    "working": "Au travail",
+    "on_break": "En pause"
+  },
+  "headline": {
+    "idle": "Tu n'as pas timbré",
+    "working": "Tu es au travail",
+    "on_break": "Tu es en pause"
+  },
+  "offline": "Hors ligne",
+  "pending_one": "Hors ligne, {count} en attente",
+  "pending_other": "Hors ligne, {count} en attente",
+  "queued_offline": "Hors ligne. Enregistré, sera synchronisé.",
+  "synced": "Timbrages hors ligne synchronisés",
+  "custom_time_in": "Timbrer l'arrivée à une heure choisie",
+  "custom_time_out": "Timbrer la sortie à une heure choisie",
+  "custom_time_label_in": "Heure de début",
+  "custom_time_label_out": "Heure de fin",
+  "custom_time_help_in": "Jusqu'à 48 h en arrière. Marqué comme manuel.",
+  "custom_time_help_out": "Plus tard que maintenant = hier. Marqué comme manuel.",
+  "rejected_one": "{count} timbrage hors ligne refusé",
+  "rejected_other": "{count} timbrages hors ligne refusés",
+  "custom_time": "Autre heure"
+}

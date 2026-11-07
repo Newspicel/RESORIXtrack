@@ -1,7 +1,0 @@
-{% set subject = "Still working?" %}{% set cta_url = base_url ~ "/" %}{% set cta_label = "Open RESORIXtrack" %}Hello {{ user.name }},
-
-You have been clocked in since {{ since.strftime('%H:%M') }} ({{ since.strftime('%d.%m.%Y') }}), more than {{ hours }} hours. Did you forget to clock out?
-
-You can stop the clock or correct the time in RESORIXtrack.
-
-{{ cta_url }}

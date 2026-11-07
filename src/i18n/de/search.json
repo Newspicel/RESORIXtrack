@@ -1,0 +1,15 @@
+{
+  "placeholder": "Suchen…",
+  "title": "Suche",
+  "description": "Seiten, Personen und Projekte finden oder eine Aktion ausführen.",
+  "input_placeholder": "Name, Projekt oder Seite eingeben…",
+  "empty": "Keine Treffer.",
+  "people": "Personen",
+  "projects": "Projekte",
+  "teams": "Teams",
+  "actions": "Aktionen",
+  "pages": "Seiten",
+  "add_time": "Zeit erfassen",
+  "request_absence": "Abwesenheit beantragen",
+  "clock": "Ein-/Ausstempeln"
+}

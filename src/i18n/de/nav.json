@@ -1,0 +1,41 @@
+{
+  "main": "Hauptnavigation",
+  "menu": "Menü",
+  "dashboard": "Übersicht",
+  "time": "Meine Zeit",
+  "absences": "Abwesenheiten",
+  "account": "Zeitkonto",
+  "reports": "Berichte",
+  "team_section": "Team",
+  "team": "Teamübersicht",
+  "approvals": "Freigaben",
+  "admin_section": "Administration",
+  "users": "Mitarbeitende",
+  "teams": "Teams",
+  "holidays": "Feiertage",
+  "settings": "Einstellungen",
+  "backups": "Backups & Protokolle",
+  "profile": "Profil & Sicherheit",
+  "logout": "Abmelden",
+  "account_menu": "Kontomenü",
+  "signoff": "Monatsabschluss",
+  "team_calendar": "Teamkalender",
+  "projects": "Projekte",
+  "profile_hint": "Passwort, Zwei-Faktor-Authentifizierung, Geräte und API-Tokens",
+  "more": "Mehr",
+  "skip_to_content": "Zum Inhalt springen",
+  "toggle_sidebar": "Seitenleiste ein-/ausblenden",
+  "tab": {
+    "dashboard": "Start",
+    "time": "Zeit",
+    "absences": "Absenzen",
+    "account": "Konto",
+    "team": "Team"
+  },
+  "theme_is": "Darstellung: {mode}",
+  "theme": {
+    "system": "System",
+    "light": "Hell",
+    "dark": "Dunkel"
+  }
+}

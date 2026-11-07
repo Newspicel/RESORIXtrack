@@ -1,5 +1,0 @@
-{% set subject = "L'adresse e-mail de votre compte RESORIXtrack a été modifiée" %}Bonjour {{ user.name }},
-
-L'adresse e-mail de votre compte RESORIXtrack a été remplacée par {{ new_email }} par {{ actor.name if actor else "un administrateur" }}. Cette adresse ne recevra plus de messages de RESORIXtrack. Tous les appareils ont été déconnectés et les jetons API révoqués.
-
-Si vous n'attendiez pas cette modification, contactez immédiatement votre administrateur.
