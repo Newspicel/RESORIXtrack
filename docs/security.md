@@ -49,6 +49,7 @@ RESORIXtrack holds personal data (working hours, absences, sick notes) of a whol
 ## API keys
 
 - Created under Profile → API keys after confirming the password (people who only use SSO have none to confirm). Shown once, stored hashed, prefix `rt_`.
+- Apps obtain a key by signing in (`POST /api/v1/auth/token`: email, password and, with two-factor authentication, the authenticator or a backup code – verified by the same Better Auth two-factor flow as the web, incl. its lockout). Same failure throttle, sign-in log (`token_issued`) and OIDC-only rule as the web sign-in, plus a per-address burst limit; refused while the company requires two-factor authentication the person has not set up. See [api.md](api.md).
 - Scopes: `time:read`, `time:write`, `absences:read`, `absences:write`, `reports:read`. A key never exceeds its owner's rights.
 - Expire after 30, 90, 180 or 365 days. Per-key rate limit (burst 120, 2 per second). Use count and last use are recorded.
 - Account management (password, sessions, keys, profile) is not reachable with a key.

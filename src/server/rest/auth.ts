@@ -18,8 +18,11 @@ export const keyBuckets = new TokenBuckets()
 
 /** Thrown with the seconds a client should wait (Retry-After). */
 export class RateLimited extends TooManyRequests {
-  constructor(readonly retryAfter: number) {
-    super("Too many requests. Slow down.")
+  constructor(
+    readonly retryAfter: number,
+    message = "Too many requests. Slow down.",
+  ) {
+    super(message)
   }
 }
 

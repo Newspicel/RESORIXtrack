@@ -22,9 +22,16 @@ export interface Ctx<Q, B> {
   body: B
 }
 
+/** What a public endpoint sees: no key, no actor, but the raw request (client address for its own checks). */
+export interface PublicCtx<Q, B> {
+  request: Request
+  query: Q
+  body: B
+}
+
 export type Method = "GET" | "POST" | "PATCH" | "DELETE"
 
-export interface Endpoint {
+interface EndpointBase {
   method: Method
   path: string
   tag: string
@@ -37,8 +44,24 @@ export interface Endpoint {
   /** null = 204 No Content. */
   response: z.ZodType | null
   status: 200 | 201 | 204
+  /** Error descriptions for the OpenAPI document, per status, over the generic ones. */
+  errors?: Record<string, string>
+}
+
+/** Authenticated with an API key (the rule). */
+export interface KeyEndpoint extends EndpointBase {
+  auth: "key"
   handler: (ctx: Ctx<unknown, unknown>) => unknown
 }
+
+/** No API key: the handler authenticates on its own (app sign-in). */
+export interface PublicEndpoint extends EndpointBase {
+  auth: "none"
+  scope: null
+  handler: (ctx: PublicCtx<unknown, unknown>) => unknown
+}
+
+export type Endpoint = KeyEndpoint | PublicEndpoint
 
 type Out<T> = T extends z.ZodType ? z.output<T> : Record<string, never>
 
@@ -58,13 +81,43 @@ export function endpoint<
   body?: B
   response: R
   status?: 200 | 201 | 204
+  errors?: Record<string, string>
   handler: (ctx: Ctx<Out<Q>, Out<B>>) => R extends z.ZodType ? z.input<R> : void
-}): Endpoint {
+}): KeyEndpoint {
   return {
     ...def,
+    auth: "key",
     status: def.status ?? (def.response ? 200 : 204),
     // type erasure for the endpoint list: the router parses query and body with these same schemas first
     // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-    handler: def.handler as Endpoint["handler"],
+    handler: def.handler as KeyEndpoint["handler"],
+  }
+}
+
+/** Endpoint without an API key: the router skips authentication; the (async) handler gets the request instead. */
+export function publicEndpoint<
+  Q extends z.ZodType | undefined = undefined,
+  B extends z.ZodType | undefined = undefined,
+  R extends z.ZodType | null = null,
+>(def: {
+  method: Method
+  path: string
+  tag: string
+  summary: string
+  description?: string
+  query?: Q
+  body?: B
+  response: R
+  status?: 200 | 201 | 204
+  errors?: Record<string, string>
+  handler: (ctx: PublicCtx<Out<Q>, Out<B>>) => Promise<R extends z.ZodType ? z.input<R> : void>
+}): PublicEndpoint {
+  return {
+    ...def,
+    auth: "none",
+    scope: null,
+    status: def.status ?? (def.response ? 200 : 204),
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+    handler: def.handler as PublicEndpoint["handler"],
   }
 }

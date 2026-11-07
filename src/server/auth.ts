@@ -339,7 +339,8 @@ const betterAuthInstance = betterAuth({
               email: newSession.user.email,
               userId: Number(newSession.user.id),
               success: true,
-              reason: "ok",
+              // "token_issued" when the app sign-in (services/app-sign-in) verifies the second factor
+              reason: requestContext.getStore()?.signInReason ?? "ok",
               headers,
             })
           } else if (returned instanceof APIError) {

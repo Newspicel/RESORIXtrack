@@ -55,6 +55,13 @@ async function readBody(request: Request): Promise<unknown> {
   }
 }
 
+/** Parsed query and body of a request (after authentication, so a bad key answers 401 before 422). */
+async function inputs(ep: Endpoint, request: Request, url: URL): Promise<{ query: unknown; body: unknown }> {
+  const query = parse(ep.query, Object.fromEntries(url.searchParams), "query")
+  const body = ep.body ? parse(ep.body, await readBody(request), "body") : {}
+  return { query, body }
+}
+
 export function matchRoute(method: string, path: string): { ep: Endpoint; id: number } | "method" | null {
   let pathMatched = false
   for (const r of ROUTES) {
@@ -74,11 +81,14 @@ export async function handleRest(request: Request): Promise<Response> {
     if (match === null) throw new NotFound("No such endpoint")
     if (match === "method") throw new AppError("Method not allowed", { status: 405, code: "method_not_allowed" })
     const { ep, id } = match
-    const caller = await authenticate(request)
-    if (ep.scope) requireScope(caller, ep.scope)
-    const query = parse(ep.query, Object.fromEntries(url.searchParams), "query")
-    const body = ep.body ? parse(ep.body, await readBody(request), "body") : {}
-    const result = await ep.handler({ caller, actor: caller.actor, id, query, body })
+    let result: unknown
+    if (ep.auth === "none") {
+      result = await ep.handler({ request, ...(await inputs(ep, request, url)) })
+    } else {
+      const caller = await authenticate(request)
+      if (ep.scope) requireScope(caller, ep.scope)
+      result = await ep.handler({ caller, actor: caller.actor, id, ...(await inputs(ep, request, url)) })
+    }
     if (!ep.response) return new Response(null, { status: 204, headers: NO_STORE })
     return Response.json(ep.response.parse(result), { status: ep.status, headers: NO_STORE })
   } catch (err) {

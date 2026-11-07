@@ -38,6 +38,14 @@ describe("OpenAPI document", () => {
     ])
   })
 
+  it("marks the app sign-in as public (no key) with its own error descriptions", () => {
+    const op = doc.paths["/auth/token"].post
+    expect(op.security).toEqual([])
+    expect(op["x-scope"]).toBeNull()
+    expect(JSON.stringify(op.responses)).toContain("invalid_credentials")
+    expect(doc.components.schemas.AppToken).toBeTruthy()
+  })
+
   it("resolves every $ref to a component and keeps operation ids unique", () => {
     for (const r of refs(doc)) {
       expect(r.startsWith("#/components/schemas/"), r).toBe(true)

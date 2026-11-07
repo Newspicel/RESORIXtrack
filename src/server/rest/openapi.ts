@@ -70,7 +70,7 @@ function operation(ep: Endpoint, defs: Json): Json {
   responses[String(ep.status)] = ep.response
     ? { description: "OK", content: { "application/json": { schema: toSchema(ep.response, "output", defs) } } }
     : { description: "No content" }
-  for (const [status, description] of Object.entries(ERROR_STATUSES))
+  for (const [status, description] of Object.entries({ ...ERROR_STATUSES, ...ep.errors }))
     responses[status] = { description, content: { "application/json": { schema: { $ref: `${REF_PREFIX}Error` } } } }
   return {
     operationId: operationId(ep),
@@ -87,7 +87,8 @@ function operation(ep: Endpoint, defs: Json): Json {
         }
       : {}),
     responses,
-    security: [{ apiKey: ep.scope ? [ep.scope] : [] }],
+    // a public endpoint (app sign-in) needs no key: an empty security list
+    security: ep.auth === "none" ? [] : [{ apiKey: ep.scope ? [ep.scope] : [] }],
     "x-scope": ep.scope,
   }
 }
