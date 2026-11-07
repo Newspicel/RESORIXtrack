@@ -184,15 +184,17 @@ export function WeekTimeline({
                   <span className="absolute inset-y-0 w-0.5 bg-today" style={{ left: pct(nowMin) }} aria-hidden />
                 ) : null}
               </div>
-              {list.length > 0 && (d.holiday || d.absences.length) ? <DayChips day={d} className="mt-1.5" /> : null}
+              {(list.length > 0 && (d.holiday || d.absences.length)) || findings.length ? (
+                <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                  {list.length > 0 ? <DayChips day={d} /> : null}
+                  <FindingsBadge findings={findings} />
+                </div>
+              ) : null}
             </div>
 
             <div className="col-start-2 row-start-1 flex flex-col items-end gap-0.5 md:col-start-auto md:row-start-auto">
-              <span className="flex items-center gap-2">
-                <FindingsBadge findings={findings} className="hidden md:inline-flex" />
-                <span className="text-sm font-semibold tabular">
-                  {d.workedMin > 0 || d.running ? fmtMinutes(d.workedMin) : "–"}
-                </span>
+              <span className="text-sm font-semibold tabular">
+                {d.workedMin > 0 || d.running ? fmtMinutes(d.workedMin) : "–"}
               </span>
               {hasFigures ? (
                 d.isToday ? (
@@ -202,7 +204,6 @@ export function WeekTimeline({
                 )
               ) : null}
               {!d.isFuture ? <DayCredits day={d} /> : null}
-              <FindingsBadge findings={findings} className="md:hidden" />
             </div>
           </div>
         )

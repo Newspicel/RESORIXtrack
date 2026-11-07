@@ -148,7 +148,7 @@
     "severity": "Severity",
     "ref": "Legal basis",
     "no_findings": "No findings in this period.",
-    "in_progress": "in progress",
+    "in_progress": "open",
     "plus_today": "+ {time} today",
     "sunday_work": "Sunday",
     "holiday_work": "Holiday",
