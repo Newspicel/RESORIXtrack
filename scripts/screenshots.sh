@@ -16,7 +16,7 @@ c_info "starting a seeded throwaway instance on :$PORT"
 # setsid: own process group, so the trap stops the whole tree (the shell wrapper AND the flask server behind it)
 E2E_PORT="$PORT" setsid "$ROOT/frontend/scripts/e2e-server.sh" >/dev/null 2>&1 &
 SERVER=$!
-trap 'kill -- -$SERVER 2>/dev/null; wait $SERVER 2>/dev/null' EXIT
+trap 'kill -- -$SERVER 2>/dev/null; wait $SERVER 2>/dev/null || true' EXIT  # || true: the killed server's status (143) must not become ours (set -e)
 for i in $(seq 1 60); do curl -fsS "http://localhost:$PORT/api/health" >/dev/null 2>&1 && break; sleep 1; done
 curl -fsS "http://localhost:$PORT/api/health" >/dev/null || { c_err "instance did not start"; exit 1; }
 B="http://localhost:$PORT"
@@ -32,7 +32,7 @@ c_info "login page"
 (cd "$ROOT/frontend" && THEME=dark LOCALE=en node scripts/screenshot.mjs "$B" "" "" "$OUT" /login >/dev/null && mv "$OUT/login.png" "$OUT/login-dark.png")
 (cd "$ROOT/frontend" && THEME=light LOCALE=en node scripts/screenshot.mjs "$B" "" "" "$OUT" /login >/dev/null && mv "$OUT/login.png" "$OUT/login-light.png")
 c_info "employee pages"
-shot dark  marc.dubois@example.nomail employee-dark  / /time "/time?view=month" /absences /account /profile
+shot dark  marc.dubois@example.nomail employee-dark  / /time "/time?view=month" /absences /holidays /account /profile
 shot light marc.dubois@example.nomail employee-light / /time /absences
 c_info "team lead pages"
 shot dark luca.bianchi@example.nomail lead-dark /team /team/approvals /team/signoff /reports

@@ -4,9 +4,9 @@
 
 First public release.
 
-- One-click clocking (web, keyboard shortcuts, offline queue, clock in or out with a custom time), time and vacation accounts, versioned work schedules; per-person 24-hour or 12-hour time format.
+- One-click clocking (web, keyboard shortcuts, offline queue, clock in with a custom time, clock out at a custom time or later: the entry closes automatically), time and vacation accounts, versioned work schedules; per-person 24-hour or 12-hour time format. A break is simply a clock-out; there is no separate pause state (migration 0003 retires old break entries outside signed-off months).
 - Work log: describe what was done while clocked in (free text and/or projects managed by team leads); optional or required with a configurable share of the worked time; project report.
-- Absence workflow (requests with a calendar showing holidays and existing absences, approvals, sick self-reports with documents), public-holiday calendars with import and Swiss presets; vacation entitlement optionally pro-rated by scheduled days per week.
+- Absence workflow (requests with a calendar showing holidays and existing absences, approvals, sick self-reports with documents), public-holiday calendars with import and Swiss presets, every employee sees the calendar that applies to them; vacation entitlement optionally pro-rated by scheduled days per week.
 - Month sign-off with four enforcement levels (UI, services, SQLite triggers, HMAC seal chain) and an integrity check.
 - Reports (timesheet, balances, absences, raw entries) as PDF, XLSX, CSV, localised in English, German and French.
 - Roles: administrators without access to time data, HR and Projects capabilities, several leads per team, deputies with validity periods.

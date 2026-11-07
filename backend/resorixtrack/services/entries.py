@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # SPDX-FileCopyrightText: 2026 RESORIX AG
-"""Time entries and the clock state machine (idle -> working <-> on_break -> idle)."""
+"""Time entries and the clock (idle <-> working; a break is simply a clock-out, "clock out later" schedules it)."""
 
 from __future__ import annotations
 
@@ -29,7 +29,8 @@ def serialize(e: TimeEntry, edited_ids: set[int] | None = None) -> dict[str, Any
     minutes = ((end or utcnow()) - e.start_at).total_seconds() / 60.0
     return {
         "id": e.id, "user_id": e.user_id, "kind": e.kind, "start_at": iso(e.start_at),
-        "end_at": iso(end), "running": end is None, "tz": e.tz, "note": e.note, "source": e.source,
+        "end_at": iso(end), "running": end is None, "scheduled_end_at": iso(e.scheduled_end_at),
+        "tz": e.tz, "note": e.note, "source": e.source,
         "minutes": round(max(0.0, minutes), 2), "created_by_id": e.created_by_id,
         "edited": bool(edited_ids and e.id in edited_ids),
         "corrected": e.created_by_id is not None and e.created_by_id != e.user_id,
@@ -261,21 +262,27 @@ def open_entry(user: User) -> TimeEntry | None:
 
 
 def clock_state(user: User) -> dict[str, Any]:
+    close_due_scheduled(user)
     e = open_entry(user)
-    state = "idle" if e is None else "working" if e.kind == "work" else "on_break"
     today_start, today_end = _today_bounds(user)
-    worked = 0.0
-    breaks = 0.0
     now = utcnow()
+    worked = 0.0
+    first: datetime | None = None
+    last: datetime | None = None
     for t in list_entries(user, today_start, today_end):
+        if t.kind != "work":  # legacy break rows (pauses were removed: a break is a clock-out)
+            continue
         a, b = max(t.start_at, today_start), min(t.end_at or now, today_end)
-        mins = max(0.0, (b - a).total_seconds() / 60)
-        if t.kind == "work":
-            worked += mins
-        else:
-            breaks += mins
-    return {"state": state, "entry": serialize(e) if e else None,
+        if b <= a:
+            continue
+        worked += (b - a).total_seconds() / 60
+        first = a if first is None else min(first, a)
+        last = b if last is None else max(last, b)
+    # Breaks are the gaps between the work entries of the day (same definition as the time account).
+    breaks = max(0.0, (last - first).total_seconds() / 60 - worked) if first and last else 0.0
+    return {"state": "idle" if e is None else "working", "entry": serialize(e) if e else None,
             "since": iso(e.start_at) if e else None,
+            "scheduled_end": iso(e.scheduled_end_at) if e is not None and e.scheduled_end_at else None,
             "today_worked_min": round(worked, 2), "today_break_min": round(breaks, 2),
             "server_time": iso(now)}
 
@@ -329,7 +336,7 @@ def _start_new(user: User, kind: str, t: datetime, source: str) -> TimeEntry:
     return e
 
 
-def _close(user: User, e: TimeEntry, t: datetime, source: str) -> datetime:
+def _close(user: User, e: TimeEntry, t: datetime, source: str, reason: str | None = None) -> datetime:
     """Close the open entry at ``t``; returns the effective end (next entry starts there)."""
     ensure_unlocked(user, t)
     backdated = utcnow() - t > BACKDATE_NOTE_AFTER
@@ -340,47 +347,77 @@ def _close(user: User, e: TimeEntry, t: datetime, source: str) -> datetime:
         current_app.logger.info("Clock entry %s exceeded 24h; closing at start+24h", e.id)
         t = e.start_at + MAX_ENTRY
     e.end_at = t
-    if source == "manual":  # end time chosen by hand ("clock out with a custom time"): shown as manual, not as a punch
+    e.scheduled_end_at = None
+    if source == "manual":  # end time chosen by hand ("clock out at a custom time"): shown as manual, not as a punch
         e.source = "manual"
     revisions.record(obj=e, action="update", actor=user, subject_user_id=user.id, before=before,
-                     reason="clock (offline sync: earlier time)" if backdated else "clock", source=source)
+                     reason=reason or ("clock (offline sync: earlier time)" if backdated else "clock"), source=source)
     return t
+
+
+def _schedule_stop(user: User, e: TimeEntry, at: datetime, source: str) -> None:
+    """"Clock out later": the entry stays open and is closed at ``at`` by :func:`close_due_scheduled`."""
+    at = at.replace(microsecond=0)
+    if at - e.start_at > MAX_ENTRY:
+        raise Validation("A clock-out can be scheduled at most 24 hours after the clock-in", fields={"at": "too_late"})
+    ensure_unlocked(user, at)
+    before = revisions.snapshot(e)
+    e.scheduled_end_at = at
+    local = at.astimezone(zone(user.timezone)).strftime("%H:%M")
+    revisions.record(obj=e, action="update", actor=user, subject_user_id=user.id, before=before,
+                     reason=f"clock-out scheduled for {local}", source=source)
+
+
+def _unschedule_stop(user: User, e: TimeEntry, source: str) -> None:
+    before = revisions.snapshot(e)
+    e.scheduled_end_at = None
+    revisions.record(obj=e, action="update", actor=user, subject_user_id=user.id, before=before,
+                     reason="scheduled clock-out cancelled", source=source)
+
+
+def close_due_scheduled(user: User | None = None) -> int:
+    """Close the open entries whose scheduled clock-out time has passed, at exactly that time. The worker
+    runs this every minute; every clock request runs it for its user first, so a stopped worker never
+    leaves someone clocked in beyond the time they chose. Commits; returns the number of closed entries."""
+    now = utcnow()
+    q = db.select(TimeEntry).where(TimeEntry.end_at.is_(None), TimeEntry.is_deleted.is_(False),
+                                   TimeEntry.scheduled_end_at.is_not(None), TimeEntry.scheduled_end_at <= now)
+    if user is not None:
+        q = q.where(TimeEntry.user_id == user.id)
+    closed = 0
+    for e in db.session.scalars(q).all():
+        owner = user if user is not None else db.session.get(User, e.user_id)
+        try:
+            _close(owner, e, e.scheduled_end_at, "manual", reason="clock (scheduled clock-out)")
+            db.session.commit()
+            closed += 1
+        except Exception:  # noqa: BLE001 - e.g. the month was signed off meanwhile: leave the entry to the person
+            current_app.logger.exception("Scheduled clock-out of entry %s failed", e.id)
+            db.session.rollback()
+    return closed
 
 
 def clock_action(user: User, action: str, at: datetime | None = None, source: str = "web",
                  note: str = "") -> dict[str, Any]:
-    current = open_entry(user)
-    state = "idle" if current is None else ("working" if current.kind == "work" else "on_break")
-    noop = {("start", "working"), ("break", "on_break"), ("resume", "working"), ("stop", "idle")}
-    if (action, state) in noop:
-        return clock_state(user)  # idempotent: repeated clicks / retried offline requests
-    if action not in ("start", "break", "resume", "stop"):
+    """``start``, ``stop`` and ``unschedule``. A ``stop`` with a future ``at`` does not close the entry but
+    schedules the clock-out ("clock out later"); ``unschedule`` drops such a plan. Idempotent: repeated
+    clicks and retried offline requests change nothing."""
+    if action not in ("start", "stop", "unschedule"):
         raise Validation("Unknown clock action", fields={"action": "invalid"})
-    if action in ("break", "resume") and state == "idle":
-        raise Conflict("You are not clocked in" if action == "break" else "You are not on a break",
-                       code="not_working" if action == "break" else "not_on_break")
-    t = _clock_time(at, current)
-    if action == "start":
-        if state == "idle":
-            e = _start_new(user, "work", t, source)
+    close_due_scheduled(user)
+    current = open_entry(user)
+    if action == "unschedule":
+        if current is not None and current.scheduled_end_at is not None:
+            _unschedule_stop(user, current, source)
+    elif action == "start":
+        if current is None:
+            e = _start_new(user, "work", _clock_time(at, None), source)
             if note:
                 e.note = note[:500]
-        elif state == "on_break":
-            _start_new(user, "work", _close(user, current, t, source), source)
-    elif action == "break":
-        if state == "idle":
-            raise Conflict("You are not clocked in", code="not_working")
-        if state == "working":
-            _start_new(user, "break", _close(user, current, t, source), source)
-    elif action == "resume":
-        if state == "idle":
-            raise Conflict("You are not on a break", code="not_on_break")
-        if state == "on_break":
-            _start_new(user, "work", _close(user, current, t, source), source)
-    elif action == "stop":
-        if current is not None:
-            _close(user, current, t, source)
-    else:
-        raise Validation("Unknown clock action", fields={"action": "invalid"})
+    elif current is not None:  # stop
+        if at is not None and at > utcnow() + FUTURE_TOLERANCE:
+            _schedule_stop(user, current, at, source)
+        else:
+            _close(user, current, _clock_time(at, current), source)
     db.session.flush()
     return clock_state(user)

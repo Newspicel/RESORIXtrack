@@ -39,9 +39,11 @@ def clock_get():
 @scope_required("clock")
 @bp.arguments(s.ClockIn)
 def clock_post(data, action: str):
-    """Quick entry: `start`, `break`, `resume`, `stop`. Idempotent. Optional `at` (offline sync, or a time chosen by
-    hand together with `custom: true`, which marks the entry as manual)."""
-    if action not in ("start", "break", "resume", "stop"):
+    """Quick entry: `start`, `stop`, `unschedule`. Idempotent. Optional `at` (offline sync, or a time chosen by
+    hand together with `custom: true`, which marks the entry as manual). A `stop` with an `at` in the future
+    schedules the clock-out: the person stays clocked in until then (`scheduled_end` in the state);
+    `unschedule` cancels that, a plain `stop` clocks out now."""
+    if action not in ("start", "stop", "unschedule"):
         raise NotFound("Unknown clock action")
     user = me()
     source = "manual" if (data.get("custom") and data.get("at")) else request_source()

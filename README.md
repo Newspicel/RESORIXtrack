@@ -21,13 +21,14 @@
 ## Features
 
 **For employees**
-- Clock in, start a break, clock out – from every page, with keyboard shortcuts, even when offline (actions are synced later).
+- Clock in and out from every page – at a custom time or scheduled for later – with keyboard shortcuts, even when offline (actions are synced later).
 - Time account with target hours (from the personal work schedule), worked hours and a running balance.
 - Vacation account with yearly entitlement, carry-over and half-days; requests go to the team lead.
 - Describe what you worked on (free text and/or projects) – optional, or required with a share of the worked time that your company sets.
 - Report sick in one click on a working day; optionally attach a doctor's note.
 - Every edit of your own time is possible but logged; corrections by others are highlighted, explained and can be disputed.
 - Team calendar: who is out when (sick leave is shown anonymously).
+- The public holidays that apply to you, read-only: personal, team or company calendar.
 
 **For team leads**
 - Team overview with balances, absences today and this week.

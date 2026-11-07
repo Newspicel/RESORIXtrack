@@ -15,7 +15,6 @@
   "break_warning": "Break too short",
   "break_warning_help": "Legal minimum breaks: 15 min after 5.5 h, 30 min after 7 h, 60 min after 9 h.",
   "legend_work": "Work",
-  "legend_break": "Break",
   "legend_edited": "Edited / manual",
   "legend_corrected": "Changed by someone else",
   "kind": {
@@ -57,14 +56,16 @@
     "clock": "Clock",
     "manual": "Manual entry",
     "api": "API",
-    "desktop": "Desktop app"
+    "desktop": "Desktop app",
+    "migration": "System upgrade"
   },
   "field": {
     "kind": "Type",
     "start_at": "Start",
     "end_at": "End",
     "note": "Note",
-    "is_deleted": "Deleted"
+    "is_deleted": "Deleted",
+    "scheduled_end_at": "Scheduled clock-out"
   },
   "by_other": "by someone else",
   "dispute": "Dispute this change",

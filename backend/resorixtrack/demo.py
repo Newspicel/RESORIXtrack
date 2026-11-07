@@ -145,8 +145,8 @@ def seed(password: str) -> Iterator[str]:
                 e1 = s1 + timedelta(minutes=morning)
                 s2 = e1 + timedelta(minutes=brk)
                 e2 = s2 + timedelta(minutes=max(60, daily - morning))
-                for (a, b, kind) in ((s1, e1, "work"), (e1, s2, "break"), (s2, e2, "work")):
-                    db.session.add(TimeEntry(user_id=u.id, kind=kind, start_at=a, end_at=b, tz=tz,
+                for (a, b) in ((s1, e1), (s2, e2)):  # the gap between the two entries is the break
+                    db.session.add(TimeEntry(user_id=u.id, kind="work", start_at=a, end_at=b, tz=tz,
                                              source="clock", created_by_id=u.id))
                 # Work log: most days are annotated (two items), some only partially, a few not at all.
                 team_name = next(p[2] for p in PEOPLE if p[1] == u.email)

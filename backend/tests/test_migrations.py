@@ -70,6 +70,41 @@ def test_upgrade_from_every_revision_keeps_data(tmp_path):
             db.engine.dispose()
 
 
+def test_0003_retires_breaks_and_keeps_guards(tmp_path):
+    """Legacy break entries are soft-deleted with a revision row (not inside signed-off months); the guard
+    triggers on time_entries survive the in-place column add."""
+    path = tmp_path / "breaks.db"
+    app = create_app("testing", overrides={"SQLALCHEMY_DATABASE_URI": f"sqlite:///{path}", "DATA_DIR": tmp_path})
+    with app.app_context():
+        upgrade(revision="0002")
+        con = sqlite3.connect(path)
+        con.execute("INSERT INTO users (id, email, name, role, timezone, locale, vacation_days_per_year, is_active, "
+                    "notify_email_on_correction, created_at) VALUES (1, 'b@x.ch', 'B', 'employee', 'Europe/Zurich', "
+                    "'en', 25, 1, 1, '2026-01-01 00:00:00')")
+        rows = (("work", "2026-11-02 07:00:00", "2026-11-02 11:00:00"), ("break", "2026-11-02 11:00:00", "2026-11-02 11:30:00"),
+                ("work", "2026-11-02 11:30:00", "2026-11-02 16:00:00"), ("break", "2026-11-03 11:00:00", None),
+                ("break", "2026-10-05 11:00:00", "2026-10-05 11:30:00"))
+        for i, (kind, start, end) in enumerate(rows, start=1):
+            con.execute("INSERT INTO time_entries (id, user_id, kind, start_at, end_at, tz, note, source, is_deleted, "
+                        "created_at, updated_at) VALUES (?, 1, ?, ?, ?, 'Europe/Zurich', '', 'clock', 0, "
+                        "'2026-11-02 07:00:00', '2026-11-02 07:00:00')", (i, kind, start, end))
+        con.execute("INSERT INTO month_signoffs (user_id, month, period_start_date, period_end_date, period_start_utc, "
+                    "period_end_utc, signed_by_id, signed_at, note, snapshot, digest, prev_seal, seal, reopen_reason) VALUES (1, "
+                    "'2026-10', '2026-10-01', '2026-10-31', '2026-09-30 22:00:00', '2026-10-31 23:00:00', 1, "
+                    "'2026-11-01 08:00:00', '', '{}', 'd', '', 's', '')")
+        con.commit()
+        con.close()
+        upgrade()
+        with db.engine.connect() as conn:
+            got = conn.exec_driver_sql("SELECT id, kind, is_deleted, end_at IS NOT NULL FROM time_entries ORDER BY id").fetchall()
+            assert got == [(1, "work", 0, 1), (2, "break", 1, 1), (3, "work", 0, 1), (4, "break", 1, 1), (5, "break", 0, 1)]
+            revs = conn.exec_driver_sql("SELECT entity, entity_id, action, source FROM revisions ORDER BY entity_id").fetchall()
+            assert revs == [("time_entry", 2, "delete", "migration"), ("time_entry", 4, "delete", "migration")]
+            triggers = {r[0] for r in conn.exec_driver_sql("SELECT name FROM sqlite_master WHERE type='trigger'")}
+            assert {"trg_signoff_time_entries_ins", "trg_signoff_time_entries_upd", "trg_signoff_time_entries_del"} <= triggers
+        db.engine.dispose()
+
+
 def test_migrate_check_on_empty_db(bare_app):
     assert bare_app.test_cli_runner().invoke(args=["resorixtrack", "migrate", "--check"]).exit_code == 1
 

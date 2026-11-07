@@ -1,0 +1,11 @@
+{
+  "title": "Public holidays",
+  "sub": "The public holidays that apply to you. On your working days they reduce your target hours; you cannot edit them.",
+  "manage": "Manage calendars",
+  "source_user": "assigned to you personally",
+  "source_team": "calendar of your team",
+  "source_default": "company default",
+  "none": "No holiday calendar yet",
+  "none_help": "Your administrator has not assigned a public-holiday calendar to you, your team or the company yet.",
+  "help": "Half-day holidays cover the afternoon. If a holiday is missing or wrong, tell your administrator."
+}

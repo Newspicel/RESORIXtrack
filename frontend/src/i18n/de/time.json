@@ -15,7 +15,6 @@
   "break_warning": "Pause zu kurz",
   "break_warning_help": "Gesetzliche Mindestpausen: 15 Min. ab 5,5 h, 30 Min. ab 7 h, 60 Min. ab 9 h.",
   "legend_work": "Arbeit",
-  "legend_break": "Pause",
   "legend_edited": "Bearbeitet / manuell",
   "legend_corrected": "Von jemand anderem geändert",
   "kind": {
@@ -57,14 +56,16 @@
     "clock": "Stempeluhr",
     "manual": "Manuell erfasst",
     "api": "API",
-    "desktop": "Desktop-App"
+    "desktop": "Desktop-App",
+    "migration": "System-Update"
   },
   "field": {
     "kind": "Art",
     "start_at": "Beginn",
     "end_at": "Ende",
     "note": "Notiz",
-    "is_deleted": "Gelöscht"
+    "is_deleted": "Gelöscht",
+    "scheduled_end_at": "Geplantes Ausstempeln"
   },
   "by_other": "von jemand anderem",
   "dispute": "Änderung beanstanden",

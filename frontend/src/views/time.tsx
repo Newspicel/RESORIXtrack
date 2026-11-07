@@ -130,7 +130,6 @@ export function TimeView({ user }: { user: User }) {
           <div class="row wrap small" style="margin-top:16px;gap:18px;justify-content:flex-end">
             <span class="legend">
               <span><span class="dot" style="background:var(--color-work)" />{t("time.legend_work")}</span>
-              <span><span class="dot" style="background:var(--color-break)" />{t("time.legend_break")}</span>
               <span>✎ {t("time.legend_edited")}</span>
               <span><span class="dot" style="background:var(--color-break);outline:2px solid var(--color-break)" />{t("time.legend_corrected")}</span>
             </span>
@@ -304,7 +303,7 @@ export function EntryEditor({ user, entry, date, start, locked = {}, onClose, on
   const self = user.id === me.value?.user.id;
   const initStart = entry ? toLocalInput(entry.start_at, tz) : `${date}T${start || "08:00"}`;
   const initEnd = entry?.end_at ? toLocalInput(entry.end_at, tz) : entry ? "" : `${date}T${addMinutes(start || "08:00", start ? 60 : 240)}`;
-  const [kind, setKind] = useState<"work" | "break">(entry?.kind || "work");
+  const kind = entry?.kind || "work"; // breaks are clock-outs; "break" only on legacy rows
   const [day, setDay] = useState(initStart.slice(0, 10));
   const [from, setFrom] = useState(initStart.slice(11, 16));
   const [to, setTo] = useState(initEnd ? initEnd.slice(11, 16) : "");
@@ -374,7 +373,6 @@ export function EntryEditor({ user, entry, date, start, locked = {}, onClose, on
           </div>
         )}
         {entry?.corrected && self && <div class="alert warn small">{t("time.was_corrected")}</div>}
-        <Segmented value={kind} onChange={setKind} options={[{ value: "work", label: t("time.kind.work") }, { value: "break", label: t("time.kind.break") }]} />
         <div class="form-grid" style="grid-template-columns: 1.3fr 1fr 1fr">
           <Field label={t("common.date")} error={fieldErrors.start_at}>
             <input type="date" class="input" required disabled={readOnly} value={day} max={todayIn(tz)} onInput={(e) => setDay((e.target as HTMLInputElement).value)} />
@@ -412,7 +410,7 @@ function addMinutes(hm: string, n: number): string {
 
 // ------------------------------------------------------------------ history
 
-const FIELD_ORDER = ["kind", "start_at", "end_at", "note", "is_deleted"];
+const FIELD_ORDER = ["kind", "start_at", "end_at", "scheduled_end_at", "note", "is_deleted"];
 
 export function HistoryModal({ entry, tz, self, onClose }: { entry: Entry; tz: string; self: boolean; onClose: () => void }) {
   const { data, loading } = useAsync(() => api.get<any[]>(`/entries/${entry.id}/history`), [entry.id]);
@@ -422,7 +420,7 @@ export function HistoryModal({ entry, tz, self, onClose }: { entry: Entry; tz: s
   const ownerId = entry.user_id;
   const fmt = (k: string, v: unknown) => {
     if (v === null || v === undefined || v === "") return "–";
-    if (k === "start_at" || k === "end_at") return fmtDateTime(String(v), tz);
+    if (k === "start_at" || k === "end_at" || k === "scheduled_end_at") return fmtDateTime(String(v), tz);
     if (k === "kind") return t(`time.kind.${v}`);
     if (k === "is_deleted") return v ? t("common.yes") : t("common.no");
     return String(v);

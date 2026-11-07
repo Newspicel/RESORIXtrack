@@ -17,13 +17,13 @@ The dashboard shows your clock, today's and this week's hours against your targe
 
 ### Clocking
 
-- **Clock in** when you start working, **Start break** / **End break** around breaks, **Clock out** when you leave. The buttons are also in the top bar on every page.
-- Keyboard: **S** clocks in/out, **B** starts/ends a break (when no text field is focused).
+- **Clock in** when you start working, **Clock out** when you leave – also for a break: a break is simply the gap between two entries. The buttons are also in the top bar on every page.
+- Keyboard: **S** clocks in/out (when no text field is focused).
 - Offline? The click is stored and synced with its original time as soon as you are back online.
 - Forgot to clock in? **Add time manually** opens the entry editor.
 - Forgot to clock out? The next morning the dashboard warns you: clock out, then correct the end time of yesterday's entry under *My time* (a reason is required for past days). After a configurable number of hours you also get an email reminder.
 
-Forgot to clock in or out? Tick **Clock in with a custom time** (or **Clock out with a custom time** while clocked in) under the buttons and enter the real time: today, earlier than now, up to 48 hours back for a start. Such entries are marked as manual, like corrected ones. Times in the future are not accepted.
+**Custom times.** Tick **Clock in with a custom time** under the buttons and enter the real start: today, earlier than now, up to 48 hours back. While clocked in, **Clock out at a custom time** works in both directions: a time in the past closes the entry there; a time in the future is a **clock out later** – you stay clocked in, the card shows "Clocks out automatically at …", and the entry is closed at that moment even if you have left and closed the browser. Until then the button reads **Clock out now** (ends the entry immediately) and **Cancel** next to the planned time keeps you clocked in without a plan. Such entries are marked as manual, like corrected ones.
 
 ### Report sick
 
@@ -36,11 +36,11 @@ Your recorded time, as a **week** timeline or a **month** grid. Each day shows w
 <p><img src="screenshots/employee-dark-time.png" alt="My time, week view" width="760"></p>
 <p><img src="screenshots/employee-dark-time_view_month.png" alt="My time, month view" width="760"></p>
 
-- **Add entry** (or click into an empty part of a day in the week view): type (work or break), date, start and end, optional note.
+- **Add entry** (or click into an empty part of a day in the week view): date, start and end, optional note. Breaks are not entered: the gap between two entries is the break.
 - **Edit** an entry by clicking it. Changes to **today** need no reason. Changes to **past days** need a reason, which is stored in the change history – this keeps everyone's records trustworthy. Deleting works the same way; deleted entries stay in the history.
 - Entries marked **Edited / manual** were entered or changed by hand. Entries marked **Changed by someone else** were corrected by your team lead or an administrator; open the history to see what changed and why, and use **Dispute this change** if you disagree – the person who made the change is notified.
 - A **signed-off month** is read-only and shows a lock. Ask your team lead or an administrator if something needs to be corrected; they can reopen the month.
-- **Break too short** warnings follow the legal minimum breaks; they are hints, not blocks.
+- **Break too short** warnings follow the legal minimum breaks (the gaps between your entries); they are hints, not blocks.
 
 Times are shown in your timezone (Profile). Entries are stored in UTC, so travelling never changes what you worked.
 
@@ -67,6 +67,12 @@ The request dialog shows a calendar: public holidays in red, weekends and days o
 - **Sick leave** is recorded immediately; your lead is informed. You can attach documents (PDF, JPG, PNG, HEIC) that only you, your lead and administrators can see.
 - **Cancel** a pending request any time; approved absences in the past can only be cancelled by your lead.
 - Your lead or an administrator can also record absences for you; you are notified and see who did it.
+
+## Public holidays
+
+The public holidays that apply to you, year by year, and where they come from: a calendar assigned to you personally, your team's calendar or the company default. The page is read-only – on your working days the holidays reduce your target hours automatically, half-day holidays cover the afternoon. Tell your administrator if a holiday is missing.
+
+<p><img src="screenshots/employee-dark-holidays.png" alt="Public holidays" width="760"></p>
 
 ## Time account
 

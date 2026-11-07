@@ -6,11 +6,13 @@ import { ApiError, api } from "./api";
 import { t, tError } from "./i18n";
 import { bumpData, toast } from "./store";
 
-export type ClockState = "idle" | "working" | "on_break";
+export type ClockState = "idle" | "working";
 
 export interface ClockData {
   state: ClockState;
   since: string | null;
+  /** "Clock out later": the open entry is closed automatically at this time. */
+  scheduled_end: string | null;
   today_worked_min: number;
   today_break_min: number;
   server_time: string;
@@ -64,7 +66,7 @@ export function liveSinceSeconds(): number {
 }
 
 /** `customAt`: a time chosen by hand (local "YYYY-MM-DDTHH:MM:00" in the user's timezone); the entry is then marked as manual. */
-export async function clockAction(action: "start" | "break" | "resume" | "stop", customAt?: string) {
+export async function clockAction(action: "start" | "stop" | "unschedule", customAt?: string) {
   if (clockBusy.value) return;
   clockBusy.value = true;
   const at = customAt || new Date().toISOString();
@@ -89,8 +91,16 @@ export async function clockAction(action: "start" | "break" | "resume" | "stop",
 function optimistic(action: string, at: string) {
   const c = clock.value;
   if (!c) return;
-  const state: ClockState = action === "start" || action === "resume" ? "working" : action === "break" ? "on_break" : "idle";
-  clock.value = { ...c, state, since: state === "idle" ? null : at };
+  if (action === "unschedule") {
+    clock.value = { ...c, scheduled_end: null };
+    return;
+  }
+  if (action === "stop" && new Date(at).getTime() > Date.now() + 120000) {
+    clock.value = { ...c, scheduled_end: at }; // clock out later: still working until then
+    return;
+  }
+  const state: ClockState = action === "start" ? "working" : "idle";
+  clock.value = { ...c, state, since: state === "idle" ? null : at, scheduled_end: null };
 }
 
 export async function flushQueue() {

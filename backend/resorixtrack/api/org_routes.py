@@ -291,6 +291,20 @@ def create_calendar(data):
     return ok(hol.serialize_calendar(c), 201)
 
 
+@bp.route("/holiday-calendars/mine", methods=["GET"])
+@scope_required("absences:read")
+def my_calendar():
+    """The public-holiday calendar that applies to the signed-in person (personal assignment ->
+    team calendar -> company default), read-only, with the holidays of ``year`` (default: all).
+    ``null`` when no calendar is configured. Contains no other person's data."""
+    cal, source = hol.applicable_calendar(me())
+    if cal is None:
+        return jsonify(None)
+    data = hol.serialize_calendar(cal, with_holidays=True, year=request.args.get("year", type=int))
+    data["source"] = source
+    return jsonify(data)
+
+
 @bp.route("/holiday-calendars/<int:cal_id>", methods=["GET"])
 @login_required
 def get_calendar(cal_id: int):

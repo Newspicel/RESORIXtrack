@@ -15,7 +15,6 @@
   "break_warning": "Pause trop courte",
   "break_warning_help": "Pauses minimales légales: 15 min dès 5,5 h, 30 min dès 7 h, 60 min dès 9 h.",
   "legend_work": "Travail",
-  "legend_break": "Pause",
   "legend_edited": "Modifié / manuel",
   "legend_corrected": "Modifié par quelqu'un d'autre",
   "kind": {
@@ -57,14 +56,16 @@
     "clock": "Timbreuse",
     "manual": "Saisie manuelle",
     "api": "API",
-    "desktop": "Application de bureau"
+    "desktop": "Application de bureau",
+    "migration": "Mise à jour du système"
   },
   "field": {
     "kind": "Type",
     "start_at": "Début",
     "end_at": "Fin",
     "note": "Remarque",
-    "is_deleted": "Supprimé"
+    "is_deleted": "Supprimé",
+    "scheduled_end_at": "Sortie planifiée"
   },
   "by_other": "par quelqu'un d'autre",
   "dispute": "Contester cette modification",

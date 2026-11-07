@@ -36,7 +36,7 @@ H="Authorization: Bearer $TOKEN"
 B=https://time.example.com/api/v1
 
 curl -H "$H" $B/me                          # who am I, permissions, company
-curl -H "$H" $B/clock                       # current state: idle | working | on_break
+curl -H "$H" $B/clock                       # current state: idle | working (+ scheduled_end)
 curl -X POST -H "$H" -H "X-Client: desktop/1.0" $B/clock/start
 curl -X POST -H "$H" -H "Content-Type: application/json" -d '{"at":"2026-11-05T07:58:00Z"}' $B/clock/stop
 curl -H "$H" "$B/entries?from=2026-11-01&to=2026-11-30"
@@ -46,8 +46,8 @@ curl -H "$H" "$B/reports/timesheet?year=2026&month=11&format=pdf" -o timesheet.p
 
 ## Clock semantics for desktop clients
 
-- Actions: `POST /clock/start`, `/clock/break`, `/clock/resume`, `/clock/stop`. They are **idempotent**: repeating `start` while already working changes nothing.
-- An optional `at` timestamp (ISO 8601, UTC or with offset, up to 48 hours in the past) lets a client sync actions it recorded while offline. Future timestamps are rejected.
+- Actions: `POST /clock/start`, `/clock/stop`, `/clock/unschedule`. They are **idempotent**: repeating `start` while already working changes nothing. There is no pause action: a break is a clock-out followed by a clock-in.
+- An optional `at` timestamp (ISO 8601, UTC or with offset, up to 48 hours in the past) lets a client sync actions it recorded while offline. A `stop` with an `at` in the **future** (at most 24 hours after the clock-in) schedules the clock-out: the entry stays open, `GET /clock` reports `scheduled_end`, and the server closes the entry at that time. `unschedule` drops the plan; a plain `stop` clocks out now. Future timestamps on `start` are rejected.
 - Send `X-Client: desktop/<version>` so entries show "Desktop app" as their source in the change history.
 - Responses carry the state, the running entry and today's totals; poll `GET /clock` or re-fetch after each action.
 - Clocking is refused outside the employment period (`409 employment_ended`) and in signed-off months (`409 period_signed_off`).
@@ -63,14 +63,14 @@ Uniform JSON: `{"error": {"code": "…", "message": "…", "fields": {"field": "
 |---|---|
 | Session | `POST /auth/login` (answers `{"mfa_required": true, "mfa_token": …}` when 2FA is on), `POST /auth/mfa` (second step), `POST /auth/logout`, `POST /auth/forgot`, `POST /auth/reset`, `POST /auth/accept-invite` |
 | Me | `GET /me`, `PATCH /me` (session only), `GET /me/summary`, `GET /me/export` (session only), `GET/POST /auth/mfa/…` (session only), `GET /notifications`, `POST /notifications/read` |
-| Clock | `GET /clock`, `POST /clock/{start,break,resume,stop}` |
+| Clock | `GET /clock`, `POST /clock/{start,stop,unschedule}` |
 | Entries | `GET/POST /entries`, `GET/PATCH/DELETE /entries/{id}`, `GET /entries/{id}/history`, `POST /entries/{id}/dispute`, `GET /days` |
 | Absences | `GET/POST /absences`, `GET/PATCH /absences/{id}`, `POST /absences/{id}/{approve,reject,cancel}`, `POST /absences/sick-today`, `GET /absences/pending`, `POST /absences/{id}/attachments`, `GET /attachments/{id}`, `GET /calendar/team`, `GET /absence-types` |
 | Work log | `GET /worklog?from&to[&user_id]`, `POST /worklog`, `PATCH /worklog/{id}`, `DELETE /worklog/{id}`, `GET /projects` (any token that may clock or read entries). `POST /projects`, `PATCH /projects/{id}` (leads, Projects capability) are web-session only |
 | Accounts | `GET /accounts/{user_id}/time`, `GET /accounts/{user_id}/vacation`, `GET /accounts/{user_id}/balance`, `POST /accounts/{user_id}/adjustments` |
 | Reports | `GET /reports/{timesheet,balances,absences,projects,entries}?format=json|pdf|xlsx|csv` |
 | Sign-off | `GET /signoffs`, `GET /signoffs/overview`, `POST /signoffs`, `POST /signoffs/{id}/reopen`, `GET /signoffs/verify` |
-| Organisation | `GET /users`, `GET /users/{id}`, `GET /teams`, `GET /teams/{id}/leads`, `POST /teams/{id}/leads` (leads/deputies with `valid_from`/`valid_to`), `DELETE /teams/{id}/leads/{row}`, `GET /holiday-calendars` (admin routes for writing); HR: `GET /users/{id}/export`; admin: `POST /users/{id}/anonymize`, `POST /users/{id}/mfa/reset` |
+| Organisation | `GET /users`, `GET /users/{id}`, `GET /teams`, `GET /teams/{id}/leads`, `POST /teams/{id}/leads` (leads/deputies with `valid_from`/`valid_to`), `DELETE /teams/{id}/leads/{row}`, `GET /holiday-calendars`, `GET /holiday-calendars/mine` (the calendar that applies to the caller; scope `absences:read`; admin routes for writing); HR: `GET /users/{id}/export`; admin: `POST /users/{id}/anonymize`, `POST /users/{id}/mfa/reset` |
 | Administration (`admin` scope) | `GET/PATCH /admin/settings`, `GET /admin/backups`, `POST /admin/backups`, `GET /admin/backups/{name}`, `POST /admin/backups/download`, `GET /admin/audit`, `GET /admin/login-attempts`, `GET /admin/api-tokens`, `DELETE /admin/api-tokens/{id}`, `GET /admin/getting-started` |
 | Branding | `GET /branding` (public), `GET /branding/logo/{dark,light}` (public), `PUT/DELETE /branding/logo/{variant}`, `PATCH /branding` (admin) |
 

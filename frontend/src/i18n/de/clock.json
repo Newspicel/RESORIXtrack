@@ -1,25 +1,23 @@
 {
   "start": "Einstempeln",
   "stop": "Ausstempeln",
-  "break": "Pause beginnen",
-  "resume": "Pause beenden",
+  "stop_now": "Jetzt ausstempeln",
+  "stop_later": "Später ausstempeln",
   "start_work": "Einstempeln",
   "stop_work": "Ausstempeln",
-  "take_break": "Pause beginnen",
-  "resume_work": "Pause beenden",
   "state": {
     "idle": "Nicht eingestempelt",
-    "working": "Am Arbeiten",
-    "on_break": "In der Pause"
+    "working": "Am Arbeiten"
   },
   "headline": {
     "idle": "Sie sind nicht eingestempelt",
-    "working": "Sie sind eingestempelt",
-    "on_break": "Sie sind in der Pause"
+    "working": "Sie sind eingestempelt"
   },
+  "scheduled": "Automatisches Ausstempeln um {time}",
+  "scheduled_short": "bis {time}",
+  "cancel_scheduled": "Abbrechen",
   "shortcuts": "Tastenkürzel:",
   "start_stop": "ein- / ausstempeln",
-  "break_resume": "Pause beginnen / beenden",
   "queued_offline": "Du bist offline. Die Zeit wurde gespeichert und wird automatisch synchronisiert.",
   "synced": "Offline-Stempelungen synchronisiert.",
   "custom_time_in": "Mit eigener Uhrzeit einstempeln",
@@ -27,5 +25,5 @@
   "custom_time_label_in": "Startzeit",
   "custom_time_label_out": "Endzeit",
   "custom_time_help_in": "Heute, früher als jetzt (bis 48 Stunden zurück). Der Eintrag wird als manuell markiert.",
-  "custom_time_help_out": "Heute, zwischen dem Beginn dieses Eintrags und jetzt. Der Eintrag wird als manuell markiert."
+  "custom_time_help_out": "Heute. Eine Zeit in der Vergangenheit schliesst den Eintrag dort; eine Zeit in der Zukunft stempelt dich dann automatisch aus – bis dahin bleibst du eingestempelt. Der Eintrag wird als manuell markiert."
 }

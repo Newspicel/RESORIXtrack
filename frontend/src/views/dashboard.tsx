@@ -141,7 +141,7 @@ function ClockCard({ today, sick, onSick }: { today: any; sick: { allowed: boole
   const pct = target ? Math.min(1, worked / target) : st === "idle" ? 0 : 1;
   const R = 84;
   const C = 2 * Math.PI * R;
-  const color = st === "on_break" ? "var(--color-break)" : "url(#ringGrad)";
+  const color = "url(#ringGrad)";
   const tz = me.value!.user.timezone;
   const sickAbsence = today.absences.find((a: any) => a.category === "sick" && a.status === "approved");
   const [customStart, setCustomStart] = useState(false);
@@ -150,10 +150,13 @@ function ClockCard({ today, sick, onSick }: { today: any; sick: { allowed: boole
   function startWork() {
     clockAction("start", customAt());
   }
+  // With a custom time in the future this schedules the clock-out ("clock out later") instead of closing the entry.
+  const later = customStart && !!startAt && startAt > localHHMM(new Date().toISOString(), tz);
   async function stopAndPrompt() {
     await clockAction("stop", customAt());
+    setCustomStart(false);
     const cfg = worklogConfig();
-    if (cfg.mode === "required" && today.worklog_required_min > 0 && today.worklog_min < today.worklog_required_min) {
+    if (clock.value?.state === "idle" && cfg.mode === "required" && today.worklog_required_min > 0 && today.worklog_min < today.worklog_required_min) {
       toast(t("worklog.clock_out_prompt"), "info", 8000);
       setTimeout(() => document.querySelector<HTMLElement>(".worklog-today")?.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
     }
@@ -189,17 +192,20 @@ function ClockCard({ today, sick, onSick }: { today: any; sick: { allowed: boole
               {" · "}{t("dashboard.target_today", { target: fmtDuration(target) })}
               {c.today_break_min > 0 && <> · {t("dashboard.breaks", { time: fmtDuration(c.today_break_min) })}</>}
             </p>
+            {st === "working" && c.scheduled_end && (
+              <div class="row small scheduled-out" style="gap:8px;margin-top:8px;align-items:center">
+                <Icon.clock width={16} style="flex:none" /><span>{t("clock.scheduled", { time: fmtTime(c.scheduled_end, tz) })}</span>
+                <button class="btn btn-ghost btn-sm" disabled={clockBusy.value} onClick={() => clockAction("unschedule")}>{t("clock.cancel_scheduled")}</button>
+              </div>
+            )}
           </div>
           <div class="row wrap">
             {st === "idle" && <button class="btn btn-gradient btn-lg" disabled={clockBusy.value || (customStart && !startAt)} onClick={startWork}><Icon.play />{t("clock.start_work")}</button>}
-            {st === "working" && <>
-              <button class="btn btn-warn btn-lg" disabled={clockBusy.value} onClick={() => clockAction("break")}><Icon.coffee />{t("clock.take_break")}</button>
-              <button class="btn btn-lg" disabled={clockBusy.value || (customStart && !startAt)} onClick={stopAndPrompt}><Icon.stop />{t("clock.stop_work")}</button>
-            </>}
-            {st === "on_break" && <>
-              <button class="btn btn-gradient btn-lg" disabled={clockBusy.value} onClick={() => clockAction("resume")}><Icon.play />{t("clock.resume_work")}</button>
-              <button class="btn btn-lg" disabled={clockBusy.value || (customStart && !startAt)} onClick={stopAndPrompt}><Icon.stop />{t("clock.stop_work")}</button>
-            </>}
+            {st === "working" && (
+              <button class="btn btn-lg" disabled={clockBusy.value || (customStart && !startAt)} onClick={stopAndPrompt}>
+                <Icon.stop />{later ? t("clock.stop_later") : c.scheduled_end && !customStart ? t("clock.stop_now") : t("clock.stop_work")}
+              </button>
+            )}
             <a class="btn btn-ghost" href="/time?add=1"><Icon.plus />{t("dashboard.forgot_clock")}</a>
             {sick.allowed && <button class="btn btn-ghost" onClick={onSick}><Icon.thermo />{t("dashboard.report_sick")}</button>}
           </div>
@@ -210,7 +216,7 @@ function ClockCard({ today, sick, onSick }: { today: any; sick: { allowed: boole
             {customStart && <TimeInput value={startAt} onChange={setStartAt} required ariaLabel={st === "idle" ? t("clock.custom_time_label_in") : t("clock.custom_time_label_out")} style="width:130px" />}
             {customStart && <span class="tiny muted">{st === "idle" ? t("clock.custom_time_help_in") : t("clock.custom_time_help_out")}</span>}
           </div>
-          <div class="tiny faint">{t("clock.shortcuts")} <span class="kbd">S</span> {t("clock.start_stop")} · <span class="kbd">B</span> {t("clock.break_resume")}</div>
+          <div class="tiny faint">{t("clock.shortcuts")} <span class="kbd">S</span> {t("clock.start_stop")}</div>
         </div>
       </div>
     </div>

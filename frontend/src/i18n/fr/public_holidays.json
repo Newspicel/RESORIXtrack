@@ -1,0 +1,11 @@
+{
+  "title": "Jours fériés",
+  "sub": "Les jours fériés qui s'appliquent à vous. Vos jours de travail fériés réduisent vos heures dues; vous ne pouvez pas les modifier.",
+  "manage": "Gérer les calendriers",
+  "source_user": "attribué à vous personnellement",
+  "source_team": "calendrier de votre équipe",
+  "source_default": "valeur par défaut de l'entreprise",
+  "none": "Pas encore de calendrier de jours fériés",
+  "none_help": "Votre administration n'a pas encore attribué de calendrier de jours fériés à vous, à votre équipe ou à l'entreprise.",
+  "help": "Les demi-jours fériés concernent l'après-midi. Si un jour férié manque ou est erroné, signalez-le à votre administration."
+}

@@ -36,6 +36,25 @@ def serialize_holiday(h: Holiday) -> dict[str, Any]:
             "fraction": h.fraction}
 
 
+def applicable_calendar(user: User) -> tuple[HolidayCalendar | None, str]:
+    """The calendar that applies to a person and where it comes from: a personal assignment
+    (``user``), the team's calendar (``team``) or the company default (``default``). ``none`` when
+    nothing is configured. The target-hour calculation (``accounts.resolve_calendar_id``) uses the
+    same order, so what people see here is what reduces their target."""
+    if user.holiday_calendar_id:
+        c = db.session.get(HolidayCalendar, user.holiday_calendar_id)
+        if c is not None:
+            return c, "user"
+    if user.team_id:
+        team = db.session.get(Team, user.team_id)
+        if team is not None and team.holiday_calendar_id:
+            c = db.session.get(HolidayCalendar, team.holiday_calendar_id)
+            if c is not None:
+                return c, "team"
+    c = db.session.scalar(db.select(HolidayCalendar).where(HolidayCalendar.is_default.is_(True)).limit(1))
+    return (c, "default") if c is not None else (None, "none")
+
+
 def get_calendar(cal_id: int) -> HolidayCalendar:
     c = db.session.get(HolidayCalendar, cal_id)
     if c is None:

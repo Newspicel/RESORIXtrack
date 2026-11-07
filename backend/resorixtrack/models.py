@@ -208,9 +208,11 @@ class TimeEntry(db.Model):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
-    kind: Mapped[str] = mapped_column(String(8), default="work")  # work | break
+    kind: Mapped[str] = mapped_column(String(8), default="work")  # work | break (legacy: a break is a clock-out, see migration 0003)
     start_at: Mapped[datetime] = mapped_column(UTCDateTime)
     end_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    # "Clock out later": while set, the open entry is closed at this time (worker, or the next clock request).
+    scheduled_end_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     tz: Mapped[str] = mapped_column(String(64), default="Europe/Zurich")
     note: Mapped[str] = mapped_column(String(500), default="")
     source: Mapped[str] = mapped_column(String(16), default="clock")  # clock | manual | api | desktop

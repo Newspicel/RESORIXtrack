@@ -21,3 +21,6 @@ access_log_format = '%(h)s "%(m)s %(U)s %(H)s" %(s)s %(b)s %(D)sus'
 limit_request_line = 4094
 limit_request_fields = 100
 limit_request_field_size = 8190
+# Gunicorn >= 25.1 opens a management socket (gunicornc) in the working directory by default. The container
+# root is read-only and nothing uses it, so switch it off instead of logging an error at every start.
+control_socket_disable = True

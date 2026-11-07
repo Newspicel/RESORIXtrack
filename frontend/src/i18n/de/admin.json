@@ -146,7 +146,7 @@
     "period_help": "Daten leer lassen für eine unbefristete Zuweisung; eine Ferienvertretung erhält die Feriendaten."
   },
   "holidays": {
-    "title": "Feiertage",
+    "title": "Feiertagskalender",
     "sub": "Feiertagskalender reduzieren die Sollzeit an Arbeitstagen. Weise sie der Firma, Teams oder einzelnen Personen zu.",
     "calendars": "Kalender",
     "no_calendars": "Noch keine Kalender.",

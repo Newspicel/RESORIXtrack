@@ -146,7 +146,7 @@
     "period_help": "Laissez les dates vides pour une attribution sans limite; un suppléant pour des vacances reçoit les dates des vacances."
   },
   "holidays": {
-    "title": "Jours fériés",
+    "title": "Calendriers de jours fériés",
     "sub": "Les calendriers de jours fériés réduisent les heures dues les jours de travail. Attribuez-les à l'entreprise, aux équipes ou à des collaborateurs individuels.",
     "calendars": "Calendriers",
     "no_calendars": "Aucun calendrier pour l'instant.",

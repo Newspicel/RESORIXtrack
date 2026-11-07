@@ -7,12 +7,12 @@ import { loadBranding } from "../lib/branding";
 import { clock, clockAction, clockBusy, liveSinceSeconds, liveWorked, loadClock } from "../lib/clock";
 import { LOCALES, absenceLabel, locale, setLocale, t } from "../lib/i18n";
 import { currentTheme, loadMe, me, pendingApprovals, setTheme, toast, unread } from "../lib/store";
-import { fmtDate, fmtDuration, monthName, relativeTime } from "../lib/time";
+import { fmtDate, fmtDuration, fmtTime, monthName, relativeTime } from "../lib/time";
 import { Icon, Logo } from "./icons";
 import { Avatar, Loading, Toasts } from "./ui";
 
 type NavKey = "dashboard" | "time" | "absences" | "account" | "team" | "approvals" | "signoff" | "projects" | "reports" | "users" | "teams"
-  | "holidays" | "settings" | "backups" | "profile";
+  | "holidays" | "holiday_calendars" | "settings" | "backups" | "profile";
 
 export function Shell({ active, title, children, managerOnly, adminOnly }: {
   active: NavKey; title?: string; children: ComponentChildren; managerOnly?: boolean; adminOnly?: boolean;
@@ -55,6 +55,7 @@ export function Shell({ active, title, children, managerOnly, adminOnly }: {
         {link("dashboard", "/", <Icon.dashboard />, t("nav.dashboard"))}
         {link("time", "/time", <Icon.clock />, t("nav.time"))}
         {link("absences", "/absences", <Icon.palm />, t("nav.absences"))}
+        {link("holidays", "/holidays", <Icon.flag />, t("nav.holidays"))}
         {link("account", "/account", <Icon.wallet />, t("nav.account"))}
         {link("reports", "/reports", <Icon.chart />, t("nav.reports"))}
         {!manager && m.user.team_id && link("team", "/team", <Icon.team />, t("nav.team_calendar"))}
@@ -67,7 +68,7 @@ export function Shell({ active, title, children, managerOnly, adminOnly }: {
         {m.permissions.admin && <div class="nav-section">{t("nav.admin_section")}</div>}
         {m.permissions.admin && link("users", "/admin/users", <Icon.users />, t("nav.users"))}
         {m.permissions.admin && link("teams", "/admin/teams", <Icon.team />, t("nav.teams"))}
-        {m.permissions.admin && link("holidays", "/admin/holidays", <Icon.flag />, t("nav.holidays"))}
+        {m.permissions.admin && link("holiday_calendars", "/admin/holidays", <Icon.flag />, t("nav.holiday_calendars"))}
         {m.permissions.admin && link("settings", "/admin/settings", <Icon.settings />, t("nav.settings"))}
         {m.permissions.admin && link("backups", "/admin/backups", <Icon.database />, t("nav.backups"))}
         <div class="foot">
@@ -106,10 +107,6 @@ function useShortcuts() {
       const st = clock.value?.state;
       if (!st) return;
       if (e.key === "s" || e.key === "S") clockAction(st === "idle" ? "start" : "stop");
-      if (e.key === "b" || e.key === "B") {
-        if (st === "working") clockAction("break");
-        else if (st === "on_break") clockAction("resume");
-      }
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -127,11 +124,8 @@ function MiniClock() {
       <span class="t">{st === "idle" ? fmtDuration(liveWorked()) : fmtClock(since)}</span>
       <span class="small muted">{t(`clock.state.${st}`)}</span>
       {st === "idle" && <button class="btn btn-primary btn-sm" disabled={clockBusy.value} onClick={() => clockAction("start")}><Icon.play />{t("clock.start")}</button>}
-      {st === "working" && <>
-        <button class="btn btn-sm btn-warn" disabled={clockBusy.value} onClick={() => clockAction("break")} aria-label={t("clock.break")}><Icon.coffee /></button>
-        <button class="btn btn-sm" disabled={clockBusy.value} onClick={() => clockAction("stop")} aria-label={t("clock.stop")}><Icon.stop /></button>
-      </>}
-      {st === "on_break" && <button class="btn btn-primary btn-sm" disabled={clockBusy.value} onClick={() => clockAction("resume")}><Icon.play />{t("clock.resume")}</button>}
+      {st === "working" && c.scheduled_end && <span class="small muted">{t("clock.scheduled_short", { time: fmtTime(c.scheduled_end, me.value?.user.timezone) })}</span>}
+      {st === "working" && <button class="btn btn-sm" disabled={clockBusy.value} onClick={() => clockAction("stop")} aria-label={c.scheduled_end ? t("clock.stop_now") : t("clock.stop")}><Icon.stop /></button>}
     </div>
   );
 }

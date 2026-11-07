@@ -14,7 +14,7 @@ from flask import Flask
 
 from .extensions import db
 from .models import ApiToken, AuthToken, LoginAttempt, Notification, TimeEntry, User, UserSession
-from .services import mail, notifications
+from .services import entries, mail, notifications
 from .services import settings as settings_svc
 from .timeutil import utcnow, zone
 
@@ -77,6 +77,9 @@ def run_forever(app: Flask, interval: int = 60, backup_hour: int = 2) -> None:  
     while not stop["flag"]:
         with app.app_context():
             try:
+                closed = entries.close_due_scheduled()
+                if closed:
+                    app.logger.info("Executed %d scheduled clock-out(s)", closed)
                 n = send_clock_reminders()
                 if n:
                     app.logger.info("Sent %d clock reminder(s)", n)

@@ -26,9 +26,9 @@ Save once, even without changes, to tick the checklist item. Changing these rule
 
 Email is configured in the server's `.env` file (see [installation.md](installation.md#email-smtp)). **Settings → Email** shows the current configuration and sends a test email. Without email, you can still add employees and set their passwords manually.
 
-### 3. Public holidays
+### 3. Holiday calendars
 
-**Administration → Public holidays**
+**Administration → Holiday calendars**
 
 RESORIXtrack ships with presets (City of Fribourg 2026–2029, more Swiss cantons as they are added). If your region isn't covered:
 
@@ -105,11 +105,11 @@ The **integrity check** on the same page (administrators and HR) verifies that n
 
 Name, colour, leads and deputies with their periods, holiday calendar, members. Moving a member to another team takes effect immediately; history stays with the person. Deactivating a person removes them as lead or deputy.
 
-### Public holidays
+### Holiday calendars
 
 <p><img src="screenshots/admin-dark-admin_holidays.png" alt="Public-holiday calendars" width="760"></p>
 
-See step 3 above. Deleting a calendar that is in use makes teams and people fall back to the next calendar in the order.
+See step 3 above. Deleting a calendar that is in use makes teams and people fall back to the next calendar in the order. Every employee sees the calendar that applies to them under *Public holidays* in the main menu, read-only.
 
 ### Settings
 

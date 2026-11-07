@@ -35,7 +35,7 @@ def _val(v: Any) -> Any:
 
 def snapshot(obj: Any) -> dict[str, Any]:
     if isinstance(obj, TimeEntry):
-        keys = ("kind", "start_at", "end_at", "tz", "note", "source", "is_deleted")
+        keys = ("kind", "start_at", "end_at", "scheduled_end_at", "tz", "note", "source", "is_deleted")
     elif isinstance(obj, Absence):
         keys = ("type_id", "start_date", "end_date", "start_half", "end_half", "note", "status",
                 "decision_note", "cancel_reason")

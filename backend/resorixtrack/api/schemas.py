@@ -140,7 +140,7 @@ class TeamRangeQuery(Base):
 
 class EntryIn(Base):
     user_id = fields.Integer(load_default=None)
-    kind = fields.String(load_default="work", validate=validate.OneOf(["work", "break"]))
+    kind = fields.String(load_default="work", validate=validate.OneOf(["work"]))
     start_at = fields.DateTime(required=True)
     end_at = fields.DateTime(required=True)
     note = fields.String(load_default="", validate=validate.Length(max=500))
@@ -148,7 +148,7 @@ class EntryIn(Base):
 
 
 class EntryPatch(Base):
-    kind = fields.String(validate=validate.OneOf(["work", "break"]))
+    kind = fields.String(validate=validate.OneOf(["work"]))
     start_at = fields.DateTime()
     end_at = fields.DateTime(allow_none=True)
     note = fields.String(validate=validate.Length(max=500))

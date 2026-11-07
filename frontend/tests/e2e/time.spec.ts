@@ -3,20 +3,40 @@
 import { expect, test } from "@playwright/test";
 import { CLOCK_USER, EMPLOYEE, LEAD, asUser, login } from "./helpers";
 
-test("quick entry: start, break, resume, stop", async ({ page }) => {
+test("quick entry: clock in, clock out, clock in again", async ({ page }) => {
   await login(page, CLOCK_USER);
   const card = page.locator(".hero-card");
   await card.getByRole("button", { name: /^clock in$/i }).click();
   await expect(card.getByText(/you're clocked in/i)).toBeVisible();
-  await card.getByRole("button", { name: /start break/i }).click();
-  await expect(card.getByText(/you're on a break/i)).toBeVisible();
-  await card.getByRole("button", { name: /end break/i }).click();
+  await card.getByRole("button", { name: /^clock out$/i }).click();
+  await expect(card.getByText(/you're not clocked in/i)).toBeVisible();
+  // a break is simply a clock-out: clocking in again works right away
+  await card.getByRole("button", { name: /^clock in$/i }).click();
   await expect(card.getByText(/you're clocked in/i)).toBeVisible();
-  await card.getByRole("button", { name: /clock out/i }).click();
+  await card.getByRole("button", { name: /^clock out$/i }).click();
   await expect(card.getByText(/you're not clocked in/i)).toBeVisible();
   // the top bar widget reflects the state on every page
   await page.goto("/time");
   await expect(page.locator(".mini-clock")).toContainText(/not clocked in/i);
+});
+
+test("clock out later: stays clocked in until the chosen time; 'clock out now' ends it", async ({ page }) => {
+  const zurich = (d: Date, opts: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Zurich", hour12: false, ...opts }).format(d);
+  test.skip(Number(zurich(new Date(), { hour: "2-digit" })) >= 21, "two hours ahead would be tomorrow");
+  await login(page, CLOCK_USER);
+  const card = page.locator(".hero-card");
+  await card.getByRole("button", { name: /^clock in$/i }).click();
+  await expect(card.getByText(/you're clocked in/i)).toBeVisible();
+  await card.getByLabel(/clock out at a custom time/i).check();
+  const hhmm = zurich(new Date(Date.now() + 2 * 3600000), { hour: "2-digit", minute: "2-digit" });
+  await card.locator("input[data-time-input]").fill(hhmm);
+  await card.getByRole("button", { name: /clock out later/i }).click();
+  await expect(card.getByText(`Clocks out automatically at ${hhmm}`)).toBeVisible();
+  await expect(card.getByText(/you're clocked in/i)).toBeVisible();
+  await expect(card.getByRole("button", { name: /^clock in$/i })).toHaveCount(0);
+  await expect(page.locator(".mini-clock")).toContainText(`until ${hhmm}`);
+  await card.getByRole("button", { name: /clock out now/i }).click();
+  await expect(card.getByText(/you're not clocked in/i)).toBeVisible();
 });
 
 test("keyboard shortcut S starts and stops the clock", async ({ page }) => {

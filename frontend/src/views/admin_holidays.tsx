@@ -19,7 +19,7 @@ interface Holiday { id: number; calendar_id: number; date: string; name: string;
 
 export function AdminHolidaysPage() {
   return (
-    <Shell active="holidays" adminOnly title={t("admin.holidays.title")}>
+    <Shell active="holiday_calendars" adminOnly title={t("admin.holidays.title")}>
       <Holidays />
     </Shell>
   );

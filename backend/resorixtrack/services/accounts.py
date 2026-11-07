@@ -32,8 +32,6 @@ from ..models import (
     AbsenceType,
     BalanceAdjustment,
     Holiday,
-    HolidayCalendar,
-    Team,
     TimeEntry,
     User,
     VacationEntitlement,
@@ -70,13 +68,11 @@ def holiday_halves(fraction: float) -> set[str]:
 
 
 def resolve_calendar_id(user: User) -> int | None:
-    if user.holiday_calendar_id:
-        return user.holiday_calendar_id
-    if user.team_id:
-        team = db.session.get(Team, user.team_id)
-        if team and team.holiday_calendar_id:
-            return team.holiday_calendar_id
-    return db.session.scalar(db.select(HolidayCalendar.id).where(HolidayCalendar.is_default.is_(True)).limit(1))
+    """Personal assignment -> team calendar -> company default (see ``holidays.applicable_calendar``)."""
+    from . import holidays as hol
+
+    cal, _source = hol.applicable_calendar(user)
+    return cal.id if cal is not None else None
 
 
 def account_start(user: User) -> date:

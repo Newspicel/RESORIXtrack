@@ -1,25 +1,23 @@
 {
   "start": "Timbrer l'arrivée",
   "stop": "Timbrer la sortie",
-  "break": "Commencer la pause",
-  "resume": "Terminer la pause",
+  "stop_now": "Timbrer la sortie maintenant",
+  "stop_later": "Timbrer la sortie plus tard",
   "start_work": "Timbrer l'arrivée",
   "stop_work": "Timbrer la sortie",
-  "take_break": "Commencer la pause",
-  "resume_work": "Terminer la pause",
   "state": {
     "idle": "Non timbré",
-    "working": "Au travail",
-    "on_break": "En pause"
+    "working": "Au travail"
   },
   "headline": {
     "idle": "Vous n'avez pas timbré",
-    "working": "Vous avez timbré l'arrivée",
-    "on_break": "Vous êtes en pause"
+    "working": "Vous avez timbré l'arrivée"
   },
+  "scheduled": "Sortie timbrée automatiquement à {time}",
+  "scheduled_short": "jusqu'à {time}",
+  "cancel_scheduled": "Annuler",
   "shortcuts": "Raccourcis:",
   "start_stop": "timbrer l'arrivée / la sortie",
-  "break_resume": "commencer / terminer la pause",
   "queued_offline": "Vous êtes hors ligne. L'heure a été enregistrée et sera synchronisée automatiquement.",
   "synced": "Timbrages hors ligne synchronisés.",
   "custom_time_in": "Timbrer l'arrivée avec une heure choisie",
@@ -27,5 +25,5 @@
   "custom_time_label_in": "Heure de début",
   "custom_time_label_out": "Heure de fin",
   "custom_time_help_in": "Aujourd'hui, avant maintenant (jusqu'à 48 heures en arrière). L'entrée est marquée comme manuelle.",
-  "custom_time_help_out": "Aujourd'hui, entre le début de cette entrée et maintenant. L'entrée est marquée comme manuelle."
+  "custom_time_help_out": "Aujourd'hui. Une heure passée clôt l'entrée à ce moment; une heure future timbre votre sortie automatiquement à ce moment – vous restez timbré jusque-là. L'entrée est marquée comme manuelle."
 }

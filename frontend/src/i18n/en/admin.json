@@ -146,7 +146,7 @@
     "period_help": "Leave the dates empty for an open-ended assignment; a deputy for a vacation gets the vacation dates."
   },
   "holidays": {
-    "title": "Public holidays",
+    "title": "Holiday calendars",
     "sub": "Holiday calendars reduce target hours on working days. Assign them to the company, teams or single employees.",
     "calendars": "Calendars",
     "no_calendars": "No calendars yet.",

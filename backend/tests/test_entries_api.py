@@ -22,24 +22,75 @@ def local(day: str, hm: str) -> str:
 def test_clock_state_machine(make_client, org):
     c = make_client("anna@example.com")
     assert c.get("/api/v1/clock").get_json()["state"] == "idle"
-    assert c.post("/api/v1/clock/break", json={}).status_code == 409
     s = c.post("/api/v1/clock/start", json={}).get_json()
     assert s["state"] == "working"
     assert c.post("/api/v1/clock/start", json={}).get_json()["state"] == "working"  # idempotent
     freeze(DEFAULT_NOW + timedelta(hours=1))
-    assert c.post("/api/v1/clock/break", json={}).get_json()["state"] == "on_break"
-    freeze(DEFAULT_NOW + timedelta(hours=1, minutes=30))
-    assert c.post("/api/v1/clock/resume", json={}).get_json()["state"] == "working"
+    assert c.post("/api/v1/clock/stop", json={}).get_json()["state"] == "idle"
+    freeze(DEFAULT_NOW + timedelta(hours=1, minutes=30))  # a break is simply a clock-out
+    assert c.post("/api/v1/clock/start", json={}).get_json()["state"] == "working"
     freeze(DEFAULT_NOW + timedelta(hours=2))
     s = c.post("/api/v1/clock/stop", json={}).get_json()
     assert s["state"] == "idle"
     assert s["today_worked_min"] == 90
-    assert s["today_break_min"] == 30
+    assert s["today_break_min"] == 30  # the gap between the two entries
     entries = c.get("/api/v1/entries?from=2026-11-05&to=2026-11-05").get_json()
-    assert [e["kind"] for e in entries] == ["work", "break", "work"]
+    assert [e["kind"] for e in entries] == ["work", "work"]
     assert all(e["source"] == "clock" for e in entries)
     assert c.post("/api/v1/clock/stop", json={}).status_code == 200  # idempotent
-    assert c.post("/api/v1/clock/dance", json={}).status_code == 404
+    for gone in ("break", "resume", "dance"):  # pauses were removed
+        assert c.post(f"/api/v1/clock/{gone}", json={}).status_code == 404
+
+
+def test_clock_out_later(make_client, org):
+    """A future end time schedules the clock-out: the person stays clocked in until then."""
+    c = make_client("anna@example.com")
+    c.post("/api/v1/clock/start", json={})
+    r = c.post("/api/v1/clock/stop", json={"at": local("2026-11-05", "17:30"), "custom": True})
+    s = r.get_json()
+    assert r.status_code == 200 and s["state"] == "working", s
+    assert s["scheduled_end"] == "2026-11-05T16:30:00Z" and s["entry"]["scheduled_end_at"] == "2026-11-05T16:30:00Z"
+    # at most 24 h after the clock-in
+    r = c.post("/api/v1/clock/stop", json={"at": local("2026-11-06", "16:00"), "custom": True})
+    assert r.status_code == 422 and r.get_json()["error"]["fields"]["at"] == "too_late"
+    # cancelling keeps the person clocked in, without a plan
+    s = c.post("/api/v1/clock/unschedule", json={}).get_json()
+    assert s["state"] == "working" and s["scheduled_end"] is None
+    assert c.post("/api/v1/clock/unschedule", json={}).status_code == 200  # idempotent
+    # plan again, then "clock out now" ends the entry immediately
+    c.post("/api/v1/clock/stop", json={"at": local("2026-11-05", "17:30"), "custom": True})
+    freeze(DEFAULT_NOW + timedelta(minutes=20))
+    s = c.post("/api/v1/clock/stop", json={}).get_json()
+    assert s["state"] == "idle" and s["today_worked_min"] == 20 and s["scheduled_end"] is None
+    e = c.get("/api/v1/entries?from=2026-11-05&to=2026-11-05").get_json()[0]
+    assert e["end_at"] == "2026-11-05T14:20:00Z" and e["scheduled_end_at"] is None
+    reasons = [h["reason"] for h in c.get(f"/api/v1/entries/{e['id']}/history").get_json()]
+    assert "clock-out scheduled for 17:30" in reasons and "scheduled clock-out cancelled" in reasons
+
+
+def test_scheduled_clock_out_is_executed(make_client, org):
+    """The worker closes the entry at the planned time; without a worker the next clock request catches up."""
+    from resorixtrack.services import entries as entries_svc
+
+    c = make_client("anna@example.com")
+    c.post("/api/v1/clock/start", json={})
+    c.post("/api/v1/clock/stop", json={"at": local("2026-11-05", "15:45"), "custom": True})
+    assert entries_svc.close_due_scheduled() == 0  # not yet
+    freeze(DEFAULT_NOW + timedelta(hours=1))  # 16:00 Zurich
+    assert entries_svc.close_due_scheduled() == 1
+    s = c.get("/api/v1/clock").get_json()
+    assert s["state"] == "idle" and s["today_worked_min"] == 45
+    e = c.get("/api/v1/entries?from=2026-11-05&to=2026-11-05").get_json()[0]
+    assert e["end_at"] == "2026-11-05T14:45:00Z" and e["source"] == "manual"
+    revs = db.session.scalars(db.select(Revision).where(Revision.entity == "time_entry", Revision.entity_id == e["id"])).all()
+    assert revs[-1].reason == "clock (scheduled clock-out)" and revs[-1].after["end_at"] == "2026-11-05T14:45:00Z"
+
+    c.post("/api/v1/clock/start", json={})
+    c.post("/api/v1/clock/stop", json={"at": local("2026-11-05", "16:30"), "custom": True})
+    freeze(DEFAULT_NOW + timedelta(hours=2))  # the worker did not run: GET /clock closes the entry at 16:30
+    s = c.get("/api/v1/clock").get_json()
+    assert s["state"] == "idle" and s["today_worked_min"] == 75
+    assert c.get("/api/v1/entries?from=2026-11-05&to=2026-11-05").get_json()[1]["end_at"] == "2026-11-05T15:30:00Z"
 
 
 def test_clock_offline_timestamp(make_client, org):
@@ -48,7 +99,8 @@ def test_clock_offline_timestamp(make_client, org):
     s = c.post("/api/v1/clock/start", json={"at": at}).get_json()
     assert s["since"].startswith("2026-11-05T13:40")
     future = (DEFAULT_NOW + timedelta(hours=1)).isoformat()
-    assert c.post("/api/v1/clock/stop", json={"at": future}).status_code == 422
+    assert c.post("/api/v1/clock/stop", json={"at": future}).get_json()["scheduled_end"]  # a future stop schedules the clock-out
+    c.post("/api/v1/clock/unschedule", json={})
     too_old = (DEFAULT_NOW - timedelta(days=3)).isoformat()
     assert c.post("/api/v1/clock/stop", json={"at": too_old}).status_code == 422
 
@@ -90,9 +142,12 @@ def test_overlap_rejected(make_client, org):
     r = c.post("/api/v1/entries", json={"start_at": local("2026-11-05", "11:00"), "end_at": local("2026-11-05", "13:00")})
     assert r.status_code == 409 and r.get_json()["error"]["code"] == "overlap"
     # adjacent is fine
-    r = c.post("/api/v1/entries", json={"start_at": local("2026-11-05", "12:00"), "end_at": local("2026-11-05", "12:30"),
-                                        "kind": "break"})
+    r = c.post("/api/v1/entries", json={"start_at": local("2026-11-05", "12:00"), "end_at": local("2026-11-05", "12:30")})
     assert r.status_code == 201
+    # breaks are clock-outs, not entries
+    r = c.post("/api/v1/entries", json={"start_at": local("2026-11-05", "13:00"), "end_at": local("2026-11-05", "13:30"),
+                                        "kind": "break"})
+    assert r.status_code == 422
 
 
 def test_employee_edit_is_logged_and_visible(make_client, org):
@@ -231,7 +286,7 @@ def test_every_entry_write_creates_a_revision(make_client, org):
     lead = make_client("lea@example.com")
     anna.post("/api/v1/clock/start", json={})
     freeze(DEFAULT_NOW + timedelta(minutes=30))
-    anna.post("/api/v1/clock/break", json={})
+    anna.post("/api/v1/clock/stop", json={"at": local("2026-11-05", "16:00"), "custom": True})  # clock out later
     freeze(DEFAULT_NOW + timedelta(minutes=40))
     anna.post("/api/v1/clock/stop", json={})
     e = anna.post("/api/v1/entries", json={"start_at": local("2026-11-05", "07:00"),
@@ -314,11 +369,11 @@ def test_start_stop_within_one_second_is_editable(make_client, org):
 
 def test_rapid_clicks_within_one_second(make_client, org):
     c = make_client("anna@example.com")
-    for action, state in (("start", "working"), ("break", "on_break"), ("resume", "working"), ("stop", "idle")):
+    for action, state in (("start", "working"), ("stop", "idle"), ("start", "working"), ("stop", "idle")):
         r = c.post(f"/api/v1/clock/{action}", json={})
         assert r.status_code == 200 and r.get_json()["state"] == state, r.get_json()
     entries = c.get("/api/v1/entries?from=2026-11-05&to=2026-11-05").get_json()
-    assert [e["kind"] for e in entries] == ["work", "break", "work"]
+    assert [e["kind"] for e in entries] == ["work", "work"]
     for a, b in zip(entries, entries[1:], strict=False):
         assert a["end_at"] <= b["start_at"]
     # and immediately starting again works too
@@ -366,6 +421,7 @@ def test_clock_out_with_a_custom_time(make_client, org):
     anna.post("/api/v1/clock/start", json={})
     anna.post("/api/v1/clock/stop", json={})
     assert anna.get(f"/api/v1/entries?from={day}&to={day}").get_json()[-1]["source"] == "clock"
-    # an end in the future is refused
+    # an end in the future does not close the entry: it schedules the clock-out ("clock out later")
     anna.post("/api/v1/clock/start", json={})
-    assert anna.post("/api/v1/clock/stop", json={"at": (DEFAULT_NOW + timedelta(hours=2)).isoformat(), "custom": True}).status_code == 422
+    r = anna.post("/api/v1/clock/stop", json={"at": (DEFAULT_NOW + timedelta(hours=2)).isoformat(), "custom": True})
+    assert r.status_code == 200 and r.get_json()["state"] == "working" and r.get_json()["scheduled_end"]
