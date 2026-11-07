@@ -17,7 +17,7 @@ import { type PeriodView, periodQuery } from "@/features/time/api"
 import { type Entry, EntryDialog, type EntryTarget } from "@/features/time/entry-dialog"
 import { EntryHistoryDialog } from "@/features/time/entry-history"
 import { fmtClockTime, todayIn, wallClock } from "@/features/time/lib"
-import { addDaysStr, addMonthsStr, fmtDay, fmtMinutes, fmtMonth, mondayOf } from "@/lib/format"
+import { addDaysStr, addMonthsStr, fmtDay, fmtDayRange, fmtMinutes, fmtMonth, mondayOf } from "@/lib/format"
 import { useI18n } from "@/lib/i18n"
 import { useMe } from "@/lib/session"
 import { cn } from "@/lib/utils"
@@ -188,7 +188,7 @@ export function TimePanel({
   const label =
     view === "month"
       ? fmtMonth(anchor, intl)
-      : `${fmtDay(anchor, intl)} – ${fmtDay(addDaysStr(anchor, 6), intl, { day: "numeric", month: "short", year: "numeric" })}`
+      : fmtDayRange(anchor, addDaysStr(anchor, 6), intl, { day: "numeric", month: "short", year: "numeric" })
   const move = (n: number) =>
     view === "month" ? onSearch({ month: addMonthsStr(anchor, n) }) : onSearch({ week: addDaysStr(anchor, 7 * n) })
   const isCurrent = view === "month" ? anchor === today.slice(0, 7) : anchor === mondayOf(today)

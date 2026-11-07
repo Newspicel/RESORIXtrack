@@ -1,10 +1,11 @@
 import { addDays, expect, goto, PEOPLE, pick, previousMonth, rows, test, toast, weekday, zurichDay } from "./fixtures"
 
 const mondayOf = (day: string) => addDays(day, -weekday(day))
-const shortDay = (day: string) =>
-  new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }).format(
-    new Date(`${day}T12:00:00Z`),
-  )
+/** The week label as the app writes it ("2 – 8 Nov 2026"), ICU's thin spaces as plain ones. */
+const weekLabel = (monday: string) =>
+  new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })
+    .formatRange(new Date(`${monday}T12:00:00Z`), new Date(`${addDays(monday, 6)}T12:00:00Z`))
+    .replace(/\u2009/gu, " ")
 
 test("lead corrects an entry with a reason; the employee sees it highlighted", async ({ as }, info) => {
   const lead = await as("jonas")
@@ -17,7 +18,7 @@ test("lead corrects an entry with a reason; the employee sees it highlighted", a
   const lastMonday = mondayOf(addDays(zurichDay(), -7))
   const panel = lead.getByRole("tabpanel", { name: "Time" })
   await panel.getByRole("button", { name: "Previous" }).click()
-  await expect(panel).toContainText(`${shortDay(lastMonday)} – ${shortDay(addDays(lastMonday, 6))}`)
+  await expect(panel).toContainText(weekLabel(lastMonday))
   // the rows follow once the week has loaded (the previous week stays on screen meanwhile)
   await expect(panel).toContainText(new RegExp(`Mon\\s*${lastMonday.slice(8, 10)}/${lastMonday.slice(5, 7)}`))
   const entries = lead.getByRole("button", { name: /^Work \d{2}:\d{2}–\d{2}:\d{2}$/ })
