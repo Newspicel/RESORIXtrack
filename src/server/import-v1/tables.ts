@@ -5,6 +5,7 @@
  * Order matters: holidays and all time data go in before `month_signoffs`, because the v2 guard triggers
  * reject writes into signed-off periods.
  */
+import { defaultPresetDays } from "../services/holiday-presets"
 import { DEFAULTS } from "../services/settings"
 import { text, v1Bool, v1Clock, v1EpochMs, v1Instant, v1InstantRequired, v1JsonOrNull } from "./convert"
 
@@ -42,7 +43,13 @@ export const TABLES: TableSpec[] = [
   {
     table: "holiday_calendars",
     from: "holiday_calendars",
-    cols: [...plain("id", "name", "region_code", "description"), bool("is_default"), instantReq("created_at")],
+    cols: [
+      ...plain("id", "name", "region_code", "description"),
+      // 1.x always included commune days; optional days were never part of a preset
+      { to: "preset_days", from: "region_code", convert: (v) => JSON.stringify(defaultPresetDays(text(v))) },
+      bool("is_default"),
+      instantReq("created_at"),
+    ],
   },
   { table: "holidays", from: "holidays", cols: plain("id", "calendar_id", "date", "name", "fraction") },
   {

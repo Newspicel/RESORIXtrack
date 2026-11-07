@@ -184,6 +184,7 @@
       "attachment": "Document",
       "signoff": "Validation du mois",
       "api_token": "Jeton API",
+      "holiday": "Jour férié",
       "work_log": "Journal de travail",
       "project": "Projet",
       "team_lead": "Responsable / suppléant"
@@ -231,6 +232,8 @@
       "vacation_days_per_year": "Jours de vacances",
       "is_active": "Actif",
       "holiday_calendar_id": "Calendrier des fériés",
+      "calendar_id": "Calendrier",
+      "fraction": "Part de la journée",
       "note": "Note",
       "start_half": "Début",
       "end_half": "Fin",
@@ -273,7 +276,8 @@
       "demo": "Démo",
       "import": "Import",
       "cli": "Ligne de commande",
-      "worker": "Automatique"
+      "worker": "Automatique",
+      "setup": "Configuration initiale"
     }
   },
   "backups": {
@@ -386,9 +390,6 @@
     "n_holidays_one": "{count} jour férié",
     "n_holidays_other": "{count} jours fériés",
     "usage": "{teams} équipes, {users} personnes",
-    "from_preset": "Depuis un modèle",
-    "empty_calendar": "Vide",
-    "preset": "Canton ou modèle",
     "preset_years": "Jours fériés pour {from} et {to}",
     "preset_installed": "Calendrier créé",
     "use_as_default": "Par défaut pour l'entreprise",
@@ -414,6 +415,11 @@
     "canton": "Canton",
     "preset_hint": "Complété chaque année en octobre",
     "no_preset": "Aucun modèle",
+    "always_included": "Toujours inclus",
+    "optional_days": "Jours à choix",
+    "optional_days_hint": "Les jours cochés sont ajoutés chaque année. Les jours communaux valent dans la majeure partie du canton.",
+    "not_in": "Sauf à {communes}",
+    "not_in_more": "Sauf à {communes} et {count} autres",
     "kind": {
       "federal": "Fédéral",
       "cantonal": "Cantonal",

@@ -80,7 +80,7 @@ function settingsAfter(percent: string | null) {
   sqlite.prepare("INSERT INTO holiday_calendars (name, region_code) VALUES ('CH-FR City of Fribourg', 'CH-FR')").run()
   runMigrations(createDb(sqlite))
   const rows = sqlite.prepare("SELECT key, value FROM settings ORDER BY key").all()
-  const cal = sqlite.prepare("SELECT region_code AS r FROM holiday_calendars").get()
+  const cal = sqlite.prepare("SELECT region_code AS r, preset_days AS d FROM holiday_calendars").get()
   sqlite.close()
   return { rows, cal }
 }
@@ -91,13 +91,13 @@ describe("rt migrate", () => {
     olderDatabase(file, true)
     expect(await migrateDatabase({ file, check: true, log })).toBe(1)
     expect(lines.at(-1)).toMatch(
-      /^pending: 0002_passkeys, 0003_guards_v2, 0004_arg_exempt, 0005_regular_night_work, 0006_clock_out_later$/,
+      /^pending: 0002_passkeys, 0003_guards_v2, 0004_arg_exempt, 0005_regular_night_work, 0006_clock_out_later, 0007_canton_presets$/,
     )
     expect(await migrateDatabase({ file, log })).toBe(0)
     const backups = readdirSync(path.join(dir, "backups"))
     expect(backups).toHaveLength(1)
     expect(backups[0]).toMatch(/-premigrate\.zip\.enc$/)
-    expect(lines.some((l) => l.startsWith("applying 5 migration(s)"))).toBe(true)
+    expect(lines.some((l) => l.startsWith("applying 6 migration(s)"))).toBe(true)
     expect(migrationStatus(rawSqlite()).pending).toEqual([])
     // a user exists: no setup code
     expect(lines.join("\n")).not.toContain("first-run setup")
@@ -117,14 +117,18 @@ describe("rt migrate", () => {
     expect(out.slice(at, at + 5).join("\n")).toMatch(/[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}/)
   })
 
-  it("keeps the holiday surcharge of existing installs and the Fribourg preset key", () => {
+  it("keeps the holiday surcharge of existing installs; the City of Fribourg becomes canton FR", () => {
     expect(settingsAfter("25").rows).toEqual([
       { key: "holiday_work_surcharge_mode", value: '"time_credit"' },
       { key: "holiday_work_surcharge_percent", value: "25" },
     ])
     const none = settingsAfter(null)
     expect(none.rows).toEqual([{ key: "holiday_work_surcharge_percent", value: "0" }])
-    expect(none.cal).toEqual({ r: "ch-fr-fribourg" })
+    // same dates as before: the canton's commune days stay ticked
+    expect(none.cal).toEqual({
+      r: "CH-FR",
+      d: '["Corpus Christi","Assumption Day","All Saints\' Day","Immaculate Conception"]',
+    })
   })
 
   it("skips the backup on request", async () => {

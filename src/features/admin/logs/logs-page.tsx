@@ -254,6 +254,7 @@ const ENTITIES = [
   "entitlement",
   "project",
   "api_token",
+  "holiday",
   "signoff",
   "time_entry",
   "absence",

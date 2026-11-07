@@ -11,7 +11,7 @@ import { toast } from "sonner"
 import { z } from "zod"
 import { AbsenceCalendar } from "@/components/app/absence-calendar"
 import { type CalendarCell, cellsFrom } from "@/components/app/absence-calendar-cells"
-import { ResponsiveDialog } from "@/components/app/responsive-dialog"
+import { OverlayActions, ResponsiveDialog } from "@/components/app/responsive-dialog"
 import { Segmented } from "@/components/app/segmented"
 import { ColorDot } from "@/components/app/status-badge"
 import { FormRoot, useAppForm } from "@/components/form/form"
@@ -149,6 +149,7 @@ async function saveRequest({
 
 function RequestForm({ mode, ctx, onDone }: { mode: RequestMode; ctx: RequestContext; onDone: () => void }) {
   const absFileId = useId()
+  const formId = useId()
   const endAmId = useId()
   const halfLabelId = useId()
   const startPmId = useId()
@@ -266,7 +267,7 @@ function RequestForm({ mode, ctx, onDone }: { mode: RequestMode; ctx: RequestCon
 
   return (
     <form.AppForm>
-      <FormRoot form={form}>
+      <FormRoot form={form} id={formId}>
         {mode.kind === "new" && choices.length > 1 ? (
           <form.AppField name="type">
             {(f) => (
@@ -397,21 +398,20 @@ function RequestForm({ mode, ctx, onDone }: { mode: RequestMode; ctx: RequestCon
           loading={preview.isFetching && !preview.data}
           approval={ctx.self && !editing ? (selected?.requiresApproval ? "needs" : "none") : null}
         />
-
-        <div className="flex justify-end gap-2 pt-1">
-          <Button type="button" variant="ghost" onClick={onDone}>
-            {t("common.cancel")}
-          </Button>
-          <form.SubmitButton>
-            {file ? <Paperclip data-icon="inline-start" /> : null}
-            {editing
-              ? t("common.save")
-              : ctx.self && selected?.requiresApproval
-                ? t("absences.submit")
-                : t("absences.submit_record")}
-          </form.SubmitButton>
-        </div>
       </FormRoot>
+      <OverlayActions>
+        <Button type="button" variant="ghost" onClick={onDone}>
+          {t("common.cancel")}
+        </Button>
+        <form.SubmitButton form={formId}>
+          {file ? <Paperclip data-icon="inline-start" /> : null}
+          {editing
+            ? t("common.save")
+            : ctx.self && selected?.requiresApproval
+              ? t("absences.submit")
+              : t("absences.submit_record")}
+        </form.SubmitButton>
+      </OverlayActions>
     </form.AppForm>
   )
 }

@@ -734,18 +734,22 @@ const SPECS: Record<string, Spec> = {
   "features/admin/api/holidays#fetchHolidayCatalog": {},
   "features/admin/api/holidays#saveCalendarFn": {
     id: "calendar",
-    data: (_t, rec) => ({ id: rec, name: "Probe", regionCode: "CH-ZH", description: "", isDefault: false }),
+    data: (_t, rec) => ({
+      id: rec,
+      name: "Probe",
+      regionCode: "CH-ZH",
+      presetDays: [],
+      description: "",
+      isDefault: false,
+    }),
   },
   "features/admin/api/holidays#setDefaultCalendarFn": { id: "calendar" },
   "features/admin/api/holidays#deleteCalendarFn": { id: "calendar" },
-  "features/admin/api/holidays#createFromPresetFn": {
-    data: () => ({ key: "CH-ZH", years: [2026], makeDefault: false }),
-  },
   "features/admin/api/holidays#saveHolidayFn": { id: "holiday" },
   "features/admin/api/holidays#deleteHolidayFn": { id: "holiday" },
   "features/admin/api/holidays#importHolidaysFn": {
     id: "calendar",
-    data: (_t, rec) => ({ calendarId: rec, preset: "CH-ZH", year: 2026, replace: false }),
+    data: (_t, rec) => ({ calendarId: rec, preset: "CH-ZH", presetDays: [], year: 2026, replace: false }),
   },
   "features/admin/api/holidays#fetchCompanyDays": { id: "calendar" },
   "features/admin/api/holidays#addCompanyDayFn": {

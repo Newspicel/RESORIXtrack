@@ -6,6 +6,7 @@ import { type QueryKey, useMutation, useQueryClient } from "@tanstack/react-quer
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import type { ReactNode } from "react"
 import { toast } from "sonner"
+import { useActionsSlot } from "@/components/app/responsive-dialog"
 import { Button } from "@/components/ui/button"
 import { Combobox } from "@/components/ui/combobox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SHORT_LIST } from "@/components/ui/select"
@@ -25,7 +26,10 @@ import { cn } from "@/lib/utils"
 
 const ALL = "__all"
 
-/** Side sheet on desktop, bottom sheet on phones. Forms inside scroll; the footer stays put. */
+/**
+ * Side sheet on desktop, bottom sheet on phones. Forms inside scroll; the footer stays put and holds every
+ * action (`footer`, or `OverlayActions` from a form in the body).
+ */
 export function EditorSheet({
   open,
   onOpenChange,
@@ -44,6 +48,7 @@ export function EditorSheet({
   size?: SheetSize
 }) {
   const mobile = useIsMobile()
+  const { footerRef, body } = useActionsSlot(children)
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -59,12 +64,13 @@ export function EditorSheet({
             <SheetDescription className="sr-only">{title}</SheetDescription>
           )}
         </SheetHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
-        {footer ? (
-          <SheetFooter className="mt-0 flex-row flex-wrap items-center justify-end gap-2 border-t px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-            {footer}
-          </SheetFooter>
-        ) : null}
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{body}</div>
+        <SheetFooter
+          ref={footerRef}
+          className="mt-0 flex-row flex-wrap items-center justify-end gap-2 border-t px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] empty:hidden"
+        >
+          {footer}
+        </SheetFooter>
       </SheetContent>
     </Sheet>
   )

@@ -38,6 +38,7 @@ export function EntryHistoryDialog({
   self: boolean
 }) {
   const disputeMessageId = useId()
+  const disputeFormId = useId()
   const { t, tError, intl } = useI18n()
   const me = useMe()
   const qc = useQueryClient()
@@ -72,7 +73,7 @@ export function EntryHistoryDialog({
   const send = () => {
     if (!entry) return
     if (!message.trim()) {
-      document.getElementById("dispute-message")?.focus()
+      document.getElementById(disputeMessageId)?.focus()
       return
     }
     dispute.mutate({ id: entry.id, message: message.trim() })
@@ -87,12 +88,22 @@ export function EntryHistoryDialog({
       }}
       title={t("time.history_title")}
       footer={
-        self && byOther && !disputing ? (
+        disputing ? (
+          <>
+            <Button type="button" variant="ghost" onClick={() => setDisputing(false)}>
+              {t("common.cancel")}
+            </Button>
+            <Button type="submit" form={disputeFormId} disabled={busy}>
+              {busy ? <Spinner data-icon="inline-start" /> : null}
+              {t("time.send_dispute")}
+            </Button>
+          </>
+        ) : self && byOther ? (
           <Button
             variant="outline"
             onClick={() => {
               setDisputing(true)
-              requestAnimationFrame(() => document.getElementById("dispute-message")?.focus())
+              requestAnimationFrame(() => document.getElementById(disputeMessageId)?.focus())
             }}
           >
             <MessageSquareWarning data-icon="inline-start" />
@@ -158,6 +169,7 @@ export function EntryHistoryDialog({
       )}
       {disputing ? (
         <form
+          id={disputeFormId}
           className="mt-5 flex flex-col gap-3 border-t pt-5"
           onSubmit={(e) => {
             e.preventDefault()
@@ -175,15 +187,6 @@ export function EntryHistoryDialog({
               onChange={(e) => setMessage(e.target.value)}
             />
           </Field>
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={() => setDisputing(false)}>
-              {t("common.cancel")}
-            </Button>
-            <Button type="submit" disabled={busy}>
-              {busy ? <Spinner data-icon="inline-start" /> : null}
-              {t("time.send_dispute")}
-            </Button>
-          </div>
         </form>
       ) : null}
     </ResponsiveDialog>

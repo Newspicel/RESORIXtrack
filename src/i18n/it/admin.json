@@ -184,6 +184,7 @@
       "attachment": "Documento",
       "signoff": "Chiusura mensile",
       "api_token": "Token API",
+      "holiday": "Giorno festivo",
       "work_log": "Diario di lavoro",
       "project": "Progetto",
       "team_lead": "Responsabile / sostituto"
@@ -231,6 +232,8 @@
       "vacation_days_per_year": "Giorni di vacanza",
       "is_active": "Attivo",
       "holiday_calendar_id": "Calendario dei giorni festivi",
+      "calendar_id": "Calendario",
+      "fraction": "Quota del giorno",
       "note": "Nota",
       "start_half": "Inizio",
       "end_half": "Fine",
@@ -273,7 +276,8 @@
       "demo": "Demo",
       "import": "Importazione",
       "cli": "Riga di comando",
-      "worker": "Automatico"
+      "worker": "Automatico",
+      "setup": "Configurazione iniziale"
     }
   },
   "backups": {
@@ -386,9 +390,6 @@
     "n_holidays_one": "{count} giorno festivo",
     "n_holidays_other": "{count} giorni festivi",
     "usage": "{teams} team, {users} persone",
-    "from_preset": "Da modello",
-    "empty_calendar": "Vuoto",
-    "preset": "Cantone o modello",
     "preset_years": "Giorni festivi per {from} e {to}",
     "preset_installed": "Calendario creato",
     "use_as_default": "Standard dell'azienda",
@@ -414,6 +415,11 @@
     "canton": "Cantone",
     "preset_hint": "Completato ogni anno a ottobre",
     "no_preset": "Nessun modello",
+    "always_included": "Sempre inclusi",
+    "optional_days": "Giorni a scelta",
+    "optional_days_hint": "I giorni selezionati vengono aggiunti ogni anno. I giorni comunali valgono nella maggior parte del cantone.",
+    "not_in": "Non a {communes}",
+    "not_in_more": "Non a {communes} e altri {count}",
     "kind": {
       "federal": "Federale",
       "cantonal": "Cantonale",

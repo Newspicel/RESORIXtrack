@@ -50,6 +50,13 @@
       "when": 1794058445543,
       "tag": "0006_clock_out_later",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1794068772371,
+      "tag": "0007_canton_presets",
+      "breakpoints": true
     }
   ]
 }

@@ -13,6 +13,7 @@ import { hashPassword } from "../password"
 import { ensureDefaultAbsenceTypes } from "../services/absence-types"
 import { computeDays, summarize, timeBalance } from "../services/accounts"
 import { createCalendarFromPreset } from "../services/holiday-calendars"
+import { defaultPresetDays } from "../services/holiday-presets"
 import { notify } from "../services/notifications"
 import { type Actor, loadActor } from "../services/permissions"
 import { record, snapshot } from "../services/revisions"
@@ -101,7 +102,12 @@ function seed(hash: string): string[] {
   const year = Number(today.slice(0, 4))
 
   ensureDefaultAbsenceTypes()
-  const cal = createCalendarFromPreset("ch-fr-fribourg", { years: [year - 1, year, year + 1], makeDefault: true })
+  const cal = createCalendarFromPreset("CH-FR", {
+    years: [year - 1, year, year + 1],
+    presetDays: defaultPresetDays("CH-FR", year),
+    makeDefault: true,
+    source: "demo",
+  })
   const holidays = new Set(
     db
       .select({ date: s.holidays.date })

@@ -133,7 +133,7 @@ Run inside the container: `docker compose exec app rt <command>`. `rt help` list
 | `restore <file> [--yes] [--ask-password]` | Restore a backup (app stopped), see [backup-restore.md](backup-restore.md) |
 | `decrypt-backup <file> --out <dir> [--ask-password]` | Decrypt a v1 or v2 backup into an empty directory without restoring it |
 | `anonymize --email <email> [--yes]` | Anonymise a former employee once the retention period is over |
-| `install-holidays --preset <key> [--years 2026,2027] [--default]` | Public holidays from a Swiss preset (`CH-ZH` … or `ch-fr-fribourg`) |
+| `install-holidays --preset <key> [--days "Easter Monday,Whit Monday"] [--years 2026,2027] [--default]` | Public holidays from a canton preset (`CH-ZH` …); `--days` ticks optional days (default: the canton's commune days) |
 | `install-holidays --top-up` | Add the missing years to all preset calendars (the worker does it every 1 October) |
 | `send-reminders` | Send clock-out reminders now |
 | `verify-signoffs` | Check every sign-off seal chain; exit 1 on problems |

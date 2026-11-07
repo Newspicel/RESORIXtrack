@@ -184,6 +184,7 @@
       "attachment": "Document",
       "signoff": "Month sign-off",
       "api_token": "API token",
+      "holiday": "Public holiday",
       "work_log": "Work log",
       "project": "Project",
       "team_lead": "Lead / deputy"
@@ -231,6 +232,8 @@
       "vacation_days_per_year": "Vacation days",
       "is_active": "Active",
       "holiday_calendar_id": "Holiday calendar",
+      "calendar_id": "Calendar",
+      "fraction": "Share of day",
       "note": "Note",
       "start_half": "Start",
       "end_half": "End",
@@ -273,7 +276,8 @@
       "demo": "Demo",
       "import": "Import",
       "cli": "Command line",
-      "worker": "Automatic"
+      "worker": "Automatic",
+      "setup": "Initial setup"
     }
   },
   "backups": {
@@ -386,9 +390,6 @@
     "n_holidays_one": "{count} holiday",
     "n_holidays_other": "{count} holidays",
     "usage": "{teams} teams, {users} people",
-    "from_preset": "From preset",
-    "empty_calendar": "Empty",
-    "preset": "Canton or preset",
     "preset_years": "Holidays for {from} and {to}",
     "preset_installed": "Calendar created",
     "use_as_default": "Company default",
@@ -414,6 +415,11 @@
     "canton": "Canton",
     "preset_hint": "Adds next year every October",
     "no_preset": "No preset",
+    "always_included": "Always included",
+    "optional_days": "Optional days",
+    "optional_days_hint": "Ticked days are added every year. Commune days apply in most of the canton.",
+    "not_in": "Not in {communes}",
+    "not_in_more": "Not in {communes} and {count} more",
     "kind": {
       "federal": "Federal",
       "cantonal": "Cantonal",

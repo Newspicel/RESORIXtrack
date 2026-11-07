@@ -180,6 +180,8 @@ export const holidayCalendars = sqliteTable("holiday_calendars", {
   id: integer().primaryKey({ autoIncrement: true }),
   name: text().notNull().unique(),
   regionCode: text().notNull().default(""),
+  /** the preset's ticked optional and commune days, by English name (holiday-presets.ts) */
+  presetDays: text({ mode: "json" }).$type<string[]>().notNull().default(sql`'[]'`),
   description: text().notNull().default(""),
   isDefault: integer({ mode: "boolean" }).notNull().default(false),
   createdAt: instant().notNull().default(nowInstant),

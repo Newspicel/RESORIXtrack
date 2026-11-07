@@ -50,7 +50,6 @@ test("admin: create sheets open without a record", async ({ as }) => {
   await goto(page, "/admin/holidays")
   await page.getByRole("button", { name: "New calendar" }).first().click()
   const calendar = page.getByRole("dialog", { name: "New calendar" })
-  await calendar.getByRole("button", { name: "Empty" }).click()
   await expect(calendar.getByLabel("Name")).toBeVisible()
   await calendar.getByRole("button", { name: "Cancel" }).click()
   await expect(calendar).toBeHidden()
@@ -59,6 +58,25 @@ test("admin: create sheets open without a record", async ({ as }) => {
   await page.getByRole("button", { name: "New type" }).click()
   const type = page.getByRole("dialog", { name: "New type" })
   await expect(type.getByLabel("Label")).toBeVisible()
+})
+
+test("admin: delete a calendar", async ({ as }, info) => {
+  const page = await as("admin")
+  const name = `E2E Calendar ${pick(info, "d", "m")}${Date.now().toString(36)}`
+  await goto(page, "/admin/holidays")
+  await page.getByRole("button", { name: "New calendar" }).first().click()
+  const create = page.getByRole("dialog", { name: "New calendar" })
+  await create.getByLabel("Name").fill(name)
+  await create.getByRole("button", { name: "Create" }).click()
+  await expect(page.getByRole("heading", { level: 2, name })).toBeVisible()
+
+  await page.getByRole("button", { name: "Edit calendar" }).click()
+  await page.getByRole("dialog", { name: "Edit calendar" }).getByRole("button", { name: "Delete" }).click()
+  const confirm = page.getByRole("alertdialog", { name: `Delete ${name}?` })
+  await confirm.getByRole("button", { name: "Delete" }).click()
+  await expect(toast(page, "Calendar deleted")).toBeVisible()
+  await expect(confirm).toBeHidden()
+  await expect(page.getByText(name)).toHaveCount(0)
 })
 
 test("admin: settings save a switch", async ({ as }, info) => {

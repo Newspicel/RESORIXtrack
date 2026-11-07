@@ -81,6 +81,7 @@ export interface SetupInput {
   fulltimeWeeklyMinutes: number
   defaultVacationDays: number
   holidayPreset?: string | null
+  holidayPresetDays?: string[]
   adminName: string
   adminEmail: string
   adminPassword: string
@@ -169,7 +170,9 @@ export async function completeSetup(
   const preset = input.holidayPreset
   if (preset) {
     try {
-      rawSqlite().transaction(() => createCalendarFromPreset(preset, { makeDefault: true }))()
+      rawSqlite().transaction(() =>
+        createCalendarFromPreset(preset, { makeDefault: true, presetDays: input.holidayPresetDays, source: "setup" }),
+      )()
       holidaysInstalled = true
     } catch (err) {
       console.warn(`[setup] holiday preset ${preset} not installed: ${describeError(err)}`)
