@@ -139,7 +139,7 @@
     "vacation_left": "Vacances restantes",
     "exceeds": "Dépasse les vacances",
     "overlaps": "Aussi absents",
-    "no_overlap": "Personne d'autre absent",
+    "no_overlap": "Personne",
     "requested_at": "Demandée {when}",
     "upcoming": "Absences à venir",
     "upcoming_empty": "Aucune absence à venir",

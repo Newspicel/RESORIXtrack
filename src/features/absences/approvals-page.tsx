@@ -4,7 +4,7 @@
  * decline asks for an optional note. Several requests can be decided at once.
  */
 import { useSuspenseQuery } from "@tanstack/react-query"
-import { Check, History, Inbox, X } from "lucide-react"
+import { Check, Inbox, X } from "lucide-react"
 import { startTransition, useOptimistic, useState } from "react"
 import { toast } from "sonner"
 import { Page, PageHeader, Section } from "@/components/app/page"
@@ -14,7 +14,7 @@ import { tableHelper } from "@/components/data/table-helper"
 import { Button } from "@/components/ui/button"
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { approvalsQuery } from "@/features/team/api"
-import { fmtDateTime, fmtDays } from "@/lib/format"
+import { dayOf, fmtDay, fmtDays } from "@/lib/format"
 import { useI18n } from "@/lib/i18n"
 import { useMe } from "@/lib/session"
 import type { AbsenceDto } from "@/server/services/absences"
@@ -105,24 +105,9 @@ export function ApprovalsPage() {
           <span className="font-medium">{c.getValue()}</span>
           <span className="text-xs font-normal whitespace-nowrap text-muted-foreground">
             {t("absences.approvals.requested_at", {
-              when: fmtDateTime(c.row.original.createdAt, {
-                intl: i.intl,
-                tz: me.timezone,
-                hour12: me.timeFormat === "12h",
-              }),
+              when: fmtDay(dayOf(c.row.original.createdAt, me.timezone), i.intl),
             })}
           </span>
-        </span>
-      ),
-    }),
-    col.accessor((a) => absenceLabel(a.type), {
-      id: "type",
-      header: () => t("absences.type"),
-      meta: { mobileLabel: t("absences.type") },
-      cell: (c) => (
-        <span className="flex items-center gap-2">
-          <ColorDot color={c.row.original.type.color} />
-          {c.getValue()}
         </span>
       ),
     }),
@@ -133,9 +118,15 @@ export function ApprovalsPage() {
         const a = c.row.original
         return (
           <span className="flex flex-col">
-            <SpanText text={formatSpan(a, i, { today: overview.today })} />
-            <span className="text-xs text-muted-foreground tabular">
-              {t("absences.n_days", { count: a.days, n: fmtDays(a.days) })}
+            <span className="whitespace-normal lg:whitespace-nowrap">
+              <SpanText text={formatSpan(a, i, { today: overview.today })} />
+            </span>
+            <span className="flex items-center gap-1.5 text-xs whitespace-nowrap text-muted-foreground">
+              <ColorDot color={a.type.color} className="size-2" />
+              <span>
+                {absenceLabel(a.type)} ·{" "}
+                <span className="tabular">{t("absences.n_days", { count: a.days, n: fmtDays(a.days) })}</span>
+              </span>
             </span>
             {a.note ? (
               <span className="max-w-72 truncate text-xs text-muted-foreground" title={a.note}>
@@ -169,21 +160,19 @@ export function ApprovalsPage() {
         const list = c.row.original.overlaps
         if (!list.length) return <span className="text-muted-foreground">{t("absences.approvals.no_overlap")}</span>
         return (
-          <ul className="flex flex-col gap-0.5 text-xs whitespace-normal">
+          <ul className="flex flex-col gap-1.5 whitespace-nowrap">
             {list.map((o, n) => (
               // overlaps carry no absence id; one person can overlap more than once
               // oxlint-disable-next-line react/no-array-index-key
-              <li key={`${o.userId}-${n}`} className="flex items-center gap-1.5">
-                <ColorDot color={o.color} className="size-2" />
-                <span>
-                  {o.name} ·{" "}
+              <li key={`${o.userId}-${n}`} className="grid grid-cols-[auto_1fr] items-center gap-x-2">
+                <ColorDot color={o.color} />
+                <span>{o.name}</span>
+                <span className="col-start-2 text-xs text-muted-foreground">
                   {o.typeKey === "absent"
                     ? t("absences.team.absent")
                     : absenceLabel({ key: o.typeKey, label: o.label })}{" "}
                   · <span className="tabular">{t("absences.n_days", { count: o.days, n: fmtDays(o.days) })}</span>
-                  {o.status === "pending" ? (
-                    <span className="text-muted-foreground"> ({t("absences.status.pending")})</span>
-                  ) : null}
+                  {o.status === "pending" ? <> · {t("absences.status.pending")}</> : null}
                 </span>
               </li>
             ))}
@@ -204,18 +193,6 @@ export function ApprovalsPage() {
           <Button size="sm" variant="ghost" intent="negative" onClick={() => setRejecting([c.row.original.id])}>
             <X data-icon="inline-start" />
             {t("absences.approvals.reject")}
-          </Button>
-          <Button
-            size="icon-sm"
-            variant="ghost"
-            aria-label={t("absences.history")}
-            title={t("absences.history")}
-            onClick={() => {
-              setDetail(c.row.original)
-              setDetailOpen(true)
-            }}
-          >
-            <History />
           </Button>
         </div>
       ),
@@ -271,6 +248,10 @@ export function ApprovalsPage() {
             getRowId={(a) => String(a.id)}
             selectable
             onSelectionChange={setSelected}
+            onRowClick={(a) => {
+              setDetail(a)
+              setDetailOpen(true)
+            }}
             caption={t("absences.approvals.title")}
             toolbar={
               chosen.length ? (
