@@ -13,3 +13,6 @@ var/
 test-results/
 playwright-report/
 *.tsbuildinfo
+
+# owner notes, never committed
+PLAN.md
