@@ -404,7 +404,10 @@ export function EntryDialog({
       <FormRoot form={form} id="entry-form">
         {lock ? (
           <Notice icon={Lock} tone="positive">
-            {t("time.locked_editor", { name: lock.signedBy ?? "?", date: fmtDay(lock.signedAt.slice(0, 10), intl) })}
+            {t("time.locked_editor", {
+              name: lock.signedBy ?? "?",
+              date: fmtDay(wallClock(lock.signedAt, ctx.owner.timezone).date, intl),
+            })}
           </Notice>
         ) : null}
         {entry?.corrected && correction ? (

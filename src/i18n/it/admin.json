@@ -264,7 +264,8 @@
       "minutes_thu": "Gi",
       "minutes_fri": "Ve",
       "minutes_sat": "Sa",
-      "minutes_sun": "Do"
+      "minutes_sun": "Do",
+      "scheduled_end_at": "Uscita pianificata"
     },
     "sources": {
       "web": "Web",

@@ -264,7 +264,8 @@
       "minutes_thu": "Do",
       "minutes_fri": "Fr",
       "minutes_sat": "Sa",
-      "minutes_sun": "So"
+      "minutes_sun": "So",
+      "scheduled_end_at": "Geplantes Ausstempeln"
     },
     "sources": {
       "web": "Web",

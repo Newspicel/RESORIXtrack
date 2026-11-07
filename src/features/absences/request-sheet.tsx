@@ -246,6 +246,7 @@ function RequestForm({ mode, ctx, onDone }: { mode: RequestMode; ctx: RequestCon
     startDate: v.startDate,
     endDate: v.endDate,
     ...halves,
+    excludeId: editing?.id ?? null,
   }
   const [debounced, setDebounced] = useState(params)
   const paramsKey = JSON.stringify(params)

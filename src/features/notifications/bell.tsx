@@ -12,6 +12,18 @@ import { cn } from "@/lib/utils"
 import { markNotificationsRead, notificationsQuery } from "./api"
 import { notificationHref, notificationText } from "./text"
 
+type NotificationList = { items?: { id: number; read: boolean }[]; unread: number }
+
+function applyRead<T extends NotificationList>(state: T, ids: number[] | null): T {
+  const hit = (id: number) => ids === null || ids.includes(id)
+  const newlyRead = state.items?.filter((n) => !n.read && hit(n.id)).length ?? 0
+  return {
+    ...state,
+    items: state.items?.map((n) => (hit(n.id) ? { ...n, read: true } : n)),
+    unread: ids === null ? 0 : Math.max(0, state.unread - newlyRead),
+  }
+}
+
 export function NotificationsBell() {
   const i = useI18n()
   const me = useMe()
@@ -22,19 +34,17 @@ export function NotificationsBell() {
   // read marks show at once; the lists are refetched when the Action settles (a failure falls back to them)
   const [{ items, unread }, markLocally] = useOptimistic(
     { items: q.data?.items, unread: q.data?.unread ?? initialUnread },
-    (state, ids: number[] | null) => {
-      const hit = (id: number) => ids === null || ids.includes(id)
-      const newlyRead = state.items?.filter((n) => !n.read && hit(n.id)).length ?? 0
-      return {
-        items: state.items?.map((n) => (hit(n.id) ? { ...n, read: true } : n)),
-        unread: ids === null ? 0 : Math.max(0, state.unread - newlyRead),
-      }
-    },
+    (state, ids: number[] | null) => applyRead(state, ids),
   )
   const markRead = (ids: number[] | null) =>
     startTransition(async () => {
       markLocally(ids)
-      await markNotificationsRead({ data: { ids } }).catch(() => undefined)
+      const ok = await markNotificationsRead({ data: { ids } }).then(
+        () => true,
+        () => false,
+      )
+      // the query is disabled once the popover closes, so invalidating alone would leave the old count
+      if (ok) qc.setQueryData(notificationsQuery.queryKey, (old) => old && { ...old, ...applyRead(old, ids) })
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["notifications"] }),
         qc.invalidateQueries({ queryKey: ["bootstrap"] }),

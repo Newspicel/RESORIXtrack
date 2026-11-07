@@ -19,7 +19,7 @@
  *
  * A period is loaded in a handful of indexed queries (`loadContext`) and computed in memory.
  */
-import { and, asc, eq, gte, inArray, isNull, lt, lte, min, sum } from "drizzle-orm"
+import { and, asc, eq, gte, inArray, isNull, lt, lte, min, ne, sum } from "drizzle-orm"
 import { db } from "../db"
 import {
   type Absence,
@@ -268,6 +268,8 @@ export interface ContextOptions {
   entries?: boolean
   /** Skip the legacy work log (figures that do not need project coverage). */
   projects?: boolean
+  /** Leave out one absence, e.g. the request being edited in a preview. */
+  excludeAbsenceId?: number
 }
 
 export function loadContext(user: User, start: string, end: string, opts: ContextOptions = {}): AccountContext {
@@ -283,6 +285,7 @@ export function loadContext(user: User, start: string, end: string, opts: Contex
         lte(absences.startDate, end),
         gte(absences.endDate, start),
         inArray(absences.status, states),
+        opts.excludeAbsenceId != null ? ne(absences.id, opts.excludeAbsenceId) : undefined,
       ),
     )
     .orderBy(asc(absences.startDate), asc(absences.id))
@@ -890,7 +893,7 @@ function emptyVacation(userId: number, year: number): VacationAccount {
   }
 }
 
-export function vacationAccount(user: User, year: number): VacationAccount {
+export function vacationAccount(user: User, year: number, excludeAbsenceId?: number): VacationAccount {
   const startYear = Number(accountStart(user).slice(0, 4))
   const today = localToday(user.timezone)
   const overrides = entitlementOverrides(user.id)
@@ -900,6 +903,7 @@ export function vacationAccount(user: User, year: number): VacationAccount {
     includePending: true,
     entries: false,
     projects: false,
+    excludeAbsenceId,
   })
   const days = computeDaysFrom(ctx, { raw: true })
   const used = new Map<number, number>()

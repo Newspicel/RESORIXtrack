@@ -529,7 +529,7 @@ export function absencePreview(actor: Actor, raw: z.input<typeof previewInput>) 
   const endHalf = end === input.startDate ? "full" : input.endHalf
   const days = countAbsenceDays(owner, input.startDate, end, input.startHalf, endHalf)
   const t = getAbsenceType(input.type)
-  const vac = vacationAccount(owner, Number(input.startDate.slice(0, 4)))
+  const vac = vacationAccount(owner, Number(input.startDate.slice(0, 4)), input.excludeId ?? undefined)
   return {
     days,
     deductsVacation: t.deductsVacation,

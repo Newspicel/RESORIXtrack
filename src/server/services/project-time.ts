@@ -11,6 +11,7 @@ import { type Project, projects, timeEntries, type User, workLogs } from "../db/
 import { Conflict, Validation } from "../errors"
 import { addDays, localDateOf, localToday, nowInstant, rangeBoundsUtc, zone } from "../time"
 import { computeDaysFrom, loadContext } from "./accounts"
+import { lockedMonths } from "./locks"
 import { type Actor, actorFromUser } from "./permissions"
 import { getProjectOr404, visibleProjects } from "./projects"
 import { getSetting } from "./settings"
@@ -92,9 +93,14 @@ export function daysMissingProjects(user: User, start: string, end: string): str
     .map((d) => d.date)
 }
 
+/** The oldest recent day still open for changes whose work lacks a required project. */
 export function firstDayMissingProject(user: User, daysBack = 14): string | null {
   const today = localToday(user.timezone)
-  return daysMissingProjects(user, addDays(today, -daysBack), addDays(today, -1))[0] ?? null
+  const [start, end] = [addDays(today, -daysBack), addDays(today, -1)]
+  const days = daysMissingProjects(user, start, end)
+  if (!days.length) return null
+  const locked = lockedMonths(user, start, end)
+  return days.find((d) => !locked[d.slice(0, 7)]) ?? null
 }
 
 // ------------------------------------------------------------------ project items (reports, coverage)

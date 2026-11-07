@@ -9,6 +9,7 @@ import { Document, Font, Image, Page, StyleSheet, Text, View } from "@react-pdf/
 import type { ReactNode } from "react"
 import type { ComplianceReportData } from "@/features/reports/compliance-report"
 import type { AbsencesReportData, BalancesData, ProjectHoursData, TimesheetData } from "@/server/services/reports"
+import { localDateOf } from "@/server/time"
 import { type ExportI18n, hm } from "./labels"
 import { findingAmount, findingWhen, projectName } from "./tables"
 
@@ -339,7 +340,7 @@ export function TimesheetPdf({ d, ctx }: { d: TimesheetData; ctx: PdfContext }) 
         <Text style={[s.foot, { color: POS }]}>
           {L("signed_off", {
             name: d.signoff.signedBy ?? "?",
-            date: x.date(d.signoff.signedAt.slice(0, 10)),
+            date: x.date(localDateOf(d.signoff.signedAt, d.user.timezone)),
             seal: d.signoff.seal,
           })}
         </Text>

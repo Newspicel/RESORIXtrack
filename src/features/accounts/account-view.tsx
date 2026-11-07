@@ -131,7 +131,7 @@ export function AccountView({
           <StatCard
             label={t("account.opening")}
             value={<Duration minutes={st.openingMin} balance />}
-            hint={t("account.opening_hint", { year: data.year })}
+            hint={t("account.opening_hint", { prev: data.year - 1 })}
           />
           <StatCard
             label={t("account.target_year")}

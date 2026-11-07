@@ -264,7 +264,8 @@
       "minutes_thu": "Thu",
       "minutes_fri": "Fri",
       "minutes_sat": "Sat",
-      "minutes_sun": "Sun"
+      "minutes_sun": "Sun",
+      "scheduled_end_at": "Scheduled clock-out"
     },
     "sources": {
       "web": "Web",

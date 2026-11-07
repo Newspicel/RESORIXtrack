@@ -76,7 +76,7 @@ export function EntriesTable({
             <span
               className={cn(
                 // phones: the badge moves below the date when the row is too narrow
-                "flex flex-wrap items-center gap-x-2 gap-y-1",
+                "flex flex-wrap items-center gap-x-2 gap-y-1 md:flex-nowrap",
                 e.deleted && "text-muted-foreground line-through",
               )}
             >
@@ -154,7 +154,7 @@ export function EntriesTable({
         const e = c.row.original
         return (
           <span className="flex min-w-0 flex-col gap-1">
-            {e.note ? <span className="max-w-72 truncate text-muted-foreground">{e.note}</span> : null}
+            {e.note ? <span className="line-clamp-1 max-w-72 break-all text-muted-foreground">{e.note}</span> : null}
             <CorrectionLine corr={corrections[e.id]} />
           </span>
         )

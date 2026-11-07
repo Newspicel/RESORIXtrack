@@ -167,6 +167,21 @@ describe("vacation workflow", () => {
       err(() => absencePreview(loadActor(org.ben.id), { userId: org.anna.id, startDate: "2026-12-21" })).code,
     ).toBe("not_found")
   })
+
+  it("previewing a change does not count the edited request twice", () => {
+    const before = absencePreview(loadActor(org.anna.id), { startDate: "2026-12-14", type: "vacation" })
+    const req = vac(org.anna.id, "2026-12-14", "2026-12-15")
+    const input = { startDate: "2026-12-14", type: "vacation", excludeId: req.id }
+    expect(absencePreview(loadActor(org.anna.id), input).vacationAfter).toBe(before.vacationAfter)
+    expect(absencePreview(loadActor(org.anna.id), { ...input, excludeId: null }).vacationAfter).toBe(
+      before.vacationAfter - 2,
+    )
+    // another person's request id changes nothing
+    const other = vac(org.ben.id, "2026-12-14")
+    expect(absencePreview(loadActor(org.anna.id), { ...input, excludeId: other.id }).vacationAfter).toBe(
+      before.vacationAfter - 2,
+    )
+  })
 })
 
 describe("cancel and change", () => {

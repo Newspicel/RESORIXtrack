@@ -23,7 +23,15 @@ import type { Entry } from "./entry-dialog"
 
 const FIELDS = ["kind", "start_at", "end_at", "project_id", "note", "is_deleted"] as const
 /** Reasons the app writes itself for clocking; not worth showing as a reason. */
-export const HIDDEN_REASONS = new Set(["clock", "clock (offline sync: earlier time)"])
+const APP_REASONS = new Set([
+  "clock",
+  "clock (offline sync: earlier time)",
+  "clock (project switched)",
+  "scheduled clock-out cancelled",
+])
+
+/** Reasons the app writes itself when clocking; the change shows what happened, so they are not shown. */
+export const isAppReason = (r: string) => APP_REASONS.has(r) || r.startsWith("clock-out scheduled for ")
 
 export function EntryHistoryDialog({
   open,
@@ -164,7 +172,7 @@ export function EntryHistoryDialog({
                       <ins className="no-underline">{fmt(k, r.after?.[k])}</ins>
                     </p>
                   ))}
-                  {r.reason && !HIDDEN_REASONS.has(r.reason) ? <p className="text-pretty">“{r.reason}”</p> : null}
+                  {r.reason && !isAppReason(r.reason) ? <p className="text-pretty">“{r.reason}”</p> : null}
                 </div>
               </li>
             )

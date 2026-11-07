@@ -222,6 +222,17 @@ describe("coverage, sign-off and reports", () => {
     expect(firstDayMissingProject(anna)).toBe("2026-11-04")
   })
 
+  it("the reminder skips days in signed-off months, which can no longer get a project", () => {
+    const { anna } = org()
+    withSettings({ project_mode: "required" })
+    makeEntry(anna.id, "2026-10-27T07:00:00.000000Z", "2026-10-27T11:00:00.000000Z")
+    expect(firstDayMissingProject(anna)).toBe("2026-10-27")
+    lockMonth(anna.id, "2026-10")
+    expect(firstDayMissingProject(anna)).toBeNull()
+    makeEntry(anna.id, "2026-11-03T07:00:00.000000Z", "2026-11-03T11:00:00.000000Z")
+    expect(firstDayMissingProject(anna)).toBe("2026-11-03")
+  })
+
   it("project hours: entries split at midnight plus legacy work log rows (customer reference in the note)", () => {
     const { anna, lead, internal } = org()
     // a night shift over midnight, Zurich time 22:00-02:00

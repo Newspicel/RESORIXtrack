@@ -264,7 +264,8 @@
       "minutes_thu": "Je",
       "minutes_fri": "Ve",
       "minutes_sat": "Sa",
-      "minutes_sun": "Di"
+      "minutes_sun": "Di",
+      "scheduled_end_at": "Sortie planifiée"
     },
     "sources": {
       "web": "Web",

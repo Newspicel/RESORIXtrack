@@ -127,7 +127,7 @@ export function AccountPanel({ userId }: { userId: number }) {
           <StatCard
             label={t("account.opening")}
             value={<Duration minutes={a.statement.openingMin} balance />}
-            hint={t("account.opening_hint", { year: a.year })}
+            hint={t("account.opening_hint", { prev: a.year - 1 })}
           />
           <StatCard
             label={t("member.adjustments_year", { year: a.year })}

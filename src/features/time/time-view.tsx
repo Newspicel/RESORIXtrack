@@ -84,7 +84,7 @@ export function TimeView({
     setEditOpen(true)
   }
   const openEdit = (entry: Entry) => {
-    setTarget({ entry, date: entry.startAt.slice(0, 10) })
+    setTarget({ entry, date: wallClock(entry.startAt, view.user.timezone).date })
     setEditOpen(true)
   }
   const openHistory = (entry: Entry) => {
@@ -126,7 +126,7 @@ export function TimeView({
           {t("time.locked_banner", {
             month: fmtMonth(month, intl),
             name: lock.signedBy ?? "?",
-            date: fmtDay(lock.signedAt.slice(0, 10), intl),
+            date: fmtDay(wallClock(lock.signedAt, me.timezone).date, intl),
           })}
         </Notice>
       ))}
