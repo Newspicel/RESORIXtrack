@@ -67,6 +67,12 @@ Vacation account for the year (entitlement, carried over, taken, planned) and yo
 - **Cancel** a request in the absence's sheet. A new request needs approval again.
 - Your lead or HR can record absences for you; you are notified.
 
+## Public holidays
+
+The public holidays that apply to you, year by year, and where they come from: a calendar assigned to you personally, your team's calendar or the company default. The page is read-only – on your working days the holidays reduce your target hours automatically, half-day holidays cover the afternoon. Tell your administrator if a holiday is missing.
+
+<p><img src="screenshots/employee-dark-holidays.png" alt="Public holidays" width="760"></p>
+
 ## Time account
 
 <p><img src="screenshots/employee-dark-account.png" alt="Time account" width="760"></p>

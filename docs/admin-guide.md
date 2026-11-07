@@ -70,7 +70,7 @@ Search, filter by team and role. A person's page has tabs:
 
 Leads and deputies with periods, members, holiday calendar. Deleting a team keeps its members' data; they have no team afterwards.
 
-### Public holidays
+### Holiday calendars
 
 <p><img src="screenshots/admin-dark-admin_holidays.png" alt="Public holidays" width="760"></p>
 
