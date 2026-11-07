@@ -2,17 +2,15 @@
   "label": "Clock",
   "start": "Clock in",
   "stop": "Clock out",
-  "break": "Start break",
-  "resume": "End break",
+  "stop_now": "Clock out now",
+  "stop_later": "Clock out later",
   "state": {
     "idle": "Not clocked in",
-    "working": "Working",
-    "on_break": "On break"
+    "working": "Working"
   },
   "headline": {
     "idle": "You're not clocked in",
-    "working": "You're clocked in",
-    "on_break": "You're on a break"
+    "working": "You're clocked in"
   },
   "offline": "Offline",
   "pending_one": "Offline, {count} pending",
@@ -24,8 +22,11 @@
   "custom_time_label_in": "Start time",
   "custom_time_label_out": "End time",
   "custom_time_help_in": "Up to 48 h back. Marked as manual.",
-  "custom_time_help_out": "Later than now means yesterday. Marked as manual.",
+  "custom_time_help_out": "Past: closes the entry there. Future: clocks you out then. Marked as manual.",
   "rejected_one": "{count} offline punch rejected",
   "rejected_other": "{count} offline punches rejected",
-  "custom_time": "Other time"
+  "custom_time": "Other time",
+  "scheduled": "Clocks out automatically at {time}",
+  "scheduled_short": "until {time}",
+  "cancel_scheduled": "Cancel"
 }

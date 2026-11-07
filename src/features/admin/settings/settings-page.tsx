@@ -70,6 +70,7 @@ const TAB_GROUPS: Partial<Record<SettingsTab, Group[]>> = {
       title: "compliance",
       fields: [
         { key: "compliance_enabled", kind: "switch" },
+        { key: "break_enforcement", kind: "switch", when: ["compliance_enabled", "true"] },
         { key: "weekly_max_minutes", kind: "weekly_max" },
         { key: "night_work_permitted", kind: "switch" },
         { key: "sunday_work_permitted", kind: "switch" },

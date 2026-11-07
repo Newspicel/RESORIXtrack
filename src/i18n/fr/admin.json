@@ -375,7 +375,7 @@
     }
   },
   "holidays": {
-    "title": "Jours fériés",
+    "title": "Calendriers des jours fériés",
     "calendars": "Calendriers",
     "new_calendar": "Nouveau calendrier",
     "edit_calendar": "Modifier le calendrier",
@@ -539,6 +539,7 @@
       "worklog_required_percent": "Part requise",
       "worklog_project_required": "Projet obligatoire",
       "compliance_enabled": "L'entreprise est soumise à la loi sur le travail",
+      "break_enforcement": "Bloquer le timbrage avant la pause légale minimale et le repos quotidien",
       "weekly_max_minutes": "Durée maximale légale de la semaine",
       "night_work_permitted": "Autorisation de travail de nuit accordée (art. 17 LTr)",
       "sunday_work_permitted": "Autorisation de travail du dimanche accordée (art. 19 LTr)",
@@ -560,6 +561,7 @@
       "retention_years": "Au moins 5 (OLT 1 art. 73)",
       "worklog_required_percent": "Part du temps travaillé par jour",
       "compliance_enabled": "Sont exclus p. ex. les administrations publiques, l'agriculture, les ménages privés (art. 2 LTr)",
+      "break_enforcement": "Art. 15 et 15a LTr. Une saisie manuelle reste possible.",
       "holiday_work_surcharge_mode": "Salaire : rapporté pour la paie. Crédit de temps : selon CCT."
     },
     "options": {

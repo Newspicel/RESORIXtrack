@@ -16,13 +16,15 @@ import { tx } from "../middleware"
 import { listAbsenceTypes, requestableTypes } from "../services/absence-types"
 import { cancelAbsence, createAbsence, getAbsenceDto, listAbsences, serializeAbsences } from "../services/absences"
 import { computeDaysFrom, loadContext, summarize, timeBalance, vacationAccount } from "../services/accounts"
-import { type ClockAction, clockAction, clockState, syncOffline } from "../services/clock"
+import { type ClockAction, clockAction, clockState, type OfflineClockAction, syncOffline } from "../services/clock"
 import { createEntry, deleteEntry, getEntry, listEntries, updateEntry } from "../services/entries"
+import { myHolidays } from "../services/holiday-calendars"
 import { withOutbox } from "../services/outbox"
 import { type Actor, isManager, requireView, visibleUserIds } from "../services/permissions"
 import { timesheet } from "../services/reports"
 import { getSetting } from "../services/settings"
 import { localToday, utcnow } from "../time"
+import { appToken } from "./app-token"
 import { requireScope } from "./auth"
 import { type Ctx, type Endpoint, endpoint } from "./endpoint"
 import * as S from "./schemas"
@@ -142,7 +144,9 @@ const listUsers = endpoint({
 // ------------------------------------------------------------------ clock
 
 const clockBody = z.object({
-  at: instantInput.optional().meta({ description: "When it happened (offline clients); at most 48 h back." }),
+  at: instantInput.optional().meta({
+    description: "When it happened (offline clients); at most 48 h back. Clock-out: a future time schedules it.",
+  }),
   clientId: z
     .string()
     .min(1)
@@ -169,21 +173,30 @@ function clockWithId(ctx: Ctx<unknown, z.output<typeof clockBody>>, action: Cloc
   })
 }
 
+const IDEMPOTENT = "Idempotent: repeating the current state's action changes nothing."
 const CLOCK_PATHS = [
-  ["in", "start", "Clock in"],
-  ["break", "break", "Start a break"],
-  ["resume", "resume", "End the break"],
-  ["out", "stop", "Clock out"],
+  [
+    "in",
+    "start",
+    "Clock in",
+    `${IDEMPOTENT} A break is simply a clock-out followed by a clock-in. Refused outside the employment period (409 employment_ended), in signed-off months (409 period_signed_off) and, when the company enforces the legal minimums, before the minimum break (409 break_required, fields required/taken/earliest) or the daily rest of 11 h (409 rest_required, fields requiredMin/earliest).`,
+  ],
+  [
+    "out",
+    "stop",
+    "Clock out",
+    `${IDEMPOTENT} A past \`at\` closes the entry there. An \`at\` more than 2 minutes in the future schedules the clock-out instead ("clock out later", at most 24 h after the clock-in, 422 too_late): the entry stays open, \`scheduledEnd\` is set and the entry closes at exactly that time.`,
+  ],
+  ["unschedule", "unschedule", "Cancel a scheduled clock-out", "No-op when nothing is scheduled."],
 ] as const
 
-const clockActions = CLOCK_PATHS.map(([path, action, summary]) =>
+const clockActions = CLOCK_PATHS.map(([path, action, summary, description]) =>
   endpoint({
     method: "POST",
     path: `/clock/${path}`,
     tag: "Clock",
     summary,
-    description:
-      "Idempotent: repeating the current state's action changes nothing. Refused outside the employment period (409 employment_ended) and in signed-off months (409 period_signed_off).",
+    description,
     scope: "time:write",
     body: clockBody,
     response: S.ClockResult,
@@ -191,13 +204,8 @@ const clockActions = CLOCK_PATHS.map(([path, action, summary]) =>
   }),
 )
 
-const clockSyncAction = z.enum(["in", "break", "resume", "out"])
-const ACTION_OF: Record<z.output<typeof clockSyncAction>, ClockAction> = {
-  in: "start",
-  break: "break",
-  resume: "resume",
-  out: "stop",
-}
+const clockSyncAction = z.enum(["in", "out"])
+const ACTION_OF: Record<z.output<typeof clockSyncAction>, OfflineClockAction> = { in: "start", out: "stop" }
 
 const clockSync = endpoint({
   method: "POST",
@@ -321,7 +329,6 @@ const createEntryEp = endpoint({
   summary: "Add a time entry (forgot to clock)",
   scope: "time:write",
   body: z.object({
-    kind: z.enum(["work", "break"]).default("work"),
     startAt: instantInput,
     endAt: instantInput,
     note: z.string().max(500).default(""),
@@ -340,7 +347,6 @@ const updateEntryEp = endpoint({
   summary: "Change an own time entry",
   scope: "time:write",
   body: z.object({
-    kind: z.enum(["work", "break"]).optional(),
     startAt: instantInput.optional(),
     endAt: instantInput.optional(),
     note: z.string().max(500).optional(),
@@ -401,6 +407,27 @@ const vacation = endpoint({
   handler: (ctx) => {
     const user = subject(ctx, ctx.query.userId)
     return vacationAccount(user, ctx.query.year ?? Number(localToday(user.timezone).slice(0, 4)))
+  },
+})
+
+const holidaysEp = endpoint({
+  method: "GET",
+  path: "/holidays",
+  tag: "Accounts",
+  summary: "Public holidays that apply to the owner",
+  description:
+    "The owner's calendar (assigned personally, their team's or the company default) and its holidays of one year.",
+  scope: "time:read",
+  query: z.object({ year: S.qYear.optional().meta({ description: "Default: current year" }) }),
+  response: S.Holidays,
+  handler: ({ actor, query }) => {
+    const mine = myHolidays(actor, query.year)
+    if (!mine) {
+      const year = query.year ?? Number(localToday(actor.user.timezone).slice(0, 4))
+      return { userId: actor.id, year, source: null, calendar: null, team: null, years: [], items: [] }
+    }
+    const { calendar, source, team, year, years, holidays } = mine
+    return { userId: actor.id, year, source, calendar, team, years, items: holidays }
   },
 })
 
@@ -536,6 +563,7 @@ const timesheetEp = endpoint({
 
 /** Every endpoint, in documentation order. */
 export const ENDPOINTS: Endpoint[] = [
+  appToken,
   me,
   listUsers,
   getClock,
@@ -549,6 +577,7 @@ export const ENDPOINTS: Endpoint[] = [
   deleteEntryEp,
   balance,
   vacation,
+  holidaysEp,
   absenceTypes,
   listAbsencesEp,
   getAbsenceEp,
@@ -557,4 +586,4 @@ export const ENDPOINTS: Endpoint[] = [
   timesheetEp,
 ]
 
-export const TAGS = ["Me", "People", "Clock", "Time", "Accounts", "Absences", "Reports"] as const
+export const TAGS = ["Auth", "Me", "People", "Clock", "Time", "Accounts", "Absences", "Reports"] as const

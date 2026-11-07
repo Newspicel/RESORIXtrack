@@ -5,16 +5,18 @@
 Complete rewrite. Migrating from 1.x: [docs/migration-from-v1.md](docs/migration-from-v1.md).
 
 - Stack: TanStack Start (React 19, SSR), Drizzle + SQLite, Better Auth, shadcn/ui on Base UI, Node 26. One service layer for the web app, REST API, worker and CLI (`rt`).
+- Clocking: clock in and out, at a custom time or scheduled for later ("clock out later" closes the entry at the chosen time; cancel any time, "Clock out now" ends it earlier). A break is a clock-out: there is no pause state; legacy break entries are retired by migration 0006. Optional block of clock-ins before the legal minimum break and daily rest (ArG Art. 15, 15a; setting, on by default).
 - New UI: calmer dark and light themes that follow the device (or System / Light / Dark in the top bar), less text, mobile tab bar, command palette, accessible keyboard use.
 - Period totals (month, week, timesheet, team) count complete days only: today is shown as in progress with its time so far, so a running day no longer shows a deficit.
 - Long lists render only the rows in view (TanStack Virtual); the audit and sign-in logs load older entries while scrolling instead of page buttons.
 - Swiss law: checks for breaks, daily rest, day span, night and Sunday work, weekly maximum, Überzeit per day and year, consecutive days, minimum vacation; full, simplified or waived recording per person; labour-law report; retention setting (minimum 5 years). See [docs/compliance.md](docs/compliance.md).
 - Sunday, holiday and night work: compensatory rest check (ArG Art. 20), Sunday/holiday supplement (default 50 %) reported for payroll or credited as time, 10 % time credit for regular night work (Art. 17b), Sunday/holiday/night hours in the timesheet and balances exports.
 - Public holidays: Swiss presets only (26 cantons, City of Fribourg), topped up with next year's holidays every 1 October, optional company days in one click.
+- Public holidays page for everyone: the calendar that applies to you (assigned personally, your team's or the company default), year by year, read-only; `GET /api/v1/holidays`. The administration entry is now *Holiday calendars*.
 - Italian as fourth language (UI, emails, PDF and spreadsheet exports).
 - revDSG: privacy notice page, record of processing template, anonymisation only after the retention period.
 - Sign-in: passkeys, single sign-on via OpenID Connect (e.g. Pocket ID, optional OIDC-only mode with break-glass), sessions listed and revocable per device.
-- API: Better Auth API keys with scopes `time`, `absences`, `reports`; OpenAPI 3.1 at `/api/v1/openapi.json`, reference at `/api/v1/docs`; per-key rate limit.
+- API: Better Auth API keys with scopes `time`, `absences`, `reports`; OpenAPI 3.1 at `/api/v1/openapi.json`, reference at `/api/v1/docs`; per-key rate limit. Apps obtain a key by signing in with email, password and the two-factor code (`POST /api/v1/auth/token`), as in 1.x.
 - Security: CSP with per-request nonces, CSRF origin check, sign-off seals in RFC 8785 JSON chained onto v1 seals, weekly integrity check by the worker.
 - Backups: same encrypted RTBK1 format, now including logos and per-file checksums; `rt restore` detects v1 archives.
 - Migration: `rt import-v1` imports a v1 database with ids, passwords, documents and seals; verifies every seal chain; reports who must re-enrol two-factor, create new API keys or get a new invitation. v1 files are never modified.

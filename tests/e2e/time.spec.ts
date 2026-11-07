@@ -1,6 +1,12 @@
 import { expect, goto, isMobile, lastWeekday, pick, pickDate, test } from "./fixtures"
 
-test("clock in, break, resume, clock out from the bar; dashboard follows", async ({ as }, info) => {
+const zurich = (d: Date, opts: Intl.DateTimeFormatOptions) =>
+  new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Zurich", hour12: false, ...opts }).format(d)
+const zurichHour = () => Number(zurich(new Date(), { hour: "2-digit" }))
+
+test("clock in, clock out, clock in again from the bar; dashboard follows", async ({ as }, info) => {
+  // the demo's entries of yesterday end by 19:00: the legal daily rest (11 h) blocks a clock-in before 06:00
+  test.skip(zurichHour() < 6, "daily rest after yesterday's demo entries")
   // desktop: top bar pill; mobile: sticky clock bar above the tab bar (both are the group "Clock")
   const page = await as(pick(info, "sofia", "marc"))
   await goto(page, "/")
@@ -14,14 +20,12 @@ test("clock in, break, resume, clock out from the bar; dashboard follows", async
   await expect(hero).toHaveAccessibleName("You're clocked in")
   await expect(hero).toContainText(/since \d{2}:\d{2}/)
 
-  await bar.getByRole("button", { name: "Start break" }).click()
-  await expect(bar).toContainText("On break")
-  await expect(hero).toHaveAccessibleName("You're on a break")
-
-  await bar.getByRole("button", { name: "End break" }).click()
-  await expect(bar).toContainText("Working")
+  // a break is simply a clock-out followed by a clock-in
+  await bar.getByRole("button", { name: "Clock out", exact: true }).click()
+  await expect(bar).toContainText("Not clocked in")
+  await expect(hero).toHaveAccessibleName("You're not clocked in")
+  await bar.getByRole("button", { name: "Clock in", exact: true }).click()
   await expect(hero).toHaveAccessibleName("You're clocked in")
-
   await bar.getByRole("button", { name: "Clock out", exact: true }).click()
   await expect(bar).toContainText("Not clocked in")
   await expect(hero).toHaveAccessibleName("You're not clocked in")
@@ -29,6 +33,31 @@ test("clock in, break, resume, clock out from the bar; dashboard follows", async
   // the punches are on My time
   await goto(page, "/time")
   await expect(page.getByRole("button", { name: /^Work \d{2}:\d{2}/ }).last()).toBeVisible()
+})
+
+test("clock out later: stays clocked in until the chosen time; 'clock out now' ends it", async ({ as }, info) => {
+  test.skip(zurichHour() < 6, "daily rest after yesterday's demo entries")
+  test.skip(zurichHour() >= 21, "two hours ahead would be tomorrow")
+  const page = await as(pick(info, "noah", "jonas"))
+  await goto(page, "/")
+  const bar = page.getByRole("group", { name: "Clock" })
+  const hero = page.getByRole("region", { name: /^You're/ })
+  await bar.getByRole("button", { name: "Clock in", exact: true }).click()
+  await expect(hero).toHaveAccessibleName("You're clocked in")
+
+  const hhmm = zurich(new Date(Date.now() + 2 * 3600_000), { hour: "2-digit", minute: "2-digit" })
+  await hero.getByRole("button", { name: "Other time" }).click()
+  await page.getByLabel("End time").fill(hhmm)
+  await page.getByRole("button", { name: "Clock out later" }).click()
+  await expect(hero).toContainText(`Clocks out automatically at ${hhmm}`)
+  await expect(hero).toHaveAccessibleName("You're clocked in")
+  await expect(hero.getByRole("button", { name: "Clock out now" })).toBeVisible()
+  await expect(page.getByRole("button", { name: "Clock in", exact: true })).toHaveCount(0)
+  await expect(bar).toContainText(`until ${hhmm}`)
+
+  await hero.getByRole("button", { name: "Clock out now" }).click()
+  await expect(hero).toHaveAccessibleName("You're not clocked in")
+  await expect(bar).toContainText("Not clocked in")
 })
 
 test("manual entry: add, edit, delete with undo, restore", async ({ as }, info) => {

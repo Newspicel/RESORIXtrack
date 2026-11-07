@@ -1,16 +1,16 @@
 /**
- * Clock actions taken while offline, kept in IndexedDB until they are replayed with `syncOfflineFn`.
+ * Clock in/out punches taken while offline, kept in IndexedDB until they are replayed with `syncOfflineFn`.
  * Each action carries a client id, so a retried upload is applied only once (the server remembers ids).
  * Items belong to one person: on a shared device nobody replays someone else's punches.
  */
 
 import { errorCode } from "@/lib/guards"
-import type { ClockAction } from "@/server/services/clock"
+import type { OfflineClockAction } from "@/server/services/clock"
 
 export interface QueuedAction {
   id: string
   userId: number
-  action: ClockAction
+  action: OfflineClockAction
   /** ISO instant of the click on the device */
   at: string
 }

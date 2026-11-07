@@ -2,9 +2,10 @@
  * Clock state shared by the top bar, the mobile bar and the dashboard card.
  *
  * - Actions are optimistic: the state flips at once, the server answer replaces it.
- * - Offline (or a network error): the action is stored in IndexedDB with its click time and a client id,
+ * - Offline (or a network error): a clock in/out is stored in IndexedDB with its click time and a client id,
  *   shown as pending, and replayed with `syncOfflineFn` when the connection returns. While anything is
- *   pending, later actions queue behind it so their order is kept.
+ *   pending, later actions queue behind it so their order is kept. Scheduling a clock-out ("clock out later")
+ *   and cancelling it need the server and are refused offline.
  * - A rejected action (not a network problem) rolls back and shows the reason.
  */
 import { type QueryClient, queryOptions, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -12,10 +13,12 @@ import { useNavigate } from "@tanstack/react-router"
 import { useEffect, useEffectEvent, useState, useSyncExternalStore } from "react"
 import { toast } from "sonner"
 import { clockActionFn, fetchClock, syncOfflineFn } from "@/features/time/api"
+import { errorCode, errorFields } from "@/lib/guards"
 import { useI18n } from "@/lib/i18n"
 import type { I18n } from "@/lib/i18n-core"
 import { useBootstrap, useMe } from "@/lib/session"
-import type { ClockAction, ClockStateName } from "@/server/services/clock"
+import type { ClockAction, ClockStateName, OfflineClockAction } from "@/server/services/clock"
+import { fmtClockTime, wallClock } from "../time/lib"
 import { enqueue, isNetworkError, onQueueChange, type QueuedAction, queued, remove } from "./offline-queue"
 
 export type LiveClock = Awaited<ReturnType<typeof fetchClock>> & { receivedAt: number }
@@ -28,16 +31,22 @@ export const liveClockQuery = () =>
     refetchInterval: 5 * 60_000,
   })
 
-const NEXT: Record<ClockAction, ClockStateName> = {
-  start: "working",
-  resume: "working",
-  break: "on_break",
-  stop: "idle",
+const SCHEDULE_AHEAD_MS = 2 * 60_000
+
+/** A clock-out with a time this far ahead is scheduled ("clock out later") instead of closing the entry. */
+export const schedulesLater = (at: string | null | undefined, now: number): boolean =>
+  at != null && Date.parse(at) > now + SCHEDULE_AHEAD_MS
+
+/** The primary action for a state: clock in or clock out. */
+export function primaryAction(state: ClockStateName): ClockAction {
+  return state === "idle" ? "start" : "stop"
 }
 
-/** The primary action for a state: clock in, clock out, or end the break. */
-export function primaryAction(state: ClockStateName): ClockAction {
-  return state === "idle" ? "start" : state === "working" ? "stop" : "resume"
+type Person = { timezone: string; timeFormat: string }
+
+/** A scheduled clock-out as "17:30" in the person's zone and clock format. */
+export function scheduledTimeText(at: string, me: Person): string {
+  return fmtClockTime(wallClock(at, me.timezone).time, me.timeFormat === "12h")
 }
 
 /** `now` 0 (SSR, hydration) means "as received": the figures the server rendered. */
@@ -46,13 +55,12 @@ const atTime = (c: LiveClock, now: number) => (now > 0 ? now : c.receivedAt)
 /** Server time estimate: the server clock at `receivedAt` plus elapsed local time. */
 const serverNow = (c: LiveClock, now: number) => Date.parse(c.serverTime) + (atTime(c, now) - c.receivedAt)
 
-/** Minutes worked today, ticking while working. */
+/** Minutes worked today, ticking while working (no further than a scheduled clock-out). */
 export function liveWorkedMin(c: LiveClock, now: number): number {
-  return c.todayWorkedMin + (c.state === "working" ? Math.max(0, atTime(c, now) - c.receivedAt) / 60000 : 0)
-}
-
-export function liveBreakMin(c: LiveClock, now: number): number {
-  return c.todayBreakMin + (c.state === "on_break" ? Math.max(0, atTime(c, now) - c.receivedAt) / 60000 : 0)
+  if (c.state !== "working") return c.todayWorkedMin
+  let elapsed = Math.max(0, atTime(c, now) - c.receivedAt)
+  if (c.scheduledEnd) elapsed = Math.min(elapsed, Math.max(0, Date.parse(c.scheduledEnd) - Date.parse(c.serverTime)))
+  return c.todayWorkedMin + elapsed / 60000
 }
 
 /** Seconds since the current state started (0 when idle). */
@@ -68,19 +76,40 @@ function withPending(c: LiveClock, pending: QueuedAction[]): LiveClock {
   return out
 }
 
-function advance(c: LiveClock, action: ClockAction, at: string, now: number): LiveClock {
-  const state = NEXT[action]
+/** The optimistic state after `action` at `at` (ISO), as of `now`. */
+export function advance(c: LiveClock, action: ClockAction, at: string, now: number): LiveClock {
+  if (action === "unschedule") return { ...c, scheduledEnd: null }
+  if (action === "stop" && schedulesLater(at, now)) return { ...c, scheduledEnd: at }
+  const state: ClockStateName = action === "start" ? "working" : "idle"
   const t = Math.min(now, c.receivedAt + 24 * 3600_000)
   return {
     ...c,
     state,
     since: state === "idle" ? null : at,
+    scheduledEnd: null,
     entry: null,
     todayWorkedMin: liveWorkedMin(c, t),
-    todayBreakMin: liveBreakMin(c, t),
     serverTime: new Date(serverNow(c, t)).toISOString(),
     receivedAt: t,
   }
+}
+
+/**
+ * Clock-in refusals by the legal minimums carry the time from which clocking in is allowed; they are worded
+ * with that time in the person's clock format. Null for every other error.
+ */
+export function clockErrorText(err: unknown, i18n: Pick<I18n, "t" | "intl">, me: Person): string | null {
+  const code = errorCode(err)
+  const f = errorFields(err)
+  if ((code !== "break_required" && code !== "rest_required") || typeof f?.earliest !== "string") return null
+  const time = scheduledTimeText(f.earliest, me)
+  const num = new Intl.NumberFormat(i18n.intl)
+  if (code === "rest_required") {
+    return i18n.t("errors.rest_required", { hours: num.format((Number(f.requiredMin) || 660) / 60), time })
+  }
+  const required = Number(f.required) || 0
+  const hours = required >= 60 ? 9 : required >= 30 ? 7 : 5.5
+  return i18n.t("errors.break_required", { required: num.format(required), hours: num.format(hours), time })
 }
 
 // ------------------------------------------------------------------ pending queue (shared)
@@ -136,10 +165,10 @@ let syncing: Promise<void> | null = null
 
 interface ClockDeps {
   userId: number
+  me: Person
   worklogMode: string
   qc: QueryClient
-  t: I18n["t"]
-  tError: I18n["tError"]
+  i18n: I18n
   navigate: ReturnType<typeof useNavigate>
 }
 
@@ -153,7 +182,7 @@ function setServer(qc: QueryClient, state: Awaited<ReturnType<typeof fetchClock>
   qc.setQueryData<LiveClock>(liveClockQuery().queryKey, { ...state, receivedAt: Date.now() })
 }
 
-async function replayQueue({ userId, qc, t, tError }: ClockDeps) {
+async function replayQueue({ userId, qc, i18n: { t, tError } }: ClockDeps) {
   try {
     const items = await queued(userId)
     if (!items.length || !navigator.onLine) return
@@ -183,20 +212,28 @@ async function runAction(
   opts: { at?: string; custom?: boolean },
   setActing: (acting: boolean) => void,
 ) {
-  const { userId, qc, t, tError } = deps
+  const { userId, qc, me, i18n } = deps
+  const { t, tError } = i18n
   const current = qc.getQueryData<LiveClock>(liveClockQuery().queryKey)
   if (busy || !current) return
   busy = true
   setActing(true)
   const clickAt = opts.at ?? new Date().toISOString()
+  const later = schedulesLater(opts.at, Date.now())
+  // only plain clock in/out punches can wait in the offline queue
+  const queueable: OfflineClockAction | null = action === "unschedule" || later ? null : action
   const queue = async () => {
-    await enqueue({ userId, action, at: clickAt })
+    if (!queueable) {
+      toast.error(t("errors.network"))
+      return
+    }
+    await enqueue({ userId, action: queueable, at: clickAt })
     toast.info(t("clock.queued_offline"))
+    void sync(deps)
   }
   try {
     if ((await queued(userId)).length || !navigator.onLine) {
       await queue()
-      void sync(deps)
       return
     }
     qc.setQueryData<LiveClock>(liveClockQuery().queryKey, advance(current, action, clickAt, Date.now()))
@@ -204,7 +241,7 @@ async function runAction(
       setServer(qc, await clockActionFn({ data: { action, at: opts.at ?? null, custom: Boolean(opts.custom) } }))
       refreshTimeData(qc)
       // clocking out is the moment to describe the day when the company requires a work log
-      if (action === "stop" && deps.worklogMode === "required") {
+      if (action === "stop" && !later && deps.worklogMode === "required") {
         toast.info(t("worklog.clock_out_prompt"), {
           duration: 8000,
           action: {
@@ -215,10 +252,10 @@ async function runAction(
       }
     } catch (err) {
       qc.setQueryData(liveClockQuery().queryKey, current)
-      if (isNetworkError(err)) {
+      if (isNetworkError(err) && queueable) {
         await queue()
       } else {
-        toast.error(tError(err))
+        toast.error(clockErrorText(err, i18n, me) ?? tError(err))
         void qc.invalidateQueries({ queryKey: liveClockQuery().queryKey })
       }
     }
@@ -233,20 +270,33 @@ export function useClock() {
   const worklogMode = useBootstrap().company.worklogMode
   const navigate = useNavigate()
   const qc = useQueryClient()
-  const { t, tError } = useI18n()
+  const i18n = useI18n()
   const query = useQuery(liveClockQuery())
   const pending = usePending(me.id)
   const online = useOnline()
   const [acting, setActing] = useState(false)
 
   const data = query.data ? withPending(query.data, pending) : undefined
-  const deps: ClockDeps = { userId: me.id, worklogMode, qc, t, tError, navigate }
+  const deps: ClockDeps = { userId: me.id, me, worklogMode, qc, i18n, navigate }
 
   // replay on start and whenever the connection comes back
   const replay = useEffectEvent(() => void sync(deps))
   useEffect(() => {
     if (online && pending.length) replay()
   }, [online, pending.length])
+
+  // a scheduled clock-out happens on the server: fetch the new state once its time has come
+  const refetch = useEffectEvent(() => void qc.invalidateQueries({ queryKey: liveClockQuery().queryKey }))
+  const scheduledEnd = query.data?.scheduledEnd ?? null
+  const serverTime = query.data?.serverTime ?? ""
+  const receivedAt = query.data?.receivedAt ?? 0
+  useEffect(() => {
+    const due = scheduledEnd ? receivedAt + (Date.parse(scheduledEnd) - Date.parse(serverTime)) + 1500 : null
+    const id = due == null ? null : setTimeout(refetch, Math.max(0, due - Date.now()))
+    return () => {
+      if (id != null) clearTimeout(id)
+    }
+  }, [scheduledEnd, serverTime, receivedAt])
 
   const act = (action: ClockAction, opts: { at?: string; custom?: boolean } = {}) =>
     runAction(deps, action, opts, setActing)

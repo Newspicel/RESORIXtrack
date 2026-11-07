@@ -375,7 +375,7 @@
     }
   },
   "holidays": {
-    "title": "Giorni festivi",
+    "title": "Calendari dei giorni festivi",
     "calendars": "Calendari",
     "new_calendar": "Nuovo calendario",
     "edit_calendar": "Modifica calendario",
@@ -539,6 +539,7 @@
       "worklog_required_percent": "Quota richiesta",
       "worklog_project_required": "Progetto obbligatorio",
       "compliance_enabled": "L'azienda è soggetta alla Legge sul lavoro",
+      "break_enforcement": "Bloccare la timbratura prima della pausa minima legale e del riposo giornaliero",
       "weekly_max_minutes": "Durata massima settimanale legale",
       "night_work_permitted": "Permesso per lavoro notturno rilasciato (art. 17 LL)",
       "sunday_work_permitted": "Permesso per lavoro domenicale rilasciato (art. 19 LL)",
@@ -560,6 +561,7 @@
       "retention_years": "Almeno 5 (art. 73 OLL 1)",
       "worklog_required_percent": "Quota del tempo lavorato di ogni giorno",
       "compliance_enabled": "Sono esenti p. es. amministrazioni pubbliche, agricoltura, economie domestiche private (art. 2 LL)",
+      "break_enforcement": "Art. 15 e 15a LL. Una registrazione manuale resta possibile.",
       "holiday_work_surcharge_mode": "Salario: nel rapporto per la paga. Accredito di tempo: secondo CCL."
     },
     "options": {

@@ -1,6 +1,7 @@
 /**
- * "Clock in/out at a chosen time": a small popover with a time input. A time later than now means the
- * previous day (forgot to clock out last night). The server marks such entries as manual.
+ * "Clock in/out at a chosen time": a small popover with a time input. Clock-in: a time later than now means
+ * the previous day (forgot to clock in last night). Clock-out: a past time closes the entry there, a future
+ * time schedules the clock-out ("clock out later"). The server marks such entries as manual.
  */
 import { History } from "lucide-react"
 import { type ReactElement, useId, useState } from "react"
@@ -12,8 +13,11 @@ import { addDaysStr } from "@/lib/format"
 import { useT } from "@/lib/i18n"
 import { useMe } from "@/lib/session"
 import type { ClockStateName } from "@/server/services/clock"
-import { minutesOfDay, todayIn, wallClock, wallToInstant } from "../time/lib"
+import { hhmmToMin, minutesOfDay, todayIn, wallClock, wallToInstant } from "../time/lib"
 import { TimeInput } from "../time/time-input"
+
+/** A clock-out this many minutes ahead is scheduled (the server's tolerance for "now"). */
+const LATER_AFTER_MIN = 2
 
 export function CustomTimeButton({
   state,
@@ -31,9 +35,12 @@ export function CustomTimeButton({
   const me = useMe()
   const [open, setOpen] = useState(false)
   const [time, setTime] = useState("")
+  const [nowMin, setNowMin] = useState(0)
   const [error, setError] = useState(false)
   const dir = state === "idle" ? "in" : "out"
-  const label = t(`clock.custom_time_${dir}`)
+  const label = dir === "in" ? t("clock.custom_time_in") : t("clock.custom_time_out")
+  const later = dir === "out" && time !== "" && hhmmToMin(time) > nowMin + LATER_AFTER_MIN
+  const submitLabel = dir === "in" ? t("clock.start") : later ? t("clock.stop_later") : t("clock.stop")
 
   const submit = () => {
     if (!time) {
@@ -42,10 +49,7 @@ export function CustomTimeButton({
     }
     const tz = me.timezone
     const today = todayIn(tz)
-    const date =
-      minutesOfDay(Date.now(), tz) < Number(time.slice(0, 2)) * 60 + Number(time.slice(3))
-        ? addDaysStr(today, -1)
-        : today
+    const date = dir === "in" && nowMin < hhmmToMin(time) ? addDaysStr(today, -1) : today
     onSubmit(wallToInstant(date, time, tz))
     setOpen(false)
   }
@@ -57,6 +61,7 @@ export function CustomTimeButton({
         setOpen(o)
         if (o) {
           setTime(wallClock(Date.now(), me.timezone).time)
+          setNowMin(minutesOfDay(Date.now(), me.timezone))
           setError(false)
         }
       }}
@@ -86,7 +91,9 @@ export function CustomTimeButton({
           }}
         >
           <Field data-invalid={error || undefined}>
-            <FieldLabel htmlFor={clockCustomTimeId}>{t(`clock.custom_time_label_${dir}`)}</FieldLabel>
+            <FieldLabel htmlFor={clockCustomTimeId}>
+              {dir === "in" ? t("clock.custom_time_label_in") : t("clock.custom_time_label_out")}
+            </FieldLabel>
             <TimeInput
               id={clockCustomTimeId}
               value={time}
@@ -96,9 +103,11 @@ export function CustomTimeButton({
               }}
               aria-invalid={error || undefined}
             />
-            <FieldDescription>{t(`clock.custom_time_help_${dir}`)}</FieldDescription>
+            <FieldDescription>
+              {dir === "in" ? t("clock.custom_time_help_in") : t("clock.custom_time_help_out")}
+            </FieldDescription>
           </Field>
-          <Button type="submit">{t(dir === "in" ? "clock.start" : "clock.stop")}</Button>
+          <Button type="submit">{submitLabel}</Button>
         </form>
       </PopoverContent>
     </Popover>

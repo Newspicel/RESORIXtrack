@@ -805,6 +805,7 @@ const SPECS: Record<string, Spec> = {
   "features/compliance/api#fetchFindings": {},
   "features/compliance/api#fetchYearFindings": {},
   "features/compliance/api#fetchTeamCompliance": {},
+  "features/holidays/api#fetchMyHolidays": {},
   "features/notifications/api#fetchNotifications": {},
   "features/notifications/api#markNotificationsRead": { id: "notification" },
   "features/profile/api#fetchProfile": {},
@@ -1079,7 +1080,7 @@ describe("isolation", () => {
   }, 120_000)
 })
 
-const REST_NO_SUCCESS: Record<string, string> = { "POST /clock/resume": "nobody is on a break" }
+const REST_NO_SUCCESS: Record<string, string> = { "POST /auth/token": "signs in with a password, not a key" }
 
 function restRecords(ep: Endpoint, t: Key): number[] {
   if (!ep.path.includes("{id}")) return [0]

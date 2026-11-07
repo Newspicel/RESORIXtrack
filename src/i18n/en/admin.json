@@ -375,7 +375,7 @@
     }
   },
   "holidays": {
-    "title": "Public holidays",
+    "title": "Holiday calendars",
     "calendars": "Calendars",
     "new_calendar": "New calendar",
     "edit_calendar": "Edit calendar",
@@ -539,6 +539,7 @@
       "worklog_required_percent": "Required share",
       "worklog_project_required": "Project required",
       "compliance_enabled": "Company is subject to the Labour Act",
+      "break_enforcement": "Block clocking in before the legal minimum break and daily rest",
       "weekly_max_minutes": "Legal weekly maximum",
       "night_work_permitted": "Night work permit granted (Art. 17 ArG)",
       "sunday_work_permitted": "Sunday work permit granted (Art. 19 ArG)",
@@ -560,6 +561,7 @@
       "retention_years": "At least 5 (ArGV 1 Art. 73)",
       "worklog_required_percent": "Share of each day's worked time",
       "compliance_enabled": "Exempt are e.g. public administrations, agriculture, private households (Art. 2 ArG)",
+      "break_enforcement": "Art. 15 and 15a ArG. A manual entry stays possible.",
       "holiday_work_surcharge_mode": "Payroll: reported for wages. Time credit: per collective agreement."
     },
     "options": {

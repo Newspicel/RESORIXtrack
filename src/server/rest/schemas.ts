@@ -72,10 +72,11 @@ export const Entry = named(
   z.object({
     id,
     userId: id,
-    kind: z.enum(["work", "break"]),
+    kind: z.enum(["work", "break"]).meta({ description: "`break` only on legacy rows; a break is a clock-out." }),
     startAt: instant,
     endAt: instant.nullable(),
     running: z.boolean(),
+    scheduledEndAt: instant.nullable().meta({ description: "When a running entry closes automatically." }),
     minutes,
     tz: z.string(),
     note: z.string(),
@@ -91,8 +92,9 @@ export const Entry = named(
 export const ClockState = named(
   "ClockState",
   z.object({
-    state: z.enum(["idle", "working", "on_break"]),
+    state: z.enum(["idle", "working"]),
     since: instant.nullable(),
+    scheduledEnd: instant.nullable().meta({ description: "Scheduled clock-out of the running entry, if any." }),
     entry: Entry.nullable(),
     todayWorkedMin: minutes,
     todayBreakMin: minutes,
@@ -219,6 +221,27 @@ export const Vacation = named(
     remaining: z.number(),
     remainingAfterPending: z.number(),
     adjustmentItems: z.array(Adjustment),
+  }),
+)
+
+export const Holiday = z.object({
+  date: day,
+  name: z.string().meta({ description: "English name; the web app translates it." }),
+  fraction: z.number().meta({ description: "1 = full day, 0.5 = afternoon." }),
+})
+
+export const Holidays = named(
+  "Holidays",
+  z.object({
+    userId: id,
+    year: z.number().int(),
+    source: z.enum(["user", "team", "default"]).nullable().meta({
+      description: "Where the calendar comes from: assigned to the person, their team, or the company default.",
+    }),
+    calendar: z.object({ id, name: z.string(), regionCode: z.string(), isDefault: z.boolean() }).nullable(),
+    team: z.object({ id, name: z.string() }).nullable(),
+    years: z.array(z.number().int()).meta({ description: "Years with holidays, plus this and next year." }),
+    items: z.array(Holiday),
   }),
 )
 

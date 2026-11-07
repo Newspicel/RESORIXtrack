@@ -41,8 +41,8 @@ Severity: **violation** (a legal limit was exceeded), **warning** (close to a li
 
 | Rule key | Check | Reference |
 |---|---|---|
-| `break_min` | Day with > 5½ h work needs ≥ 15 min break, > 7 h ≥ 30 min, > 9 h ≥ 60 min (breaks may be split; only breaks ≥ 15 min… count as such – v1 rule: total break minutes) | ArG Art. 15 |
-| `daily_rest` | ≥ 11 consecutive hours of rest between two working days (once a week down to 8 h if the 2-week average is 11 h → warning, below 8 h → violation) | ArG Art. 15a |
+| `break_min` | Day with > 5½ h work needs ≥ 15 min break, > 7 h ≥ 30 min, > 9 h ≥ 60 min (breaks may be split; only breaks ≥ 15 min… count as such – v1 rule: total break minutes). Enforced at clock-in when `break_enforcement` is on: 15 and 30 min in one piece, 60 min may be split into pieces of at least 15 min | ArG Art. 15 |
+| `daily_rest` | ≥ 11 consecutive hours of rest between two working days (once a week down to 8 h if the 2-week average is 11 h → warning, below 8 h → violation). Enforced at clock-in when `break_enforcement` is on | ArG Art. 15a |
 | `day_span` | Day and evening work (incl. breaks) within a span of 14 h | ArG Art. 10 para. 3 |
 | `night_work` | Work between 23:00 and 06:00 (needs a permit; warning so HR can verify) | ArG Art. 16/17 |
 | `sunday_work` | Work between Saturday 23:00 and Sunday 23:00, on 1 August and on full-day public holidays of the person's calendar (holidays = Sundays) | ArG Art. 18, 20a |
@@ -59,6 +59,10 @@ Settings:
   agriculture and private households (Art. 2 ArG); off runs no checks.
 - Breaks (`break_min`, Art. 15) are a legal minimum and always checked when the ArG applies. The former
   `break_rules_enabled` setting is retired and ignored (also on import from v1).
+- `break_enforcement` (default true): a clock-in is refused until the minimum break for the time worked so far
+  today and the daily rest after the previous working day are complete (`409 break_required` / `rest_required`
+  with `earliest`, the instant from which clocking in is allowed). Only clock-ins are blocked: a manual entry
+  stays possible and gets the usual finding.
 - `weekly_max_minutes`: company default for new people, 45 h (2700) or 50 h (3000) only; per person
   `legal_weekly_max_hours` (Art. 9). 45 h: industry, office, technical and other employees, sales staff in large
   retail; 50 h: all others, e.g. construction, trades, small retail.

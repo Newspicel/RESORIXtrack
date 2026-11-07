@@ -90,7 +90,9 @@ describe("rt migrate", () => {
     const file = path.join(dir, "rt.db")
     olderDatabase(file, true)
     expect(await migrateDatabase({ file, check: true, log })).toBe(1)
-    expect(lines.at(-1)).toMatch(/^pending: 0002_passkeys, 0003_guards_v2, 0004_arg_exempt, 0005_regular_night_work, 0006_clock_out_later$/)
+    expect(lines.at(-1)).toMatch(
+      /^pending: 0002_passkeys, 0003_guards_v2, 0004_arg_exempt, 0005_regular_night_work, 0006_clock_out_later$/,
+    )
     expect(await migrateDatabase({ file, log })).toBe(0)
     const backups = readdirSync(path.join(dir, "backups"))
     expect(backups).toHaveLength(1)

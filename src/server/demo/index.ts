@@ -1,6 +1,6 @@
 /**
  * Demo company for development (port of v1 demo.py, extended): three teams with leads and a deputy, HR, an
- * administrator, part-timers, a Swiss holiday calendar, three months of entries with breaks and work logs,
+ * administrator, part-timers, a Swiss holiday calendar, three months of entries (with breaks between them) and work logs,
  * absences (approved, pending, sick), balance adjustments, a running clock and one signed-off month.
  * Deterministic (seeded random), idempotent (does nothing when the demo administrator exists).
  */
@@ -284,7 +284,7 @@ function absences(
   return absent
 }
 
-/** Clock entries (work, break, work) and work logs for every scheduled day before today. */
+/** Clock entries (two work entries with a break between them) and work logs for every scheduled day before today. */
 function workDays(
   r: Rng,
   u: s.User,
@@ -323,12 +323,19 @@ function workDays(
     const s1 = localToInstant(d, `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`, u.timezone)
     const e1 = plus(s1, morning)
     const s2 = plus(e1, brk)
-    for (const [a, b, kind] of [
-      [s1, e1, "work"],
-      [e1, s2, "break"],
-      [s2, plus(s2, afternoon), "work"],
+    for (const [a, b] of [
+      [s1, e1],
+      [s2, plus(s2, afternoon)],
     ] as const)
-      rows.push({ userId: u.id, kind, startAt: a, endAt: b, tz: u.timezone, source: "clock", createdById: u.id })
+      rows.push({
+        userId: u.id,
+        kind: "work",
+        startAt: a,
+        endAt: b,
+        tz: u.timezone,
+        source: "clock",
+        createdById: u.id,
+      })
     // most days annotated with two items, some partially, a few not at all
     const worked = morning + afternoon
     const roll = r.next()

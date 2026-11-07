@@ -375,7 +375,7 @@
     }
   },
   "holidays": {
-    "title": "Feiertage",
+    "title": "Feiertagskalender",
     "calendars": "Kalender",
     "new_calendar": "Neuer Kalender",
     "edit_calendar": "Kalender bearbeiten",
@@ -539,6 +539,7 @@
       "worklog_required_percent": "Erforderlicher Anteil",
       "worklog_project_required": "Projekt erforderlich",
       "compliance_enabled": "Betrieb untersteht dem Arbeitsgesetz",
+      "break_enforcement": "Einstempeln vor der gesetzlichen Mindestpause und Ruhezeit sperren",
       "weekly_max_minutes": "Gesetzliche Höchstarbeitszeit",
       "night_work_permitted": "Bewilligung Nachtarbeit liegt vor (Art. 17 ArG)",
       "sunday_work_permitted": "Bewilligung Sonntagsarbeit liegt vor (Art. 19 ArG)",
@@ -560,6 +561,7 @@
       "retention_years": "Mindestens 5 (ArGV 1 Art. 73)",
       "worklog_required_percent": "Anteil der Arbeitszeit pro Tag",
       "compliance_enabled": "Ausgenommen sind z. B. öffentliche Verwaltungen, Landwirtschaft, private Haushalte (Art. 2 ArG)",
+      "break_enforcement": "Art. 15 und 15a ArG. Ein manueller Eintrag bleibt möglich.",
       "holiday_work_surcharge_mode": "Lohn: im Bericht für die Lohnabrechnung. Zeitgutschrift: gemäss GAV."
     },
     "options": {

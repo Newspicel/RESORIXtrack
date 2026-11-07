@@ -8,7 +8,7 @@ import { Validation } from "@/server/errors"
 import { authed, tx } from "@/server/middleware"
 import { computeDaysFrom, loadContext, summarize, timeBalance, vacationAccount } from "@/server/services/accounts"
 import { clockAction, clockState, syncOffline } from "@/server/services/clock"
-import { CLOCK_ACTIONS } from "@/server/services/clock.schemas"
+import { CLOCK_ACTIONS, OFFLINE_ACTIONS } from "@/server/services/clock.schemas"
 import { periodFindings } from "@/server/services/compliance"
 import {
   createEntry,
@@ -126,14 +126,11 @@ export const timeOverviewQuery = () =>
 
 // ------------------------------------------------------------------ entries
 
-const kind = z.enum(["work", "break"])
-
 export const createEntryFn = createServerFn({ method: "POST" })
   .middleware([authed])
   .validator(
     z.object({
       userId: id.nullish(),
-      kind: kind.default("work"),
       startAt: instant,
       endAt: instant,
       note: z.string().max(500).default(""),
@@ -147,7 +144,6 @@ export const updateEntryFn = createServerFn({ method: "POST" })
   .validator(
     z.object({
       id,
-      kind: kind.optional(),
       startAt: instant.optional(),
       endAt: instant.nullish(),
       note: z.string().max(500).optional(),
@@ -226,7 +222,7 @@ export const syncOfflineFn = createServerFn({ method: "POST" })
         .array(
           z.object({
             id: z.string().min(1).max(64),
-            action: clockActionSchema,
+            action: z.enum(OFFLINE_ACTIONS),
             at: instant,
             note: z.string().max(500).optional(),
           }),

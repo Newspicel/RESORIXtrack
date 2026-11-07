@@ -45,6 +45,8 @@ export const DEFAULTS = {
   worklog_project_required: false,
   // Swiss law (docs/compliance.md)
   compliance_enabled: true,
+  // refuse a clock-in before the legal minimum break (Art. 15) and daily rest (Art. 15a) are complete
+  break_enforcement: true,
   night_work_permitted: false,
   sunday_work_permitted: false,
   retention_years: 5, // ArGV 1 Art. 73: at least 5 years
@@ -88,6 +90,7 @@ export const settingsSchema = z.object({
   worklog_required_percent: int(1, 100),
   worklog_project_required: z.boolean(),
   compliance_enabled: z.boolean(),
+  break_enforcement: z.boolean(),
   night_work_permitted: z.boolean(),
   sunday_work_permitted: z.boolean(),
   retention_years: int(5, 30),

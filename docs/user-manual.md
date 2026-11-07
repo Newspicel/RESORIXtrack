@@ -22,10 +22,11 @@ The theme follows your device. Pick System, Light or Dark with the sun/moon butt
 
 ### Clocking
 
-- **Clock in**, **Start break**, **End break**, **Clock out**. The clock is on every page.
-- Keys: **S** clock in or out, **B** break (when no field is focused). **⌘K** / **Ctrl K** search.
+- **Clock in**, **Clock out**. A break is simply a clock-out; clock in again when it ends. The clock is on every page.
+- Keys: **S** clock in or out (when no field is focused). **⌘K** / **Ctrl K** search.
 - Offline: punches are stored and synced with their original time.
-- Forgot a punch: **Other time** clocks in up to 48 h back, or out at a chosen time. Such entries are marked manual. Future times are refused.
+- **Other time**: clock in up to 48 h back, or clock out at a chosen time. A past time closes the entry there. A future time (up to 24 h after the clock-in) clocks you out automatically then: the card shows *Clocks out automatically at 17:30* with *Cancel*; *Clock out now* ends the entry earlier. Such entries are marked manual.
+- Legal minimums: when your company enforces them, clocking in is refused until the minimum break (15 min after 5½ h, 30 min after 7 h, 60 min after 9 h of work) or the daily rest of 11 h is complete; the message says from when you can clock in. If you did work, add the entry under *My time*; it gets the usual finding.
 - Forgot to clock out: the dashboard warns you; clock out, then fix the end time under *My time*. A reminder email follows after a set number of hours.
 
 ### Report sick
@@ -39,12 +40,12 @@ The theme follows your device. Pick System, Light or Dark with the sun/moon butt
 
 Week timeline or month grid with worked, target and difference per day.
 
-- **Add entry** or click an empty part of a day: work or break, start, end, note.
+- **Add entry** or click an empty part of a day: start, end, note.
 - Click an entry to edit or delete. Past days need a reason; everything is in the change history. Deleted entries can be restored.
 - **Edited / manual**: entered or changed by hand. **Changed by someone else**: corrected by your lead or HR; open *History* and *Dispute* if you disagree.
 - A **signed-off month** is read-only. Ask your lead or HR; HR can reopen it.
 - With **simplified recording** you enter a daily total instead of start and end.
-- Labour-law findings (short break, rest, Sunday work …) are hints, never blocks. See [compliance.md](compliance.md).
+- Labour-law findings (short break, rest, Sunday work …) are hints, never blocks; only a clock-in can be refused when the company enforces the minimum break and daily rest. See [compliance.md](compliance.md).
 
 Times are shown in your timezone (Profile) and stored in UTC.
 
@@ -66,6 +67,10 @@ Vacation account for the year (entitlement, carried over, taken, planned) and yo
 - **Sick leave** is recorded immediately; your lead is informed. Documents (PDF, JPG, PNG, WebP, HEIC) are visible to you, your lead and HR only.
 - **Cancel** a request in the absence's sheet. A new request needs approval again.
 - Your lead or HR can record absences for you; you are notified.
+
+## Public holidays
+
+The public holidays that apply to you, year by year, and where they come from: a calendar assigned to you personally, your team's calendar or the company default. The page is read-only: on your working days the holidays reduce your target hours automatically, half-day holidays cover the afternoon. Tell your administrator if a holiday is missing.
 
 ## Time account
 

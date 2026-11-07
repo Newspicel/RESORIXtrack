@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { db, rawSqlite } from "@/server/db"
 import * as s from "@/server/db/schema"
 import { env } from "@/server/env"
+import { clockAction, closeDueScheduled } from "@/server/services/clock"
 import { createCalendarFromPreset } from "@/server/services/holiday-calendars"
 import { clearMailOutbox, mailOutbox } from "@/server/services/mail"
 import { loadActor } from "@/server/services/permissions"
@@ -24,7 +25,14 @@ const notes = (userId: number, kind: string) =>
 
 describe("job table", () => {
   it("schedules every job with a valid cron expression", () => {
-    expect(JOBS.map((j) => j.name)).toEqual(["backup", "clock-reminders", "cleanup", "integrity", "holiday-top-up"])
+    expect(JOBS.map((j) => j.name)).toEqual([
+      "backup",
+      "scheduled-clock-outs",
+      "clock-reminders",
+      "cleanup",
+      "integrity",
+      "holiday-top-up",
+    ])
     for (const j of JOBS) expect(j.schedule.split(" ")).toHaveLength(5)
   })
 })
@@ -62,6 +70,30 @@ describe("nightly backup", () => {
     expect(readdirSync(env.backupsDir).sort()).toEqual(
       [r.name, "resorixtrack-20200102-020000-auto.zip.enc", "resorixtrack-20200103-020000-manual.zip.enc"].sort(),
     )
+  })
+})
+
+describe("scheduled clock-outs", () => {
+  afterEach(() => freeze(null))
+
+  it("runs every minute and at start, closing entries at their scheduled time as manual", () => {
+    const job = JOBS.find((j) => j.name === "scheduled-clock-outs")!
+    expect(job).toMatchObject({ schedule: "* * * * *", atStart: true })
+    const org = makeOrg() // now: 2026-11-05 08:00 UTC
+    const A = loadActor(org.anna.id)
+    clockAction(A, "start", { at: "2026-11-05T06:00:00Z" })
+    expect(clockAction(A, "stop", { at: "2026-11-05T09:00:00Z" }).scheduledEnd).toBe("2026-11-05T09:00:00.000Z")
+    expect(job.run()).toBe(0)
+    freeze("2026-11-05T09:00:30Z")
+    expect(job.run()).toBe(1)
+    expect(closeDueScheduled()).toBe(0)
+    expect(db.select().from(s.timeEntries).where(eq(s.timeEntries.userId, org.anna.id)).get()).toMatchObject({
+      endAt: "2026-11-05T09:00:00.000000Z",
+      scheduledEndAt: null,
+      source: "manual",
+    })
+    const last = db.select().from(s.revisions).where(eq(s.revisions.subjectUserId, org.anna.id)).all().at(-1)
+    expect(last).toMatchObject({ reason: "clock (scheduled clock-out)", source: "manual" })
   })
 })
 

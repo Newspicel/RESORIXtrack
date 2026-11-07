@@ -2,7 +2,7 @@
 
 # RESORIXtrack
 
-Self-hosted time tracking for small and mid-sized companies in Switzerland: clocking, time and vacation accounts, absences with approvals, monthly sign-off, reports and a complete change history. It checks the Swiss Labour Act and keeps records as the law requires. Developed by [RESORIX AG](https://resorix.ch), free software under AGPL-3.0 (commercial license available), for companies that keep employee data on their own server.
+Self-hosted time tracking for small and mid-sized companies: clocking, time and vacation accounts, absences with approvals, monthly sign-off, reports and a complete change history. Labour-law rules are built in per country, Switzerland first (breaks, daily rest, night and Sunday work, retention); further countries can be added as rule sets. Developed by [RESORIX AG](https://resorix.ch), free software under AGPL-3.0 (commercial license available), for companies that keep employee data on their own server.
 
 <p align="center"><img src="docs/screenshots/employee-dark-home.png" alt="Dashboard" width="860"></p>
 
@@ -11,9 +11,10 @@ Self-hosted time tracking for small and mid-sized companies in Switzerland: cloc
 ## Features
 
 **Employees**
-- Clock in, break, clock out from every page; keyboard shortcuts; works offline and syncs later; custom time for a forgotten punch.
+- Clock in and out from every page, at a custom time or scheduled for later; a break is simply a clock-out; keyboard shortcut; works offline and syncs later.
 - Time account (target from the work schedule, worked, balance) and vacation account (entitlement, carry-over, half days).
 - Absence requests with a calendar of holidays and existing absences; sick report in one click with optional doctor's note.
+- Public holidays page: the calendar that applies to you (personal, team or company default), read-only.
 - Work log: what was done, as free text, project or customer reference; optional or required per company.
 - Own edits are allowed and logged; corrections by others are marked and can be disputed.
 

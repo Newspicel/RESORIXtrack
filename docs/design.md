@@ -101,7 +101,7 @@ also play when an overlay mounts already open). Nothing else moves except the pe
 
 Every interactive element is a real `button`/`a`/input; nothing else is focusable. After navigation focus moves
 to the page `h1` (done by the shell). Dialogs trap focus and restore it. Shortcuts: `⌘K` search, `S` clock
-in/out, `B` break (only when no input is focused), `Esc` closes. Show shortcuts in tooltips.
+in/out (only when no input is focused), `Esc` closes. Show shortcuts in tooltips.
 
 ## Responsive
 

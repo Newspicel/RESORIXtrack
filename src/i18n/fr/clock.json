@@ -2,17 +2,15 @@
   "label": "Pointeuse",
   "start": "Timbrer l'arrivée",
   "stop": "Timbrer la sortie",
-  "break": "Commencer la pause",
-  "resume": "Terminer la pause",
+  "stop_now": "Timbrer la sortie maintenant",
+  "stop_later": "Timbrer la sortie plus tard",
   "state": {
     "idle": "Non timbré",
-    "working": "Au travail",
-    "on_break": "En pause"
+    "working": "Au travail"
   },
   "headline": {
     "idle": "Tu n'as pas timbré",
-    "working": "Tu es au travail",
-    "on_break": "Tu es en pause"
+    "working": "Tu es au travail"
   },
   "offline": "Hors ligne",
   "pending_one": "Hors ligne, {count} en attente",
@@ -24,8 +22,11 @@
   "custom_time_label_in": "Heure de début",
   "custom_time_label_out": "Heure de fin",
   "custom_time_help_in": "Jusqu'à 48 h en arrière. Marqué comme manuel.",
-  "custom_time_help_out": "Plus tard que maintenant = hier. Marqué comme manuel.",
+  "custom_time_help_out": "Passé: clôt la saisie à ce moment. Futur: timbre ta sortie à ce moment. Marqué comme manuel.",
   "rejected_one": "{count} timbrage hors ligne refusé",
   "rejected_other": "{count} timbrages hors ligne refusés",
-  "custom_time": "Autre heure"
+  "custom_time": "Autre heure",
+  "scheduled": "Sortie timbrée automatiquement à {time}",
+  "scheduled_short": "jusqu'à {time}",
+  "cancel_scheduled": "Annuler"
 }

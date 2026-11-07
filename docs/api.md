@@ -19,7 +19,7 @@ A key acts as its owner, narrowed to its scopes; it never sees more than the own
 
 | Scope | Allows |
 |---|---|
-| `time:read` | Clock state, days, time entries, balance |
+| `time:read` | Clock state, days, time entries, balance, public holidays |
 | `time:write` | Clock actions, offline sync, create, change and delete entries |
 | `absences:read` | Vacation account, absence types, absences |
 | `absences:write` | Request and cancel absences |
@@ -36,10 +36,38 @@ curl -X POST -H "$H" -H "X-Client: desktop/1.0" $B/clock/in
 curl -H "$H" "$B/entries?from=2026-11-01&to=2026-11-30"
 ```
 
+## App sign-in
+
+A desktop or mobile app does not need the web UI to get a key: `POST /api/v1/auth/token` with email and password answers a key (shown once) for that person. When two-factor authentication is enabled, the first answer is `401 mfa_required`; the app asks for the authenticator code (or a backup code) and repeats the call with `code`.
+
+```bash
+curl -X POST $B/auth/token -H "Content-Type: application/json" -d '{
+  "email": "anna@example.com", "password": "…", "code": "123456",
+  "name": "Laptop at home", "scopes": ["time:read", "time:write"], "expiresInDays": 90
+}'
+# 201 {"token": "rt_…", "id": 12, "name": "Laptop at home", "scopes": ["time:read", "time:write"], "expiresAt": "2027-02-05T08:00:00.000Z"}
+```
+
+- `scopes` (default: all five) and `expiresInDays` (default 90, at most 365) are optional. `name` is shown under Profile → API keys, where the person can revoke the key.
+- Same rules as the web sign-in: the failure throttle (`429` with `Retry-After` after repeated failures per address and email), the sign-in log (`token_issued`), inactive accounts refused, no password sign-in in OIDC-only mode (`403 oidc_only`, except within the break-glass window), and `403 mfa_required` when the company requires two-factor authentication the person has not set up yet (enrol in the web app first).
+- At most 20 sign-ins in a burst per client address, then one every 5 seconds.
+
+| Status | Code | Meaning |
+|---|---|---|
+| 401 | `invalid_credentials` | Wrong email or password, or the account is inactive |
+| 401 | `mfa_required` | Two-factor authentication is on: repeat with `code` |
+| 401 | `invalid_mfa` | The authenticator or backup code is wrong (a backup code works once) |
+| 403 | `api_keys_disabled` | API keys are switched off company-wide |
+| 403 | `oidc_only` | Only single sign-on is allowed |
+| 403 | `mfa_required` | Two-factor authentication is required but not set up |
+| 422 | `validation_error` | `fields` names the problem, e.g. an unknown scope |
+| 429 | `too_many_requests` | Too many failed attempts; see `Retry-After` |
+
 ## Conventions
 
 - Dates `YYYY-MM-DD` in the person's timezone; instants ISO 8601 UTC (`…Z`); durations in minutes.
-- Clock actions are idempotent and accept an optional past time for offline sync; future times are refused.
+- Clock actions are idempotent and accept an optional past time (`at`) for offline sync. A clock-in with a future time is refused. A clock-out with a time more than 2 minutes ahead (at most 24 h after the clock-in) is scheduled instead: the entry stays open, `GET /clock` shows it as `scheduledEnd`, the entry closes at exactly that time; `POST /clock/unschedule` cancels the plan. A break is simply a clock-out followed by a clock-in.
+- When the company enforces the legal minimums, a clock-in answers `409 break_required` (fields `required`, `taken`, `earliest`) or `409 rest_required` (fields `requiredMin`, `earliest`); `earliest` is the instant from which clocking in is allowed.
 - Out-of-scope ids answer `404`.
 
 ## Errors
@@ -52,10 +80,10 @@ JSON, always:
 
 | Status | Typical codes |
 |---|---|
-| 401 | `unauthorized` (missing, invalid or expired key) |
-| 403 | `insufficient_scope`, `forbidden`, `api_keys_disabled` |
+| 401 | `unauthorized` (missing, invalid or expired key); app sign-in: `invalid_credentials`, `mfa_required`, `invalid_mfa` |
+| 403 | `insufficient_scope`, `forbidden`, `api_keys_disabled`; app sign-in: `oidc_only`, `mfa_required` |
 | 404 | `not_found` |
-| 409 | `period_signed_off`, `employment_ended`, `overlap` |
+| 409 | `period_signed_off`, `employment_ended`, `overlap`, `break_required`, `rest_required` |
 | 422 | `validation_error` (with `fields`) |
 | 429 | `too_many_requests` (per-key limit: burst 120, 2 per second; see `Retry-After`) |
 

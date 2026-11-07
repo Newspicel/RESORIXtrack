@@ -44,6 +44,7 @@ export const SETTING_GROUPS = {
   ],
   compliance: [
     "compliance_enabled",
+    "break_enforcement",
     "weekly_max_minutes",
     "night_work_permitted",
     "sunday_work_permitted",
