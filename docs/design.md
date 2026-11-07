@@ -33,7 +33,7 @@ only when you can name the reason in one sentence.
 - Choose the control by the decision: immediate on/off → `Switch` (applies now); on/off inside a form →
   `Checkbox`/`SwitchField` (applies on save); 2–5 visible options → `Segmented` (`SegmentedField`); short fixed
   lists up to 6 → `Select`; dynamic or long lists (teams, people, projects, calendars, timezones, cantons) →
-  searchable `Combobox` (`ComboboxField`); action → `<button>`, navigation → `<Link>`.
+  searchable `Combobox` (`ComboboxField`). Both open below the trigger, never over it; action → `<button>`, navigation → `<Link>`.
 - No native pickers: dates use `DatePicker`/`DateField`, colours `ColorPicker`, files `FilePicker`, times our
   `TimeInput` (follows 12/24 h).
 - Geometry: inputs, selects, buttons, date triggers and segmented controls are 36 px (`h-9`), icon buttons

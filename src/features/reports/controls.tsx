@@ -194,6 +194,7 @@ export function TeamFilter({
   if (scope.teams.length < 2) return null
   return (
     <FilterSelect
+      searchable
       label={t("common.team")}
       value={value ? String(value) : ""}
       onChange={(v) => onChange(v ? Number(v) : undefined)}
