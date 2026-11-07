@@ -22,7 +22,8 @@ export function StatCard({
   hint?: ReactNode
   /** 0..1 */
   progress?: number
-  tone?: "positive" | "negative" | "default"
+  /** negative: a balance below zero (amber); destructive: legal violations (red, like their badges) */
+  tone?: "positive" | "negative" | "destructive" | "default"
   className?: string
   children?: ReactNode
 }) {
@@ -34,6 +35,7 @@ export function StatCard({
           "text-3xl font-semibold tracking-tight tabular",
           tone === "positive" && "text-positive",
           tone === "negative" && "text-negative",
+          tone === "destructive" && "text-destructive",
         )}
       >
         {value}

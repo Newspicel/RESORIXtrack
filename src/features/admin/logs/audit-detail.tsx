@@ -1,14 +1,10 @@
 import { Fragment, type ReactNode } from "react"
-import { HIDDEN_REASONS } from "@/features/time/entry-history"
-import { fmtDateTime, fmtDay } from "@/lib/format"
+import { fmtDateTime } from "@/lib/format"
 import { useI18n } from "@/lib/i18n"
-import type { Json } from "@/lib/json"
 import { useMe } from "@/lib/session"
 import type { AuditItem } from "@/server/services/admin-logs"
 import { EditorSheet } from "../ui"
-
-const INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/
-const DAY = /^\d{4}-\d{2}-\d{2}$/
+import { useAuditFormat } from "./change-list"
 
 /** Muted label left, value right, like the absence panel. */
 function DetailList({ rows }: { rows: [string, ReactNode][] }) {
@@ -31,21 +27,8 @@ function DetailList({ rows }: { rows: [string, ReactNode][] }) {
 export function AuditDetail({ item, onClose }: { item: AuditItem; onClose: () => void }) {
   const { t, has, intl } = useI18n()
   const me = useMe()
+  const { label, value, reason } = useAuditFormat()
   const hour12 = me.timeFormat === "12h"
-  const label = (k: string) => (has(`admin.audit.fields.${k}`) ? t(`admin.audit.fields.${k}`) : k)
-  const value = (k: string, v: Json | undefined): string => {
-    if (v == null || v === "") return "–"
-    if (typeof v === "boolean") return t(v ? "common.yes" : "common.no")
-    if (typeof v === "string") {
-      if (INSTANT.test(v)) return fmtDateTime(v, { intl, tz: me.timezone, hour12 })
-      if (DAY.test(v)) return fmtDay(v, intl, { day: "numeric", month: "short", year: "numeric" })
-      if (k === "kind" && has(`time.kind.${v}`)) return t(`time.kind.${v}`)
-      if (k === "source" && has(`admin.audit.sources.${v}`)) return t(`admin.audit.sources.${v}`)
-      if (k === "status" && has(`absences.status.${v}`)) return t(`absences.status.${v}`)
-      return v
-    }
-    return typeof v === "object" ? JSON.stringify(v) : String(v)
-  }
 
   const before = item.before ?? {}
   const after = item.after ?? {}
@@ -80,7 +63,7 @@ export function AuditDetail({ item, onClose }: { item: AuditItem; onClose: () =>
     [t("admin.audit.person"), item.subject ?? ""],
     [t("admin.audit.by"), item.actor ?? t("admin.audit.system")],
     [t("admin.audit.source"), value("source", item.source)],
-    [t("common.reason"), item.reason && !HIDDEN_REASONS.has(item.reason) ? item.reason : ""],
+    [t("common.reason"), reason(item.reason)],
   ]
   return (
     <EditorSheet

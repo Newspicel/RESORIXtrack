@@ -153,7 +153,8 @@ function BackupsTab() {
     }),
     bcol.accessor("name", {
       header: () => t("admin.backups.file"),
-      meta: { hideOnMobile: true, className: "font-mono text-xs text-muted-foreground" },
+      meta: { hideOnMobile: true },
+      cell: (c) => <span className="font-mono text-xs text-muted-foreground">{c.getValue()}</span>,
     }),
     bcol.accessor("size", {
       header: () => t("admin.backups.size"),
@@ -338,7 +339,7 @@ function AuditTab({ filters, onFilters }: { filters: AuditFilters; onFilters: (f
           onChange={(v) => set({ userId: v ? Number(v) : null })}
           allowClear={t("admin.audit.all_people")}
           placeholder={t("admin.audit.all_people")}
-          className="h-7 w-56"
+          className="w-56"
           options={refs.people.map((p) => ({ value: String(p.id), label: p.name, hint: p.email }))}
         />
         <FilterSelect
@@ -467,8 +468,8 @@ function LoginsTab({ filters, onFilters }: { filters: LoginFilters; onFilters: (
     lcol.accessor("ip", {
       header: () => t("admin.logins.ip"),
       enableSorting: false,
-      meta: { className: "font-mono text-xs break-all", mobileLabel: t("admin.logins.ip"), width: "11rem" },
-      cell: (c) => c.getValue() || "–",
+      meta: { mobileLabel: t("admin.logins.ip"), width: "11rem" },
+      cell: (c) => <span className="font-mono text-xs break-all">{c.getValue() || "–"}</span>,
     }),
     lcol.accessor("userAgent", {
       header: () => t("admin.logins.device"),
@@ -493,7 +494,7 @@ function LoginsTab({ filters, onFilters }: { filters: LoginFilters; onFilters: (
             onBlur={() => set({ q: q.trim() || null })}
             placeholder={t("admin.logins.search")}
             aria-label={t("admin.logins.search")}
-            className="h-7 w-56 text-sm"
+            className="h-9 w-56"
           />
         </form>
         <Segmented
