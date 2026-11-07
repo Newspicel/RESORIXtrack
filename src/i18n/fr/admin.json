@@ -262,6 +262,18 @@
       "minutes_fri": "Ve",
       "minutes_sat": "Sa",
       "minutes_sun": "Di"
+    },
+    "sources": {
+      "web": "Web",
+      "api": "API",
+      "clock": "Pointage",
+      "manual": "Manuel",
+      "offline": "Hors ligne",
+      "desktop": "Bureau",
+      "demo": "Démo",
+      "import": "Import",
+      "cli": "Ligne de commande",
+      "worker": "Automatique"
     }
   },
   "backups": {

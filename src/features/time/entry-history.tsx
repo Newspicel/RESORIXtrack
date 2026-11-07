@@ -21,7 +21,8 @@ import { disputeEntryFn, entryHistoryQuery } from "./api"
 import type { Entry } from "./entry-dialog"
 
 const FIELDS = ["kind", "start_at", "end_at", "note", "is_deleted"] as const
-const HIDDEN_REASONS = new Set(["clock", "clock (offline sync: earlier time)"])
+/** Reasons the app writes itself for clocking; not worth showing as a reason. */
+export const HIDDEN_REASONS = new Set(["clock", "clock (offline sync: earlier time)"])
 
 export function EntryHistoryDialog({
   open,

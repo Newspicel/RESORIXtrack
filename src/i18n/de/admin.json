@@ -262,6 +262,18 @@
       "minutes_fri": "Fr",
       "minutes_sat": "Sa",
       "minutes_sun": "So"
+    },
+    "sources": {
+      "web": "Web",
+      "api": "API",
+      "clock": "Stempeln",
+      "manual": "Manuell",
+      "offline": "Offline",
+      "desktop": "Desktop",
+      "demo": "Demo",
+      "import": "Import",
+      "cli": "Kommandozeile",
+      "worker": "Automatisch"
     }
   },
   "backups": {

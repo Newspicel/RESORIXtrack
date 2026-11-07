@@ -262,6 +262,18 @@
       "minutes_fri": "Fri",
       "minutes_sat": "Sat",
       "minutes_sun": "Sun"
+    },
+    "sources": {
+      "web": "Web",
+      "api": "API",
+      "clock": "Clock",
+      "manual": "Manual",
+      "offline": "Offline",
+      "desktop": "Desktop",
+      "demo": "Demo",
+      "import": "Import",
+      "cli": "Command line",
+      "worker": "Automatic"
     }
   },
   "backups": {
