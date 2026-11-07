@@ -1,3 +1,27 @@
+# Instructions for coding agents
+
+RESORIXtrack is a self-hosted time-tracking application by RESORIX AG: one TanStack Start app (React 19, SSR) with Drizzle on SQLite, Better Auth, Node 26, Docker Compose deployment. Version 1.x (Flask + Astro) lives in the git tag `v1.0.0`; `rt import-v1` migrates its data.
+
+## Where to read
+
+| Topic | Read |
+|---|---|
+| What the product is, features, license | [README.md](README.md) |
+| Running locally, demo accounts, commands, tests, migrations, releasing | [docs/development.md](docs/development.md) |
+| Architecture and design rules | [docs/architecture.md](docs/architecture.md), [docs/design.md](docs/design.md) |
+| Production installation, environment variables, updates | [docs/installation.md](docs/installation.md), [.env.example](.env.example) |
+| Moving a 1.x installation to 2.x | [docs/migration-from-v1.md](docs/migration-from-v1.md) |
+| Security model and operator checklist | [docs/security.md](docs/security.md), [SECURITY.md](SECURITY.md) |
+| Swiss labour law checks and retention | [docs/compliance.md](docs/compliance.md), [docs/privacy.md](docs/privacy.md) |
+| Backups (encrypted) and restore | [docs/backup-restore.md](docs/backup-restore.md) |
+| REST API and API keys | [docs/api.md](docs/api.md) |
+| Administrator guide, user manual | [docs/admin-guide.md](docs/admin-guide.md), [docs/user-manual.md](docs/user-manual.md) |
+| Branding, theme tokens, languages | [docs/customizing.md](docs/customizing.md) |
+| License (AGPL-3.0-or-later, commercial option), third-party licenses | [LICENSING.md](LICENSING.md), [docs/third-party-licenses.md](docs/third-party-licenses.md) |
+| Release notes | [CHANGELOG.md](CHANGELOG.md) |
+
+`PLAN.md` (git-ignored, may be absent) holds the owner's private working notes; it is not documentation.
+
 ## Non-negotiables
 1. Privacy: employees see only their own data, admins see no working times (HR does), leads see their teams only, API keys never exceed their owner and scopes. Out-of-scope ids answer NotFound.
 2. Signed-off months are immutable on every level: services, database triggers, seal chain.
@@ -18,3 +42,16 @@
 - Always use the newest stable versions of every tool and dependency and their current recommended patterns. Check the latest docs before writing.
 - Always format, lint, typecheck and test what you changed at the end of every change.
 - Write text, docs and UI copy as short as possible. Never use an em dash.
+
+## Git
+Only the owner pushes. Do not commit or push unless asked.
+
+## Checks before you finish
+
+```bash
+pnpm format && pnpm lint && pnpm typecheck && pnpm i18n:check
+pnpm exec tsx scripts/licenses.ts --check
+pnpm test            # vitest
+pnpm test:e2e        # Playwright against a seeded production build
+docker build -f docker/Dockerfile .   # the production image (slower)
+```

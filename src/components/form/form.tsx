@@ -460,6 +460,8 @@ export function FormRoot({
   return (
     <form
       id={id}
+      // a submit before hydration must never put field values (passwords) into a URL
+      method="post"
       noValidate
       className={className ?? "flex flex-col gap-5"}
       onSubmit={async (e) => {

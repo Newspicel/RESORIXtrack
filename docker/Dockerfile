@@ -1,7 +1,11 @@
 # syntax=docker/dockerfile:1.7
 FROM node:26-slim AS build
-ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH CI=true
-RUN corepack enable
+ENV CI=true
+# node:26-slim ships no corepack: pnpm is installed at the version pinned in package.json "packageManager".
+# python3, make and g++: pnpm runs better-sqlite3's node-gyp install step (node-gyp comes with pnpm); the
+# toolchain stays in this stage, the runtime image below gets only node_modules and the build output.
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/* \
+ && npm install -g pnpm@10.12.1
 WORKDIR /src
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile

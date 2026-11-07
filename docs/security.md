@@ -28,7 +28,7 @@ RESORIXtrack holds personal data (working hours, absences, sick notes) of a whol
 - **Argon2id** (64 MiB, 3 iterations, 4 lanes; v1 hashes work unchanged). Plaintext is never stored or logged.
 - Policy: 10 to 256 characters, not a common password, not containing the email name.
 - **Have I Been Pwned** check for new passwords: only the first 5 characters of the SHA-1 hash leave the server; fails open; `PWNED_PASSWORDS_CHECK=false` disables it.
-- Throttling by failed attempts: `LOGIN_MAX_FAILURES` (8) per email and IP within `LOGIN_WINDOW_MINUTES` (15), plus ceilings per email (×5) and per IP (×4). Reset emails: 3 per address and 20 per IP per hour. Better Auth rate limits stop floods on top.
+- Throttling by failed attempts: `LOGIN_MAX_FAILURES` (8) per email and IP within `LOGIN_WINDOW_MINUTES` (15), plus ceilings per email (×5) and per IP (×4). Reset emails: 3 per address and 20 per IP per hour. Better Auth rate limits stop floods on top, keyed by the same client address (computed by the server per request from `TRUSTED_PROXIES`; a client cannot choose its bucket).
 - Invitation links: 7 days; reset links: 2 hours. Single use, stored hashed, token in the URL fragment (never in access logs).
 - Changing or resetting a password ends all sessions and revokes all API keys.
 
@@ -96,7 +96,7 @@ Always encrypted (Argon2id + ChaCha20-Poly1305), no unencrypted archive on disk.
 ## Deployment
 
 - App port bound to `127.0.0.1` by default; use the `tls` profile or your own proxy.
-- Forwarded headers trusted only with `TRUSTED_PROXIES >= 1`.
+- Forwarded headers trusted only with `TRUSTED_PROXIES >= 1`: the client address is the entry that many hops from the right of `X-Forwarded-For`, used by the sign-in log, the throttle and the rate limiter alike. With `0` only `X-Real-IP` is read; without it rate limits fall back to one shared bucket.
 - Containers: unprivileged user, read-only root filesystem, all capabilities dropped, `no-new-privileges`, PID and memory limits.
 - The app refuses to start with the placeholder or a weak `SECRET_KEY`, or without `BACKUP_PASSWORD`.
 - Secrets as files (`*_FILE`). SMTP passwords never over an unencrypted connection unless `SMTP_ALLOW_PLAINTEXT_AUTH=true`.

@@ -4,7 +4,9 @@ Architecture: [architecture.md](architecture.md). UI rules: [design.md](design.m
 
 ## Setup
 
-Requirements: Node 26, pnpm 10 (`corepack enable`), optionally Docker (Mailpit, image build).
+Requirements: Node 26, pnpm 10.12.1 (`npm install -g pnpm@10.12.1`; Node 26 no longer ships corepack), python3, make and g++, optionally Docker (Mailpit, image build).
+
+`pnpm install` on Node 26 runs better-sqlite3's `node-gyp rebuild` install step: the package ships prebuilt Node-API binaries, but the step needs node-gyp (bundled with pnpm; otherwise `npm install -g node-gyp`), python3 and make on PATH, g++ when no prebuilt binary matches. The Docker build installs the same toolchain in its build stage only.
 
 ```bash
 pnpm install
@@ -53,17 +55,19 @@ RF Engineering's previous month is signed off.
 | `pnpm db:generate` / `pnpm db:migration` | New migration from the schema / custom SQL migration |
 | `pnpm tsx scripts/licenses.ts --check` / `--write` | License allow-list / regenerate [third-party-licenses.md](third-party-licenses.md) |
 | `docker compose build` | Production image |
+| `scripts/smoke.sh` | Start the image with a throwaway `.env`, check health, sign-in page, `rt setup-code` (`SMOKE_IMAGE` picks the image) |
 
 Run `pnpm format`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm i18n:check` and `pnpm build` before you finish.
 
 ## Tests
 
 - Vitest, files next to the code (`foo.test.ts`); a fresh in-memory database per test (`src/test/db.ts`), builders in `src/test/factories.ts`.
-- Coverage threshold: 80 % lines of `src/server`.
+- No coverage gate: `pnpm test` runs without coverage; `vitest run --coverage` would need `@vitest/coverage-v8`, which is not installed.
 - Every write path tests permissions and sign-off locks.
 - `src/server/isolation.test.ts` crawls every server function and REST endpoint for data leaks; add new functions to its `SPECS`.
 - `src/server/services/__fixtures__/` holds v1 seal fixtures; `src/server/import-v1/import-v1.test.ts` covers the v1 import.
 - End-to-end tests live in `tests/e2e`.
+- CI (`.github/workflows/ci.yml`): lint, typecheck, translations, licenses, Vitest and Playwright on every push and pull request, then the Docker image build and `scripts/smoke.sh`.
 
 ## Migrations
 

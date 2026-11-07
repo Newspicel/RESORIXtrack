@@ -17,6 +17,7 @@ import { genericOAuth, haveIBeenPwned, twoFactor } from "better-auth/plugins"
 import { tanstackStartCookies } from "better-auth/tanstack-start"
 import { and, eq } from "drizzle-orm"
 import { isRecord } from "@/lib/guards"
+import { CLIENT_IP_HEADER, withClientIp } from "./client-ip"
 import { db } from "./db"
 import * as schema from "./db/schema"
 import { env } from "./env"
@@ -157,7 +158,8 @@ const betterAuthInstance = betterAuth({
     cookiePrefix: "rt",
     useSecureCookies: env.cookieSecure,
     ipAddress: {
-      ipAddressHeaders: env.trustedProxies > 0 ? ["x-forwarded-for"] : [],
+      // set by withClientIp below from TRUSTED_PROXIES; a client cannot choose its rate-limit bucket
+      ipAddressHeaders: [CLIENT_IP_HEADER],
       disableIpTracking: false,
     },
   },
@@ -397,10 +399,13 @@ const betterAuthInstance = betterAuth({
   ],
 })
 
-// Wrap the HTTP entry point so callbacks deep inside Better Auth can read the request headers.
+// Wrap the HTTP entry point: the client address for the rate limiter, and the request headers for
+// callbacks deep inside Better Auth.
 const innerHandler = betterAuthInstance.handler
-betterAuthInstance.handler = (request: Request) =>
-  requestContext.run({ headers: request.headers }, () => innerHandler(request))
+betterAuthInstance.handler = (request: Request) => {
+  const req = withClientIp(request)
+  return requestContext.run({ headers: req.headers }, () => innerHandler(req))
+}
 
 export const auth = betterAuthInstance
 export type AuthSession = typeof auth.$Infer.Session

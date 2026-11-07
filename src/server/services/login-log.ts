@@ -1,24 +1,10 @@
 /** Security log of sign-in attempts (successful and failed). Never stores passwords or tokens. */
 import { and, count, desc, eq, gte, ne, notInArray, type SQL } from "drizzle-orm"
+import { clientIp } from "../client-ip"
 import { db } from "../db"
 import { type LoginAttempt, loginAttempts, users } from "../db/schema"
 import { env } from "../env"
 import { fmtInstant, nowInstant } from "../time"
-
-export function clientIp(headers: Headers | undefined | null): string {
-  if (!headers) return ""
-  if (env.trustedProxies > 0) {
-    const xff = headers.get("x-forwarded-for")
-    if (xff) {
-      const parts = xff
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean)
-      return (parts[Math.max(0, parts.length - env.trustedProxies)] ?? "").slice(0, 64)
-    }
-  }
-  return (headers.get("x-real-ip") ?? "").slice(0, 64)
-}
 
 /** Unknown addresses are stored masked: people regularly type their password into the email field. */
 function maskUnknown(email: string): string {
