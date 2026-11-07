@@ -139,7 +139,7 @@
     "vacation_left": "Vacanze rimanenti",
     "exceeds": "Supera le vacanze",
     "overlaps": "Assenti anche",
-    "no_overlap": "Nessun altro assente",
+    "no_overlap": "Nessuno",
     "requested_at": "Richiesta {when}",
     "upcoming": "Assenze pianificate",
     "upcoming_empty": "Nessuna assenza pianificata",

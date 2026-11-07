@@ -139,7 +139,7 @@
     "vacation_left": "Vacation left",
     "exceeds": "Exceeds vacation",
     "overlaps": "Also away",
-    "no_overlap": "Nobody else away",
+    "no_overlap": "Nobody",
     "requested_at": "Requested {when}",
     "upcoming": "Upcoming absences",
     "upcoming_empty": "No upcoming absences",

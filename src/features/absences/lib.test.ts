@@ -50,6 +50,20 @@ describe("formatting", () => {
         today: "2026-11-06",
       }),
     ).toBe("Mon, 28 Dec 2026 (afternoon) – Mon, 4 Jan 2027 (morning)")
+    expect(
+      formatSpan({ startDate: "2027-01-18", endDate: "2027-01-20", startHalf: "full", endHalf: "full" }, i, {
+        today: "2026-11-06",
+      }),
+    ).toBe("Mon, 18 Jan – Wed, 20 Jan 2027")
+    expect(
+      formatSpan(
+        { startDate: "2027-01-18", endDate: "2027-01-20", startHalf: "full", endHalf: "full" },
+        makeI18n("de"),
+        {
+          today: "2026-11-06",
+        },
+      ),
+    ).toBe("Mo., 18. – Mi., 20. Jan. 2027")
   })
   it("shortens labels and skips weekends", () => {
     expect(shortLabel("Military / civil service")).toBe("Military")

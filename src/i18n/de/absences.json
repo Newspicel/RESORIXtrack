@@ -139,7 +139,7 @@
     "vacation_left": "Ferien übrig",
     "exceeds": "Übersteigt Ferien",
     "overlaps": "Auch abwesend",
-    "no_overlap": "Sonst niemand abwesend",
+    "no_overlap": "Niemand",
     "requested_at": "Beantragt {when}",
     "upcoming": "Geplante Abwesenheiten",
     "upcoming_empty": "Keine geplanten Abwesenheiten",

@@ -1,5 +1,5 @@
 /** Client helpers for absences: half-day labels, date ranges, the range picker and list grouping. */
-import { addDaysStr, fmtDay } from "@/lib/format"
+import { addDaysStr, dateFormat, fmtDay, parseDay } from "@/lib/format"
 import type { I18n } from "@/lib/i18n-core"
 import type { AbsenceDto } from "@/server/services/absences"
 
@@ -17,7 +17,7 @@ export interface Span {
 const DAY: Intl.DateTimeFormatOptions = { weekday: "short", day: "numeric", month: "short" }
 const DAY_YEAR: Intl.DateTimeFormatOptions = { ...DAY, year: "numeric" }
 
-/** With `today`, the year shows only outside the current one. "Mon 7 Dec" or "Mon 7 Dec, Morning" or "Mon 7 Dec (afternoon) – Fri 11 Dec (morning)". */
+/** With `today`, the year shows only outside the current one (shared month and year once, at the end). "Mon 7 Dec" or "Mon 7 Dec, Morning" or "Mon 7 Dec (afternoon) – Fri 11 Dec (morning)". */
 export function formatSpan(
   a: Span,
   i: Pick<I18n, "t" | "intl">,
@@ -25,9 +25,21 @@ export function formatSpan(
 ): string {
   const y = opts.today?.slice(0, 4)
   const f = opts.year || (y && (!a.startDate.startsWith(y) || !a.endDate.startsWith(y))) ? DAY_YEAR : DAY
-  const start = fmtDay(a.startDate, i.intl, f)
-  if (a.startDate === a.endDate)
-    return a.startHalf === "full" ? start : `${start}, ${i.t(`absences.half.${a.startHalf}`)}`
+  if (a.startDate === a.endDate) {
+    const day = fmtDay(a.startDate, i.intl, f)
+    return a.startHalf === "full" ? day : `${day}, ${i.t(`absences.half.${a.startHalf}`)}`
+  }
+  if (a.startHalf === "full" && a.endHalf === "full") {
+    // "Mo., 18. – Mi., 20. Jan. 2027": shared month and year show once
+    const range = dateFormat(i.intl, { ...f, timeZone: "UTC" }).formatRange(parseDay(a.startDate), parseDay(a.endDate))
+    return range.replace(/\u2009/gu, " ").replace(/ *– */u, " – ") // ICU uses thin spaces in ranges
+  }
+  // within one year the year shows once, at the end
+  const start = fmtDay(
+    a.startDate,
+    i.intl,
+    f === DAY_YEAR && a.startDate.slice(0, 4) === a.endDate.slice(0, 4) ? DAY : f,
+  )
   const sh = a.startHalf === "pm" ? ` (${i.t("absences.half.pm").toLowerCase()})` : ""
   const eh = a.endHalf === "am" ? ` (${i.t("absences.half.am").toLowerCase()})` : ""
   return `${start}${sh} – ${fmtDay(a.endDate, i.intl, f)}${eh}`

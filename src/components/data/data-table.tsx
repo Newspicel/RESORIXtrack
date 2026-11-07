@@ -269,7 +269,7 @@ function PlainTable<T extends RowData>({
             ? Array.from({ length: 4 }, (_, i) => (
                 <tr key={i} className="border-b last:border-0">
                   {leafHeaders.map((h) => (
-                    <td key={h.id} className="px-4 py-3">
+                    <td key={h.id} className="px-3 py-3 first:pl-4 last:pr-4">
                       <Skeleton className="h-4 w-3/4" />
                     </td>
                   ))}
@@ -389,7 +389,15 @@ function BodyRow<T extends RowData>({
       aria-rowindex={rowIndex}
       data-state={selected ? "selected" : undefined}
       tabIndex={onRowClick ? 0 : undefined}
-      onClick={onRowClick ? () => onRowClick(row.original) : undefined}
+      onClick={
+        onRowClick
+          ? (e) => {
+              // controls inside the row (approve, decline, links) act on their own
+              if (e.target instanceof Element && e.target.closest(INTERACTIVE)) return
+              onRowClick(row.original)
+            }
+          : undefined
+      }
       onKeyDown={
         onRowClick
           ? (e) => {
@@ -583,7 +591,7 @@ function HeaderCell<T extends RowData>({
       scope="col"
       aria-sort={sorted === "asc" ? "ascending" : sorted === "desc" ? "descending" : undefined}
       className={cn(
-        "h-10 px-4 text-left align-middle text-xs font-medium tracking-wide text-muted-foreground uppercase whitespace-nowrap",
+        "h-10 px-3 text-left first:pl-4 last:pr-4 align-middle text-xs font-medium tracking-wide text-muted-foreground uppercase whitespace-nowrap",
         // the hairline under a sticky header has to travel with the cells
         sticky && "shadow-[inset_0_-1px_0_var(--color-border)]",
         meta?.numeric && "text-right",
@@ -623,7 +631,13 @@ function BodyCell<T extends RowData>({ cell }: { cell: Cell<F, T>; selected: boo
   "use no memo" // renders TanStack cells, whose objects are reused across state changes (selection, sorting)
   const meta = cell.column.columnDef.meta
   return (
-    <td className={cn("px-4 py-3 align-middle", meta?.numeric && "text-right tabular", meta?.className)}>
+    <td
+      className={cn(
+        "px-3 py-3 align-middle first:pl-4 last:pr-4",
+        meta?.numeric && "text-right tabular",
+        meta?.className,
+      )}
+    >
       <FlexRender cell={cell} />
     </td>
   )
@@ -654,7 +668,9 @@ function MobileRow<T extends RowData>({
   "use no memo" // renders TanStack cells, whose objects are reused across state changes (selection, sorting)
   const cells = allCells.filter((c) => c.column.id !== "__select" && !c.column.columnDef.meta?.hideOnMobile)
   const primary = cells.find((c) => c.column.columnDef.meta?.primary) ?? cells[0]
-  const rest = cells.filter((c) => c !== primary)
+  // row actions get their own full-width line at the bottom of the card, never squeezed into a half cell
+  const actions = cells.find((c) => c.column.id === "actions" && c !== primary)
+  const rest = cells.filter((c) => c !== primary && c !== actions)
   const select = allCells.find((c) => c.column.id === "__select")
   const inner = (
     <>
@@ -677,6 +693,11 @@ function MobileRow<T extends RowData>({
             )
           })}
         </dl>
+      ) : null}
+      {actions ? (
+        <div className="mt-3 [&>*]:justify-start">
+          <FlexRender cell={actions} />
+        </div>
       ) : null}
     </>
   )
@@ -709,6 +730,8 @@ function MobileRow<T extends RowData>({
     </li>
   )
 }
+
+const INTERACTIVE = "a, button, input, label, textarea, [role=checkbox], [role=menuitem]"
 
 function selectColumn<T extends RowData>(allLabel: string, rowLabel: string): ColumnDef<F, T> {
   return {
