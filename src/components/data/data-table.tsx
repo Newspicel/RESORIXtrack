@@ -596,6 +596,7 @@ function HeaderCell<T extends RowData>({
         sticky && "shadow-[inset_0_-1px_0_var(--color-border)]",
         meta?.numeric && "text-right",
         meta?.className,
+        "font-sans", // a cell style like font-mono never changes the header
       )}
     >
       {canSort ? (

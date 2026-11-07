@@ -103,7 +103,7 @@ export function CompliancePreview({ d }: { d: ComplianceReportData }) {
         <StatCard
           label={t("compliance.severity.violation")}
           value={totals.violation}
-          tone={totals.violation ? "negative" : "default"}
+          tone={totals.violation ? "destructive" : "default"}
         />
         <StatCard label={t("compliance.severity.warning")} value={totals.warning} />
         <StatCard label={t("compliance.severity.info")} value={totals.info} className="col-span-2 lg:col-span-1" />

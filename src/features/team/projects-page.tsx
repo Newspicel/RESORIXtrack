@@ -93,7 +93,9 @@ export function ProjectsPage({
       meta: { mobileLabel: t("common.status") },
       cell: (c) =>
         c.getValue() ? (
-          <StatusBadge tone="positive">{t("common.active")}</StatusBadge>
+          <StatusBadge tone="positive" icon="approved">
+            {t("common.active")}
+          </StatusBadge>
         ) : (
           <StatusBadge>{t("common.inactive")}</StatusBadge>
         ),

@@ -202,7 +202,7 @@ export function TeamOverviewPage({
         <StatCard
           label={t("team.violations")}
           value={violations}
-          tone={violations ? "negative" : "default"}
+          tone={violations ? "destructive" : "default"}
           hint={fmtMonth(ov.month, intl)}
           className="col-span-2 lg:col-span-1"
         />
