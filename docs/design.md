@@ -46,7 +46,8 @@ only when you can name the reason in one sentence.
   dialog (required decision or destructive confirm only) → page. On mobile, dialogs with forms become
   `Drawer`/`Sheet` from the bottom.
 - **Reversible actions run immediately with an Undo toast** (`undoToast`). Confirm only irreversible,
-  high-consequence actions, effortfully (`ConfirmDialog typeToConfirm`).
+  high-consequence actions, effortfully (`ConfirmDialog typeToConfirm`). Toasts stack expanded (max 3),
+  hide after 4 s (Undo 8 s) and their action button is primary.
 - Don't disable without explanation. A submit button stays enabled and explains on click; when something is
   unavailable for a reason the user can fix, say how (e.g. "Select employees to sign off").
 
