@@ -48,7 +48,7 @@ function ProfilePage() {
           </ButtonLink>
         }
       />
-      <div className="grid gap-6 xl:grid-cols-2 xl:items-start">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-2 xl:items-start">
         <div className="flex flex-col gap-6">
           <PersonalSection />
           {sec.hasPassword && !data.oidcOnly ? <PasswordSection /> : null}

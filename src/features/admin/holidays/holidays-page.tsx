@@ -168,7 +168,7 @@ function CalendarPanel({
         const wd = parseDay(c.getValue()).getUTCDay()
         // fixed columns: weekday · date · weekend badge always start at the same x; the badge never grows the row
         return (
-          <span className="grid grid-cols-[2rem_5.5rem_auto] items-center gap-2 tabular">
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-1 tabular md:grid md:grid-cols-[2rem_5.5rem_auto]">
             <span className="text-muted-foreground">{fmtDay(c.getValue(), intl, { weekday: "short" })}</span>
             <span>{fmtDay(c.getValue(), intl, { day: "numeric", month: "short" })}</span>
             {wd === 0 || wd === 6 ? (

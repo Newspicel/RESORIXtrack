@@ -137,7 +137,7 @@ function ProfileForm({ userId }: { userId: number }) {
   return (
     <form.AppForm>
       <FormRoot form={form} className="flex flex-col gap-8">
-        <fieldset disabled={locked} className="grid gap-8 xl:grid-cols-2 xl:items-start">
+        <fieldset disabled={locked} className="grid grid-cols-[minmax(0,1fr)] gap-8 xl:grid-cols-2 xl:items-start">
           <div className="flex flex-col gap-8">
             <PersonFields form={form} refs={refs} rows />
             <RegionFields form={form} refs={refs} rows />
