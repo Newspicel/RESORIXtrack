@@ -133,7 +133,7 @@ export function TeamSheet({
               <div className="sm:col-span-2">
                 <form.AppField name="holidayCalendarId">
                   {(f) => (
-                    <f.SelectField
+                    <f.ComboboxField
                       label={t("admin.teams.calendar")}
                       options={[
                         { value: "0", label: t("admin.teams.calendar_default") },
