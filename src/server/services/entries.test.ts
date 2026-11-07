@@ -114,7 +114,8 @@ describe("manual entries", () => {
       expect.objectContaining({ fields: { endAt: "required" } }),
     )
 
-    deleteEntry(A, e.id)
+    expect(() => deleteEntry(A, e.id)).toThrow(expect.objectContaining({ fields: { reason: "required" } })) // always
+    deleteEntry(A, e.id, "booked twice")
     expect(listEntries(A, anna.id, TODAY, TODAY)).toEqual([])
     expect(listEntries(A, anna.id, TODAY, TODAY, true)[0].deleted).toBe(true)
     expect(() => updateEntry(A, e.id, { note: "x" })).toThrow(expect.objectContaining({ code: "deleted" }))
@@ -127,7 +128,7 @@ describe("manual entries", () => {
     const { anna } = org()
     const A = loadActor(anna.id)
     const e = createEntry(A, { startAt: local(TODAY, "08:00"), endAt: local(TODAY, "12:00") })
-    deleteEntry(A, e.id)
+    deleteEntry(A, e.id, "wrong day")
     createEntry(A, { startAt: local(TODAY, "09:00"), endAt: local(TODAY, "10:00") })
     expect(() => restoreEntry(A, e.id)).toThrow(expect.objectContaining({ code: "overlap" }))
   })
@@ -135,7 +136,7 @@ describe("manual entries", () => {
   it("deleting a running entry closes it", () => {
     const { anna } = org()
     const e = makeEntry(anna.id, "2026-11-05T07:00:00.000000Z", null, { source: "clock" })
-    deleteEntry(loadActor(anna.id), e.id)
+    deleteEntry(loadActor(anna.id), e.id, "started by mistake")
     const row = listEntries(loadActor(anna.id), anna.id, TODAY, TODAY, true)[0]
     expect(row).toMatchObject({ deleted: true, endAt: "2026-11-05T14:00:00.000Z" })
   })
@@ -252,7 +253,7 @@ it("every entry write creates a revision whose last snapshot matches the row", (
   const A = loadActor(anna.id)
   const e = createEntry(A, { startAt: local(TODAY, "07:00"), endAt: local(TODAY, "08:00") })
   updateEntry(loadActor(lead.id), e.id, { note: "n" }, "r")
-  deleteEntry(A, e.id)
+  deleteEntry(A, e.id, "duplicate")
   const rows = rawSqlite().prepare("SELECT id, end_at FROM time_entries").all() as { id: number; end_at: string }[]
   for (const r of rows) {
     const revs = rawSqlite()

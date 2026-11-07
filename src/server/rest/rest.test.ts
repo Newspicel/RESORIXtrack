@@ -297,7 +297,9 @@ describe("entries and days", () => {
     expect((await call(key, "GET", `/entries/${c.json.id}`)).json.id).toBe(c.json.id)
     const u = await call(key, "PATCH", `/entries/${c.json.id}`, { note: "standup" })
     expect(u.json.note).toBe("standup")
-    expect((await call(key, "DELETE", `/entries/${c.json.id}`)).status).toBe(204)
+    const noReason = await call(key, "DELETE", `/entries/${c.json.id}`)
+    expect(noReason.status).toBe(422) // deleting always needs a reason
+    expect((await call(key, "DELETE", `/entries/${c.json.id}`, { reason: "booked twice" })).status).toBe(204)
     const list = await call(key, "GET", "/entries?from=2026-11-05&to=2026-11-05&includeDeleted=true")
     expect(list.json.items[0].deleted).toBe(true)
   })

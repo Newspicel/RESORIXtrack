@@ -421,7 +421,9 @@ export function deleteEntry(actor: Actor, id: number, reason = "", source: Revis
   const { entry, owner } = visibleEntry(actor, id)
   authorize(actor, owner)
   if (entry.isDeleted) return
-  requireReason(actor, owner, reason, entry.startAt)
+  // deleting always needs a reason, own entries of today included: the history must say why time disappeared
+  if (!reason.trim())
+    throw new Validation("Please give a reason for deleting this entry", { fields: { reason: "required" } })
   ensureOpenInstants(owner, entry.startAt, entry.endAt)
   const before = snapshot("time_entry", entry)
   const endAt = entry.endAt ?? instantOfMs(Math.max(nowInstant().epochMilliseconds, ms(entry.startAt) + 1000))

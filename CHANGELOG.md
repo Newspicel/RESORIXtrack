@@ -4,6 +4,7 @@
 
 Complete rewrite. Migrating from 1.x: [docs/migration-from-v1.md](docs/migration-from-v1.md).
 
+- Deleting a time entry always needs a reason, own entries of today included; the deletion is logged and the person is notified when someone else deletes.
 - Stack: TanStack Start (React 19, SSR), Drizzle + SQLite, Better Auth, shadcn/ui on Base UI, Node 26. One service layer for the web app, REST API, worker and CLI (`rt`).
 - Clocking: clock in and out, at a custom time or scheduled for later ("clock out later" closes the entry at the chosen time; cancel any time, "Clock out now" ends it earlier). A break is a clock-out: there is no pause state; legacy break entries are retired by migration 0006. Optional block of clock-ins before the legal minimum break and daily rest (ArG Art. 15, 15a; setting, on by default).
 - New UI: calmer dark and light themes that follow the device (or System / Light / Dark in the top bar), less text, mobile tab bar, command palette, accessible keyboard use.

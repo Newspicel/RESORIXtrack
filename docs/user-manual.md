@@ -41,7 +41,7 @@ The theme follows your device. Pick System, Light or Dark with the sun/moon butt
 Week timeline or month grid with worked, target and difference per day.
 
 - **Add entry** or click an empty part of a day: start, end, note.
-- Click an entry to edit or delete. Past days need a reason; everything is in the change history. Deleted entries can be restored.
+- Click an entry to edit or delete. Edits on past days need a reason, deleting always needs one; everything is in the change history. Deleted entries can be restored.
 - **Edited / manual**: entered or changed by hand. **Changed by someone else**: corrected by your lead or HR; open *History* and *Dispute* if you disagree.
 - A **signed-off month** is read-only. Ask your lead or HR; HR can reopen it.
 - With **simplified recording** you enter a daily total instead of start and end.

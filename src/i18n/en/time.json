@@ -79,6 +79,7 @@
   "deleted_badge": "Deleted",
   "no_history": "No changes recorded.",
   "reason_required": "Reason (required)",
+  "reason_delete_help": "Deleting always needs a reason; it stays in the change history.",
   "night_credit": "Night credit",
   "surcharge_credit": "Sunday/holiday credit"
 }

@@ -79,6 +79,7 @@
   "deleted_badge": "Supprimée",
   "no_history": "Aucune modification enregistrée.",
   "reason_required": "Motif (obligatoire)",
+  "reason_delete_help": "Une suppression exige toujours un motif; il reste dans l'historique des modifications.",
   "night_credit": "Crédit de nuit",
   "surcharge_credit": "Crédit dimanche/férié"
 }

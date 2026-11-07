@@ -79,6 +79,7 @@
   "deleted_badge": "Eliminata",
   "no_history": "Nessuna modifica registrata.",
   "reason_required": "Motivo (obbligatorio)",
+  "reason_delete_help": "Eliminare richiede sempre una motivazione; resta nella cronologia delle modifiche.",
   "night_credit": "Accredito notturno",
   "surcharge_credit": "Accredito domenica/festivi"
 }

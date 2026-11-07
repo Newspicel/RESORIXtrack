@@ -130,9 +130,25 @@ function VerifyStep({ uri, onDone }: { uri: string; onDone: () => void }) {
           <Suspense fallback={<Skeleton className="size-52 rounded-lg" />}>
             <QrCode value={uri} label={t("profile.mfa.qr")} />
           </Suspense>
-          <div className="flex min-w-0 flex-col gap-1">
-            <p className="text-xs text-muted-foreground">{t("profile.mfa.manual_key")}</p>
-            <code className="font-mono text-sm break-all select-all">{secret.match(/.{1,4}/g)?.join(" ")}</code>
+          <div className="flex min-w-0 flex-col gap-2">
+            <p className="text-sm font-medium">{t("profile.mfa.manual_key")}</p>
+            <p className="text-xs text-muted-foreground">{t("profile.mfa.manual_key_help")}</p>
+            <code className="rounded-md border bg-muted/40 px-2 py-1.5 font-mono text-sm break-all select-all">
+              {secret.match(/.{1,4}/g)?.join(" ")}
+            </code>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="self-start"
+              onClick={async () => {
+                await navigator.clipboard.writeText(secret)
+                toast.success(t("common.copied"))
+              }}
+            >
+              <Copy data-icon="inline-start" />
+              {t("profile.mfa.copy_key")}
+            </Button>
           </div>
         </div>
         <form.AppField

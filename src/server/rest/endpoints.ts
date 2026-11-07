@@ -367,9 +367,11 @@ const deleteEntryEp = endpoint({
   path: "/entries/{id}",
   tag: "Time",
   summary: "Delete an own time entry",
-  description: "Soft delete: the entry stays in the change history.",
+  description: "Soft delete: the entry stays in the change history. A reason is always required.",
   scope: "time:write",
-  body: z.object({ reason }),
+  body: z.object({
+    reason: z.string().trim().min(1).max(500).meta({ description: "Why the entry is deleted (always required)." }),
+  }),
   response: null,
   handler: ({ actor, id, body, caller }) =>
     withOutbox(() =>

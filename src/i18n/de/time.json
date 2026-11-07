@@ -79,6 +79,7 @@
   "deleted_badge": "Gelöscht",
   "no_history": "Keine Änderungen erfasst.",
   "reason_required": "Begründung (erforderlich)",
+  "reason_delete_help": "Löschen braucht immer eine Begründung; sie bleibt in der Änderungshistorie.",
   "night_credit": "Nachtgutschrift",
   "surcharge_credit": "Gutschrift Sonn-/Feiertag"
 }

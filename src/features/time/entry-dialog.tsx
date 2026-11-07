@@ -4,9 +4,11 @@
  * entries keep their seconds. A reason is asked for when the change needs one (someone else's entry, or
  * past days when the company requires it). Delete runs at once with Undo.
  */
+
 import { useStore } from "@tanstack/react-form"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { History, Lock, RotateCcw, Trash2, UserPen } from "lucide-react"
+import { useState } from "react"
 import { toast } from "sonner"
 import { ResponsiveDialog } from "@/components/app/responsive-dialog"
 import { Segmented } from "@/components/app/segmented"
@@ -184,6 +186,8 @@ export function EntryDialog({
   const lock = ctx.lockedMonths[initial.date.slice(0, 7)]
   const readOnly = Boolean(lock) || !ctx.canEdit || Boolean(entry?.deleted)
   const needsReason = (v: Values) => reasonNeeded(v, initial, ctx)
+  // deleting always needs a reason: the field appears when Delete is pressed without one
+  const [deleteRequested, setDeleteRequested] = useState(false)
 
   const form = useAppForm({
     defaultValues: initial,
@@ -240,7 +244,13 @@ export function EntryDialog({
   })
   const deleting = deletion.isPending
   const remove = () => {
-    if (!entry || !reasonGiven()) return
+    if (!entry) return
+    if (!form.state.values.reason.trim()) {
+      setDeleteRequested(true)
+      form.setFieldMeta("reason", (m) => ({ ...m, isBlurred: true }))
+      setTimeout(() => focusField(document.getElementById("entry-form"), "reason"), 0)
+      return
+    }
     deletion.mutate({ id: entry.id, reason: form.state.values.reason })
   }
 
@@ -253,7 +263,13 @@ export function EntryDialog({
           label={t("time.reason_required")}
           maxLength={500}
           placeholder={t("time.reason_placeholder")}
-          description={ctx.self ? undefined : t("time.reason_other_help", { name: ctx.owner.name })}
+          description={
+            deleteRequested
+              ? t("time.reason_delete_help")
+              : ctx.self
+                ? undefined
+                : t("time.reason_other_help", { name: ctx.owner.name })
+          }
         />
       )}
     </form.AppField>
@@ -419,7 +435,7 @@ export function EntryDialog({
             )}
           </form.AppField>
 
-          {!readOnly && needsReason(values) ? reasonField : null}
+          {!readOnly && (needsReason(values) || deleteRequested) ? reasonField : null}
         </fieldset>
         {/* a deleted entry is read-only, but restoring it may need a reason too */}
         {restorable && needsReason(values) ? reasonField : null}
