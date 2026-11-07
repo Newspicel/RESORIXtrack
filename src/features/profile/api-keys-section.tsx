@@ -117,6 +117,12 @@ export function ApiKeysSection() {
   const [open, setOpen] = useState(false)
   const [created, setCreated] = useState<string | null>(null)
   const refresh = () => qc.invalidateQueries({ queryKey: ["profile", "api-keys"] })
+  // one close path for the X, Escape and the Close button: the list is refreshed either way
+  const close = () => {
+    setOpen(false)
+    setCreated(null)
+    void refresh()
+  }
   const columns = [
     col.accessor("name", {
       header: () => t("common.name"),
@@ -199,16 +205,7 @@ export function ApiKeysSection() {
         caption={t("profile.api_keys")}
         empty={t("profile.no_keys")}
       />
-      <Dialog
-        open={open}
-        onOpenChange={(o) => {
-          setOpen(o)
-          if (!o) {
-            setCreated(null)
-            void refresh()
-          }
-        }}
-      >
+      <Dialog open={open} onOpenChange={(o) => (o ? setOpen(true) : close())}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{created ? t("profile.key_created") : t("profile.new_key")}</DialogTitle>
@@ -232,11 +229,18 @@ export function ApiKeysSection() {
                 </Button>
               </div>
               <DialogFooter>
-                <Button onClick={() => setOpen(false)}>{t("common.close")}</Button>
+                <Button onClick={close}>{t("common.close")}</Button>
               </DialogFooter>
             </>
           ) : (
-            <CreateKeyForm scopes={data.scopes} needsPassword={sec.hasPassword} onCreated={setCreated} />
+            <CreateKeyForm
+              scopes={data.scopes}
+              needsPassword={sec.hasPassword}
+              onCreated={(key) => {
+                setCreated(key)
+                void refresh() // the new key is listed behind the dialog right away
+              }}
+            />
           )}
         </DialogContent>
       </Dialog>

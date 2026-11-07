@@ -75,3 +75,19 @@ for (const device of ["light", "dark"] as const) {
 function scheme(page: Page) {
   return page.evaluate(() => getComputedStyle(document.documentElement).colorScheme)
 }
+
+test("api keys: a created key is listed without a reload", async ({ as }, info) => {
+  const page = await as(pick(info, "elena", "luca"))
+  await goto(page, "/profile")
+  await page.getByRole("button", { name: "New key" }).click()
+  const dialog = page.getByRole("dialog", { name: "New key" })
+  const name = `E2E key ${Date.now()}`
+  await dialog.getByLabel("Name").fill(name)
+  await dialog.getByLabel("Your password").fill("demo")
+  await dialog.getByRole("button", { name: "Create key" }).click()
+  const created = page.getByRole("dialog", { name: "Key created" })
+  await expect(created).toBeVisible()
+  await created.getByRole("button", { name: "Close" }).last().click() // the footer button, not the X
+  await expect(created).toBeHidden()
+  await expect(page.getByText(name).filter({ visible: true }).first()).toBeVisible() // listed without a reload
+})
