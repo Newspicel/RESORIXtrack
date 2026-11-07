@@ -9,7 +9,9 @@ v2 never upgrades a v1 database in place. Pointed at one (the same data director
 | Data | In v2 |
 |---|---|
 | People, teams, leads, deputies, schedules, entitlements, holidays, absence types, projects, settings | Imported |
-| Time entries, absences, work log, adjustments, sign-offs, change log, sign-in log, notifications | Imported |
+| Time entries, absences, adjustments, sign-offs, change log, sign-in log, notifications | Imported |
+| Work log | Moved onto the time entries as their project and note (a customer reference joins the note), for months that are not signed off (an entry spanning several items is split, the attendance stays the same). Signed-off months keep their work log rows, because their seals cover them; reports still count them |
+| Setting "work log" | Becomes "projects on time entries"; Required now means every work entry has a project | 
 | Passwords (Argon2id) | Kept; people sign in with their v1 password |
 | Documents, logos | Copied and checked against their SHA-256 |
 | Sign-off seals | Verified with the v1 key and kept; v2 sign-offs extend each person's chain |

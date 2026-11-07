@@ -12,7 +12,7 @@ import { iso } from "../time"
 import type { Actor } from "./permissions"
 
 export const SNAPSHOT_KEYS = {
-  time_entry: ["kind", "start_at", "end_at", "scheduled_end_at", "tz", "note", "source", "is_deleted"],
+  time_entry: ["kind", "start_at", "end_at", "scheduled_end_at", "tz", "note", "project_id", "source", "is_deleted"],
   absence: [
     "type_id",
     "start_date",

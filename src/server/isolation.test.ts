@@ -491,7 +491,6 @@ type RecordKind =
   | "absence"
   | "attachment"
   | "adjustment"
-  | "worklog"
   | "signoff"
   | "schedule"
   | "session"
@@ -862,14 +861,9 @@ const SPECS: Record<string, Spec> = {
     data: () => ({ actions: [{ id: "probe-1", action: "start", at: "2026-11-05T07:00:00Z" }] }),
   },
   "features/time/api#fetchCorrections": { id: "entry" },
-  "features/worklog/api#fetchWorklog": {},
-  "features/worklog/api#addWorklogFn": {},
-  "features/worklog/api#updateWorklogFn": { id: "worklog" },
-  "features/worklog/api#deleteWorklogFn": { id: "worklog" },
-  "features/worklog/api#fetchCustomerRefs": {},
-  "features/worklog/api#fetchProjects": {},
-  "features/worklog/api#createProjectFn": {},
-  "features/worklog/api#updateProjectFn": { id: "project" },
+  "features/projects/api#fetchProjects": {},
+  "features/projects/api#createProjectFn": {},
+  "features/projects/api#updateProjectFn": { id: "project" },
   "features/apidocs/api#fetchApiDocs": {},
   "server/fns/session#getBootstrap": {},
 }

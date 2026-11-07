@@ -10,7 +10,7 @@ RESORIXtrack holds personal data (working hours, absences, sick notes) of a whol
 
 | | Sees time data of | Can |
 |---|---|---|
-| **Employee** | self | clock, edit own entries (logged), request absences, work log |
+| **Employee** | self | clock, edit own entries and their projects (logged), request absences |
 | **Team lead / deputy** (per team, optionally for a period) | members of their teams | correct entries, approve, record absences, sign off, team projects, name deputies |
 | **HR** (capability) | everyone | company reports, sign off anyone, reopen months, data export, integrity check |
 | **Administrator** (role) | nobody (own data only) | people, teams, roles, settings, holidays, branding, backups, logs, anonymisation |
@@ -69,7 +69,7 @@ RESORIXtrack holds personal data (working hours, absences, sick notes) of a whol
 A signed-off month is read-only on four levels:
 
 1. UI and services refuse changes.
-2. **SQLite triggers** refuse inserts, updates and deletes of entries, absences, adjustments, work log, schedules, employment dates and holidays in signed periods, and any change to sign-offs.
+2. **SQLite triggers** refuse inserts, updates and deletes of entries (projects included), absences, adjustments, legacy work log rows, schedules, employment dates and holidays in signed periods, and any change to sign-offs.
 3. **Seal**: each sign-off stores a SHA-256 fingerprint of the period's data and an HMAC-SHA256 seal keyed with `sha256("resorixtrack-signoff:" + SIGNOFF_KEY)`.
 4. **Chain**: each seal covers the person's previous seal, so deleting or reordering sign-offs is detected.
 
@@ -77,6 +77,7 @@ A signed-off month is read-only on four levels:
 |---|---|
 | 1 (imported from v1) | Python `json.dumps(sort_keys=True, separators=(",", ":"))`, byte-exact port |
 | 2 (v2) | RFC 8785 JSON |
+| 3 (v2, current) | RFC 8785 JSON; each entry also carries its project |
 
 Checks: Team → Month sign-off → Integrity check, `rt verify-signoffs`, and the weekly worker job. Keep `SIGNOFF_KEY` away from backups: whoever has both the database and the key could forge seals.
 

@@ -78,13 +78,10 @@
   "mfa_enabled": "Die Zwei-Faktor-Authentifizierung ist bereits aktiv.",
   "mfa_disabled": "Die Zwei-Faktor-Authentifizierung ist nicht aktiv.",
   "tokens_disabled": "Persönliche API-Tokens sind von der Administration deaktiviert.",
-  "worklog_incomplete": "Die Tätigkeiten decken den geforderten Anteil der Arbeitszeit nicht ab.",
-  "worklog_off": "Die Tätigkeitserfassung ist für diese Firma ausgeschaltet.",
   "project_taken": "Ein Projekt mit diesem Namen existiert bereits.",
   "lead_exists": "Diese Person hat diese Rolle für dieses Team in diesem Zeitraum bereits.",
   "type_not_requestable": "Diese Art erfasst deine Teamleitung oder HR.",
   "already_running": "Die Zeiterfassung läuft bereits.",
-  "worklog_overlap": "Überschneidet sich mit einem anderen Eintrag dieses Tages.",
   "invalid_password": "Das Passwort ist falsch.",
   "password_too_short": "Verwende mindestens 10 Zeichen.",
   "password_too_long": "Verwende höchstens 256 Zeichen.",
@@ -96,5 +93,7 @@
   "mfa_required": "Für dein Konto ist die Zwei-Faktor-Anmeldung vorgeschrieben.",
   "invalid_admin_password": "Dein Passwort ist nicht korrekt.",
   "backup_password_missing": "Setze BACKUP_PASSWORD (mind. 12 Zeichen) auf dem Server.",
-  "type_in_use": "Diese Art wird verwendet. Deaktiviere sie stattdessen."
+  "type_in_use": "Diese Art wird verwendet. Deaktiviere sie stattdessen.",
+  "projects_missing": "Ein Teil der Arbeit hat kein Projekt.",
+  "projects_off": "Projekte sind für diese Firma ausgeschaltet."
 }

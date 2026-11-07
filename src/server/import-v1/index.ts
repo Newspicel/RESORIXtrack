@@ -10,12 +10,13 @@ import path from "node:path"
 import Database from "better-sqlite3"
 import { setDatabase } from "../db"
 import { retireLegacyBreaks } from "../db/legacy-breaks"
+import { mergeLegacyWorklogs } from "../db/legacy-worklogs"
 import { env } from "../env"
 import { checkUserChain, sealKey } from "../services/seals"
 import { DEFAULTS, RETIRED_SETTINGS } from "../services/settings"
 import { utcnow } from "../time"
 import { v1Instant } from "./convert"
-import { type ImportContext, SKIPPED, TABLES, type V1Row } from "./tables"
+import { type ImportContext, SKIPPED, settingKey, TABLES, type V1Row } from "./tables"
 
 /** Alembic revisions of released v1 versions this importer understands. */
 export const V1_REVISIONS = ["0001", "0002", "0003"] as const
@@ -48,6 +49,8 @@ export interface ImportReport {
   credentials: number
   /** legacy break entries retired during the import (a break is a clock-out) */
   breaksRetired: number
+  /** Work log items of open days moved onto the time entries. */
+  worklogsMerged: number
   settingsSkipped: string[]
   seals: { people: number; signoffs: number; problems: SealProblem[]; error?: string }
   attachments: { files: number; purged: number; missing: string[]; mismatched: string[]; copied: number }
@@ -294,6 +297,7 @@ export function importV1(v1: Database.Database, target: Database.Database, opts:
     skipped: [],
     credentials: 0,
     breaksRetired: 0,
+    worklogsMerged: 0,
     settingsSkipped: [],
     seals: { people: 0, signoffs: 0, problems: [] },
     attachments: { files: 0, purged: 0, missing: [], mismatched: [], copied: 0 },
@@ -308,7 +312,7 @@ export function importV1(v1: Database.Database, target: Database.Database, opts:
     .prepare<[], { key: string }>("SELECT key FROM settings ORDER BY key")
     .all()
     .map((r) => r.key)
-    .filter((k) => !(k in DEFAULTS) && !RETIRED_SETTINGS.includes(k))
+    .filter((k) => !(settingKey(k) in DEFAULTS) && !RETIRED_SETTINGS.includes(k))
   try {
     run(v1, target, opts, report)
   } catch (err) {
@@ -350,6 +354,8 @@ function run(v1: Database.Database, target: Database.Database, opts: ImportOptio
     keepV1Surcharge(target)
     // v1 before its revision 0003 still has break entries; a break is a clock-out now
     report.breaksRetired = retireLegacyBreaks(target)
+    // projects live on the time entries now: open days' work log items move there
+    report.worklogsMerged = mergeLegacyWorklogs(target)
 
     verifySeals(v1, report, opts.signoffKey)
     if (report.seals.error && !opts.force) throw new ImportError(`seal verification failed: ${report.seals.error}`)
@@ -424,6 +430,8 @@ export function formatReport(r: ImportReport): string {
   if (s.error) out.push(`Seals: NOT VERIFIED (${s.error})`)
   else out.push(`Seals: ${s.signoffs - s.problems.length}/${s.signoffs} sign-offs of ${s.people} people verified`)
   if (r.breaksRetired) out.push(`Breaks: ${r.breaksRetired} legacy break entries retired (a break is a clock-out)`)
+  if (r.worklogsMerged)
+    out.push(`Work log: ${r.worklogsMerged} items of open months moved onto the time entries (projects)`)
   for (const p of s.problems) out.push(`  - ${p.name} ${p.month} (#${p.signoffId}): ${p.status}`)
   out.push("")
   out.push(...list("Send an invitation (no password or open v1 invite)", r.people.invite.map(who)))

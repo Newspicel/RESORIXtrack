@@ -3,7 +3,8 @@
  * phones. One primary action per state; "custom time" is secondary. A break is simply a clock-out. With a
  * scheduled clock-out ("clock out later") the primary action reads "Clock out now" and the bars show
  * "until 17:30". Keyboard: S clocks in/out (only when no input has focus). Offline clicks queue and show as
- * pending until they are synced.
+ * pending until they are synced. With projects on, the state text names the running entry's project and
+ * `ClockProject` picks it (switches while working, sets the next clock-in's project while idle).
  */
 import { CloudOff, Play, Square, Timer } from "lucide-react"
 import { type ReactElement, useEffect, useEffectEvent } from "react"
@@ -11,12 +12,14 @@ import { Button } from "@/components/ui/button"
 import { Kbd } from "@/components/ui/kbd"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { ProjectPicker, projectShort, useProjectMode } from "@/features/projects/project-picker"
 import { fmtMinutes } from "@/lib/format"
 import { useT } from "@/lib/i18n"
 import { useMe } from "@/lib/session"
 import { cn } from "@/lib/utils"
 import type { ClockStateName } from "@/server/services/clock"
 import { CustomTimeButton } from "./custom-time"
+import { useNextProject } from "./next-project"
 import { registerServiceWorker } from "./register-sw"
 import { type LiveClock, liveWorkedMin, primaryAction, scheduledTimeText, useClock } from "./use-clock"
 import { useNow } from "./use-now"
@@ -44,12 +47,45 @@ function LiveFigure({ c, className }: { c: LiveClock; className?: string }) {
   )
 }
 
-/** "Working", "Not clocked in" or "until 17:30" while a clock-out is scheduled. */
+/** "Working", "Not clocked in" or "until 17:30" while a clock-out is scheduled; plus the running project. */
 function StateText({ c }: { c: LiveClock }) {
   const t = useT()
   const me = useMe()
-  if (c.scheduledEnd) return t("clock.scheduled_short", { time: scheduledTimeText(c.scheduledEnd, me) })
-  return c.state === "idle" ? t("clock.state.idle") : t("clock.state.working")
+  const project = c.state === "working" && c.entry?.project ? ` · ${projectShort(c.entry.project)}` : ""
+  if (c.scheduledEnd) return `${t("clock.scheduled_short", { time: scheduledTimeText(c.scheduledEnd, me) })}${project}`
+  return c.state === "idle" ? t("clock.state.idle") : `${t("clock.state.working")}${project}`
+}
+
+/**
+ * The clock's project: while working, choosing one switches the running entry (no break); while idle it is
+ * the project of the next clock-in. Nothing when projects are off.
+ */
+export function ClockProject({ clock, id, className }: { clock: Clock; id?: string; className?: string }) {
+  const t = useT()
+  const me = useMe()
+  const mode = useProjectMode()
+  const [next, setNext] = useNextProject(me.id)
+  const c = clock.data
+  if (mode === "off" || !c) return null
+  const working = c.state === "working"
+  // the entry is null right after an optimistic switch: show the choice until the server answers
+  const value = working && c.entry ? c.entry.projectId : next
+  // required: flag a running entry without one, and an idle clock with nothing chosen for the next clock-in
+  const missing = mode === "required" && (working ? c.entry != null && c.entry.projectId == null : next == null)
+  return (
+    <ProjectPicker
+      id={id}
+      className={className}
+      aria-label={t("clock.project")}
+      value={value}
+      current={working ? c.entry?.project : null}
+      invalid={missing}
+      onChange={(projectId) => {
+        setNext(projectId)
+        if (working) void clock.act("switch", { projectId })
+      }}
+    />
+  )
 }
 
 /** S: clock in/out. Ignored while typing or while an overlay is open. */

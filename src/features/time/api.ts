@@ -25,14 +25,15 @@ import {
 import { lockedMonths } from "@/server/services/locks"
 import { withOutbox } from "@/server/services/outbox"
 import { type Actor, canManageUser, requireView } from "@/server/services/permissions"
+import { firstDayMissingProject, projectMode } from "@/server/services/project-time"
 import { getAllSettings } from "@/server/services/settings"
-import { firstMissingDay, logsBetween, serializeLogs, worklogConfig } from "@/server/services/worklog"
 import { addDays, iso, localToday, monthBounds, rangeBoundsUtc, weekStart } from "@/server/time"
 
 const id = z.number().int().positive()
 const day = z.iso.date()
 const instant = z.string().min(10).max(40)
 const reason = z.string().max(500).default("")
+const projectFields = { projectId: id.nullish() }
 
 /** A period: an explicit range (max 400 days), the ISO week containing `week`, or a month `YYYY-MM`. */
 const periodInput = z
@@ -66,7 +67,7 @@ function resolveRange(p: z.output<typeof periodInput>): [string, string] {
 
 /**
  * Everything a week or month view needs in one call: per-day figures, summary, entries (incl. deleted ones on
- * request), work log items, compliance findings, signed-off months and what the viewer may do.
+ * request) with their projects, compliance findings, signed-off months and what the viewer may do.
  */
 function periodView(actor: Actor, p: z.output<typeof periodInput>) {
   const user = p.userId == null || p.userId === actor.id ? actor.user : requireView(actor, p.userId)
@@ -86,7 +87,7 @@ function periodView(actor: Actor, p: z.output<typeof periodInput>) {
     days,
     summary: summarize(days),
     entries: serializeEntries(rows, user.id),
-    worklog: { config: worklogConfig(), items: serializeLogs(logsBetween(user.id, from, to)) },
+    projectMode: projectMode(),
     findings,
     lockedMonths: lockedMonths(user, from, to),
     canEdit: own || canManageUser(actor, user),
@@ -103,7 +104,7 @@ export const fetchPeriod = createServerFn({ method: "GET" })
 export const periodQuery = (p: PeriodInput) =>
   queryOptions({ queryKey: ["time", "period", p], queryFn: () => fetchPeriod({ data: p }) })
 
-/** Dashboard tiles: today, this week, balance, vacation, clock, first day missing its work log. */
+/** Dashboard tiles: today, this week, balance, vacation, clock, first recent day with work without a project. */
 export const fetchTimeOverview = createServerFn({ method: "GET" })
   .middleware([authed])
   .handler(({ context: { actor } }) => {
@@ -117,7 +118,7 @@ export const fetchTimeOverview = createServerFn({ method: "GET" })
       balance: timeBalance(user),
       vacation: vacationAccount(user, Number(today.slice(0, 4))),
       clock: clockState(user),
-      worklogMissingDay: firstMissingDay(user),
+      projectMissingDay: firstDayMissingProject(user),
     }
   })
 
@@ -134,6 +135,7 @@ export const createEntryFn = createServerFn({ method: "POST" })
       startAt: instant,
       endAt: instant,
       note: z.string().max(500).default(""),
+      ...projectFields,
       reason,
     }),
   )
@@ -147,6 +149,7 @@ export const updateEntryFn = createServerFn({ method: "POST" })
       startAt: instant.optional(),
       endAt: instant.nullish(),
       note: z.string().max(500).optional(),
+      ...projectFields,
       reason,
     }),
   )
@@ -209,6 +212,7 @@ export const clockActionFn = createServerFn({ method: "POST" })
       at: instant.nullish(),
       custom: z.boolean().default(false),
       note: z.string().max(500).default(""),
+      ...projectFields,
     }),
   )
   .handler(({ data, context: { actor } }) => tx(() => clockAction(actor, data.action, data)))
@@ -225,6 +229,7 @@ export const syncOfflineFn = createServerFn({ method: "POST" })
             action: z.enum(OFFLINE_ACTIONS),
             at: instant,
             note: z.string().max(500).optional(),
+            ...projectFields,
           }),
         )
         .max(200),

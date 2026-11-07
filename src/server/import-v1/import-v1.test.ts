@@ -127,6 +127,20 @@ function buildV1(revision: "0001" | "0002", opts: { signoffKey?: string } = {}):
       TS,
     ],
     [102, 12, "work", "2026-11-05 07:00:00.000000", null, "Europe/Zurich", "", "clock", 0, 12, TS, TS],
+    [
+      103,
+      12,
+      "work",
+      "2026-10-06 06:00:00.000000",
+      "2026-10-06 10:00:00.000000",
+      "Europe/Zurich",
+      "",
+      "clock",
+      0,
+      12,
+      TS,
+      TS,
+    ],
   ])
   insert(d, "absences", [
     [7, 12, 2, "2026-09-10", "2026-09-10", "full", "full", "Flu", "approved", 12, 11, TS, "", null, null, "", TS, TS],
@@ -140,6 +154,8 @@ function buildV1(revision: "0001" | "0002", opts: { signoffKey?: string } = {}):
   insert(d, "balance_adjustments", [[1, 12, "time", 90.0, "2026-09-15", "correction", "Travel", 0, 11, TS]])
   insert(d, "work_logs", [
     [1, 12, "2026-09-01", 3, 240, "08:30:00.000000", "12:30:00.000000", "C-1", "Review", 12, 0, TS, TS],
+    // an open month: moves onto entry 103
+    [2, 12, "2026-10-06", 3, 240, null, null, "", "Specs", 12, 0, TS, TS],
   ])
   insert(d, "notifications", [[1, 12, "month_signed_off", '{"month": "2026-09"}', null, TS]])
   insert(d, "revisions", [
@@ -165,6 +181,7 @@ function buildV1(revision: "0001" | "0002", opts: { signoffKey?: string } = {}):
     ["legacy_flag", "true"],
     ["session_remember_days", "14"], // retired: SESSION_REMEMBER_DAYS
     ["break_rules_enabled", "false"], // retired: breaks are always checked when the ArG applies
+    ["worklog_mode", '"required"'], // renamed: project_mode
   ])
   insert(d, "login_attempts", [[1, "jurg@example.nomail", 12, "127.0.0.1", "UA", 1, "ok", TS]])
   insert(d, "user_sessions", [[1, 12, "h1", "c1", 1, "UA", "127.0.0.1", TS, TS, "2099-01-01 00:00:00", null]])
@@ -237,7 +254,7 @@ describe("import-v1", () => {
   it("copies every table with ids kept and formats converted", () => {
     const report = run()
     for (const t of report.tables) {
-      if (t.table === "settings") expect([t.v1, t.v2]).toEqual([6, 3])
+      if (t.table === "settings") expect([t.v1, t.v2]).toEqual([7, 4])
       else expect(t.v2, t.table).toBe(t.v1)
     }
     expect(report.tables.length).toBe(19)
@@ -253,12 +270,28 @@ describe("import-v1", () => {
     expect(entry.createdAt).toBe("2026-01-05T08:00:00.123456Z")
     expect(db.select().from(s.timeEntries).where(eq(s.timeEntries.id, 102)).get()!.endAt).toBeNull()
     expect(db.select().from(s.teams).get()!.createdAt).toBe("2026-01-05T08:00:00.000000Z")
+    // the signed-off September keeps its work log row (its seal covers it); open October moves onto the entry
+    expect(
+      db
+        .select()
+        .from(s.workLogs)
+        .all()
+        .map((w) => [w.id, w.isDeleted]),
+    ).toEqual([
+      [1, false],
+      [2, true],
+    ])
     expect(db.select().from(s.workLogs).get()).toMatchObject({
       id: 1,
       projectId: 3,
       startTime: "08:30",
       endTime: "12:30",
       minutes: 240,
+    })
+    expect(report.worklogsMerged).toBe(1)
+    expect(db.select().from(s.timeEntries).where(eq(s.timeEntries.id, 103)).get()).toMatchObject({
+      projectId: 3,
+      note: "Specs",
     })
     expect(db.select().from(s.absences).get()).toMatchObject({
       id: 7,
@@ -296,6 +329,7 @@ describe("import-v1", () => {
       ["company_name", "ACME AG"],
       ["holiday_mode", "prorata"],
       ["default_vacation_days", 25],
+      ["project_mode", "required"],
       ["holiday_work_surcharge_percent", 0], // v1's default, not v2's 50 %
     ])
     expect(report.settingsSkipped).toEqual(["legacy_flag"])
@@ -440,7 +474,7 @@ describe("import-v1", () => {
 
   it("rolls back on dangling references in the v1 data", () => {
     v1.pragma("foreign_keys = OFF")
-    insert(v1, "work_logs", [[2, 99, "2026-10-01", null, 60, null, null, "", "", null, 0, TS, TS]])
+    insert(v1, "work_logs", [[3, 99, "2026-10-01", null, 60, null, null, "", "", null, 0, TS, TS]])
     expect(() => run()).toThrow(/dangling references.*work_logs/)
     expect(total("users") + total("work_logs") + total("account")).toBe(0)
   })

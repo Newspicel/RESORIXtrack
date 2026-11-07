@@ -11,6 +11,7 @@ import type { z } from "zod"
 import { isRecord, toJsonObject } from "@/lib/guards"
 import type { JsonObject } from "@/lib/json"
 import { db, MIGRATIONS_DIR, rawSqlite } from "../db"
+import { mergeLegacyWorklogs } from "../db/legacy-worklogs"
 import {
   absences,
   type MonthSignoff,
@@ -28,8 +29,17 @@ import { computeDays, type Summary, summarize, timeBalance } from "./accounts"
 import { notify } from "./notifications"
 import { deferMail } from "./outbox"
 import { type Actor, canViewUser, getUserOr404, isManager, leadsUser, requireView, visibleUserIds } from "./permissions"
-import { checkUserChain, computeDigest, computeSeal, jcs, lastSeal, periodData, type SealCheck } from "./seals"
-import { daysWithGaps } from "./worklog"
+import { daysMissingProjects } from "./project-time"
+import {
+  checkUserChain,
+  computeDigest,
+  computeSeal,
+  jcs,
+  lastSeal,
+  periodData,
+  SEAL_VERSION,
+  type SealCheck,
+} from "./seals"
 
 export { listSignoffsInput, monthString, overviewInput, signInput } from "./signoffs.schemas"
 
@@ -41,14 +51,14 @@ export type Blocker =
   | "pending_absence"
   | "already_signed"
   | "not_employed"
-  | "worklog_incomplete"
+  | "projects_missing"
 export type Integrity = "intact" | "figures_changed" | "data_changed" | "seal_invalid" | "chain_broken"
 
 const BLOCKER_MESSAGES: Record<Blocker, string> = {
   month_not_complete: "The month is not over yet",
   running_entry: "There is a running time entry",
   pending_absence: "There are absence requests waiting for a decision",
-  worklog_incomplete: "The work log does not cover the required share of the worked time",
+  projects_missing: "Some work has no project",
   already_signed: "This month is already signed off",
   not_employed: "The person was not employed in this month",
 }
@@ -123,7 +133,7 @@ export function blockers(user: User, month: string): Blocker[] {
   if (activeSignoff(user.id, month)) out.push("already_signed")
   if ((user.employmentStart && end < user.employmentStart) || (user.employmentEnd && start > user.employmentEnd))
     out.push("not_employed")
-  if (!out.includes("month_not_complete") && daysWithGaps(user, start, end).length) out.push("worklog_incomplete")
+  if (!out.includes("month_not_complete") && daysMissingProjects(user, start, end).length) out.push("projects_missing")
   return out
 }
 
@@ -251,9 +261,9 @@ export function signOff(actor: Actor, user: User, month: string, note = ""): Mon
     signedAt: utcnow(),
     note: note.trim().slice(0, 500),
     snapshot,
-    digest: computeDigest(2, periodData(user.id, start, end, startUtc, endUtc)),
+    digest: computeDigest(SEAL_VERSION, periodData(user.id, start, end, startUtc, endUtc, SEAL_VERSION)),
     prevSeal: lastSeal(user.id),
-    sealVersion: 2,
+    sealVersion: SEAL_VERSION,
   }
   const row = db
     .insert(monthSignoffs)
@@ -323,6 +333,8 @@ export function reopen(actor: Actor, id: number, reason: string): MonthSignoff {
     .returning()
     .get()
   logSignoff(actor, updated, "reopen", why)
+  // the month's legacy work log rows can move onto its entries now
+  mergeLegacyWorklogs(rawSqlite(), row.userId)
   for (const targetId of new Set([row.userId, row.signedById])) {
     if (targetId != null && targetId !== actor.id) {
       notify(targetId, "month_reopened", {

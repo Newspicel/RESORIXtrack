@@ -1,6 +1,6 @@
 /**
- * "My time" (and a member's time for leads/HR via `userId`): week timeline or month calendar, the work log
- * of the week, and the period's entries. State lives in the URL: `view`, `date`, `add=1` (opens the add
+ * "My time" (and a member's time for leads/HR via `userId`): week timeline or month calendar and the period's
+ * entries, each with its project. State lives in the URL: `view`, `date`, `add=1` (opens the add
  * dialog; the command palette uses it), `deleted=1` (show deleted entries).
  */
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -29,7 +29,6 @@ import { MonthView } from "./month-view"
 import { Notice } from "./notice"
 import { periodParams, type TimeSearch } from "./period"
 import { WeekTimeline } from "./week-timeline"
-import { WorklogWeek } from "./worklog"
 
 export function TimeView({
   userId,
@@ -78,6 +77,7 @@ export function TimeView({
     lockedMonths: view.lockedMonths,
     reasonRequired: view.reasonRequired,
     canEdit: view.canEdit,
+    entries: view.entries,
   }
   const openAdd = (date: string, start?: string) => {
     setTarget({ date: date > view.today ? view.today : date, start })
@@ -149,7 +149,7 @@ export function TimeView({
             onToday={() => go({ date: undefined })}
             isCurrent={isCurrent}
           />
-          <dl className="flex items-center gap-4 text-sm sm:ml-auto" aria-live="polite">
+          <dl className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm sm:ml-auto" aria-live="polite">
             <div className="flex items-baseline gap-1.5">
               <dt className="text-muted-foreground">{t("time.worked")}</dt>
               <dd className="font-semibold tabular">
@@ -193,8 +193,6 @@ export function TimeView({
         </PeriodContent>
         {mode === "week" ? <Legend /> : null}
       </section>
-
-      {mode === "week" ? <WorklogWeek view={view} initialDay={search.date} /> : null}
 
       <Section title={t("time.entries")}>
         <EntriesTable

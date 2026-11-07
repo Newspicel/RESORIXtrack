@@ -53,7 +53,7 @@ export const SETTING_GROUPS = {
     "holiday_work_surcharge_mode",
     "retention_years",
   ],
-  worklog: ["worklog_mode", "worklog_required_percent", "worklog_project_required"],
+  projects: ["project_mode"],
   security: ["mfa_required_for_admins", "mfa_required_for_all", "api_tokens_enabled", "login_log_retention_days"],
   privacy: ["privacy_notice"],
 } as const satisfies Record<string, readonly SettingKey[]>

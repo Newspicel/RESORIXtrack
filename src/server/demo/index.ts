@@ -1,7 +1,8 @@
 /**
  * Demo company for development (port of v1 demo.py, extended): three teams with leads and a deputy, HR, an
- * administrator, part-timers, a Swiss holiday calendar, three months of entries (with breaks between them) and work logs,
- * absences (approved, pending, sick), balance adjustments, a running clock and one signed-off month.
+ * administrator, part-timers, a Swiss holiday calendar, three months of entries on projects (with breaks
+ * between them), absences (approved, pending, sick), balance adjustments, a running clock and one signed-off
+ * month.
  * Deterministic (seeded random), idempotent (does nothing when the demo administrator exists).
  */
 import { rmSync } from "node:fs"
@@ -17,7 +18,7 @@ import { defaultPresetDays } from "../services/holiday-presets"
 import { notify } from "../services/notifications"
 import { type Actor, loadActor } from "../services/permissions"
 import { record, snapshot } from "../services/revisions"
-import { computeDigest, computeSeal, lastSeal, periodData } from "../services/seals"
+import { computeDigest, computeSeal, lastSeal, periodData, SEAL_VERSION } from "../services/seals"
 import { updateSettings } from "../services/settings"
 import { setPasswordHash } from "../services/user-auth"
 import {
@@ -290,7 +291,10 @@ function absences(
   return absent
 }
 
-/** Clock entries (two work entries with a break between them) and work logs for every scheduled day before today. */
+/**
+ * Clock entries for every scheduled day before today: a morning and an afternoon with a break between them,
+ * each on a project. Most mornings switch project once; a few entries have no project.
+ */
 function workDays(
   r: Rng,
   u: s.User,
@@ -311,7 +315,18 @@ function workDays(
     sched.minutesSun,
   ]
   const rows: (typeof s.timeEntries.$inferInsert)[] = []
-  const logs: (typeof s.workLogs.$inferInsert)[] = []
+  const add = (a: string, b: string, projectId: number | null) =>
+    rows.push({
+      userId: u.id,
+      kind: "work",
+      startAt: a,
+      endAt: b,
+      tz: u.timezone,
+      projectId,
+      note: projectId != null && r.next() < 0.6 ? r.pick(WORK_NOTES) : "",
+      source: "clock",
+      createdById: u.id,
+    })
   for (const d of daterange(start, addDays(today, -1))) {
     const target = minutes[weekday(d)]
     if (!target || absent.has(d) || holidays.has(d)) continue
@@ -329,44 +344,18 @@ function workDays(
     const s1 = localToInstant(d, `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`, u.timezone)
     const e1 = plus(s1, morning)
     const s2 = plus(e1, brk)
-    for (const [a, b] of [
-      [s1, e1],
-      [s2, plus(s2, afternoon)],
-    ] as const)
-      rows.push({
-        userId: u.id,
-        kind: "work",
-        startAt: a,
-        endAt: b,
-        tz: u.timezone,
-        source: "clock",
-        createdById: u.id,
-      })
-    // most days annotated with two items, some partially, a few not at all
-    const worked = morning + afternoon
     const roll = r.next()
-    const log = (mins: number) =>
-      logs.push({
-        userId: u.id,
-        date: d,
-        projectId: r.pick(pool),
-        minutes: mins,
-        note: r.pick(WORK_NOTES),
-        createdById: u.id,
-      })
+    const project = () => (pool.length && roll < 0.95 ? r.pick(pool) : null)
     if (roll < 0.7) {
-      const first = r.int(Math.trunc(worked * 0.5), Math.trunc(worked * 0.7))
-      log(first)
-      log(worked - first)
-    } else if (roll < 0.85) log(Math.trunc(worked * 0.4))
+      const switchAt = plus(s1, r.int(60, morning - 30))
+      add(s1, switchAt, project())
+      add(switchAt, e1, project())
+    } else add(s1, e1, project())
+    add(s2, plus(s2, afternoon), project())
   }
   for (let i = 0; i < rows.length; i += 500)
     db.insert(s.timeEntries)
       .values(rows.slice(i, i + 500))
-      .run()
-  for (let i = 0; i < logs.length; i += 500)
-    db.insert(s.workLogs)
-      .values(logs.slice(i, i + 500))
       .run()
   return rows.length
 }
@@ -527,9 +516,9 @@ function signOffs(users: Map<string, s.User>, team: s.Team, hr: Actor, lead: Act
       signedAt: `${utcnow().slice(0, 19)}.000000Z`,
       note: "",
       snapshot: snap,
-      digest: computeDigest(2, periodData(u.id, startDate, endDate, startUtc, endUtc)),
+      digest: computeDigest(SEAL_VERSION, periodData(u.id, startDate, endDate, startUtc, endUtc, SEAL_VERSION)),
       prevSeal: lastSeal(u.id),
-      sealVersion: 2,
+      sealVersion: SEAL_VERSION,
     }
     const row = db
       .insert(s.monthSignoffs)

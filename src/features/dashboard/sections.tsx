@@ -1,7 +1,7 @@
 /** Dashboard building blocks below the clock card: key figures, the week chart, absences, hints. */
 import { useSuspenseQueries, useSuspenseQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import { AlertTriangle, ChevronRight, FileText } from "lucide-react"
+import { AlertTriangle, ChevronRight, FolderOpen } from "lucide-react"
 import type { ReactNode } from "react"
 import { SectionBoundary } from "@/components/app/section-boundary"
 import { AbsenceStatusBadge, ColorDot } from "@/components/app/status-badge"
@@ -241,21 +241,22 @@ function ComplianceNotice({ today }: { today: string }) {
   )
 }
 
-export function WorklogReminder({ day }: { day: string | null }) {
+/** A recent past day with work that has no project (projects required). */
+export function ProjectReminder({ day }: { day: string | null }) {
   const { t, intl } = useI18n()
   if (!day) return null
   return (
     <Notice
-      icon={FileText}
+      icon={FolderOpen}
       tone="info"
       action={
-        <ButtonLink variant="ghost" size="sm" render={<Link to="/time" search={{ date: day }} hash="worklog" />}>
-          {t("dashboard.worklog_add")}
+        <ButtonLink variant="ghost" size="sm" render={<Link to="/time" search={{ date: day }} />}>
+          {t("dashboard.project_fix")}
           <ChevronRight data-icon="inline-end" />
         </ButtonLink>
       }
     >
-      {t("dashboard.worklog_missing", { date: fmtDay(day, intl, { weekday: "long", day: "numeric", month: "long" }) })}
+      {t("dashboard.project_missing", { date: fmtDay(day, intl, { weekday: "long", day: "numeric", month: "long" }) })}
     </Notice>
   )
 }

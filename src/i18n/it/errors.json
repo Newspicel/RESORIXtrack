@@ -78,13 +78,10 @@
   "mfa_enabled": "L'autenticazione a due fattori è già attiva.",
   "mfa_disabled": "L'autenticazione a due fattori non è attiva.",
   "tokens_disabled": "I token API personali sono stati disattivati dall'amministratore.",
-  "worklog_incomplete": "Il diario di lavoro non copre la quota richiesta del tempo lavorato.",
-  "worklog_off": "Il diario di lavoro è disattivato per questa azienda.",
   "project_taken": "Esiste già un progetto con questo nome.",
   "lead_exists": "Questa persona ha già questo ruolo per questo team in questo periodo.",
   "type_not_requestable": "Questo tipo viene registrato dal tuo responsabile del team o da HR.",
   "already_running": "La timbratura è già in corso.",
-  "worklog_overlap": "Si sovrappone a un'altra voce di questo giorno.",
   "invalid_password": "La password è errata.",
   "password_too_short": "Usa almeno 10 caratteri.",
   "password_too_long": "Usa al massimo 256 caratteri.",
@@ -96,5 +93,7 @@
   "mfa_required": "Per il tuo account l'autenticazione a due fattori è obbligatoria.",
   "invalid_admin_password": "La tua password non è corretta.",
   "backup_password_missing": "Imposta BACKUP_PASSWORD (almeno 12 caratteri) sul server.",
-  "type_in_use": "Questo tipo è in uso. Disattivalo invece di eliminarlo."
+  "type_in_use": "Questo tipo è in uso. Disattivalo invece di eliminarlo.",
+  "projects_missing": "Parte del lavoro non ha un progetto.",
+  "projects_off": "I progetti sono disattivati per questa azienda."
 }

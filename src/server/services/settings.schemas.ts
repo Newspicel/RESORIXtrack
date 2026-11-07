@@ -39,10 +39,8 @@ export const DEFAULTS = {
   mfa_required_for_admins: false,
   mfa_required_for_all: false,
   api_tokens_enabled: true,
-  // off | optional | required (= at least N % of each day's worked minutes annotated)
-  worklog_mode: "optional" as "off" | "optional" | "required",
-  worklog_required_percent: 80,
-  worklog_project_required: false,
+  // projects on time entries: off | optional | required (= every work entry has a project)
+  project_mode: "optional" as "off" | "optional" | "required",
   // Swiss law (docs/compliance.md)
   compliance_enabled: true,
   // refuse a clock-in before the legal minimum break (Art. 15) and daily rest (Art. 15a) are complete
@@ -59,6 +57,9 @@ export type SettingKey = keyof Settings
 export const RETIRED_SETTINGS: readonly string[] = [
   "session_remember_days", // SESSION_REMEMBER_DAYS in the environment
   "break_rules_enabled", // breaks (ArG Art. 15) are always checked when the ArG applies
+  // projects live on the time entries: "required" means every work entry has one
+  "worklog_required_percent",
+  "worklog_project_required",
 ]
 
 const int = (min: number, max: number) => z.number().int().min(min).max(max)
@@ -86,9 +87,7 @@ export const settingsSchema = z.object({
   mfa_required_for_admins: z.boolean(),
   mfa_required_for_all: z.boolean(),
   api_tokens_enabled: z.boolean(),
-  worklog_mode: z.enum(["off", "optional", "required"]),
-  worklog_required_percent: int(1, 100),
-  worklog_project_required: z.boolean(),
+  project_mode: z.enum(["off", "optional", "required"]),
   compliance_enabled: z.boolean(),
   break_enforcement: z.boolean(),
   night_work_permitted: z.boolean(),

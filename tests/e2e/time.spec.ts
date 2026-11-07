@@ -1,4 +1,4 @@
-import { expect, goto, isMobile, lastWeekday, pick, pickDate, test } from "./fixtures"
+import { addDays, expect, goto, isMobile, lastWeekday, pick, pickDate, test } from "./fixtures"
 
 const zurich = (d: Date, opts: Intl.DateTimeFormatOptions) =>
   new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Zurich", hour12: false, ...opts }).format(d)
@@ -91,8 +91,12 @@ test("manual entry: add, edit, delete with undo, restore", async ({ as }, info) 
   const remove = async () => {
     await timeline("10:00", "12:15").click()
     const editor = page.getByRole("dialog", { name: "Edit entry" })
-    await editor.getByLabel(/^Reason/).fill("Booked twice")
     await editor.getByRole("button", { name: "Delete" }).click()
+    // the reason is asked right there, in one step
+    const confirm = page.getByRole("dialog", { name: "Delete this entry?" })
+    await confirm.getByLabel("Reason").fill("Booked twice")
+    await confirm.getByRole("button", { name: "Delete" }).click()
+    await expect(confirm).toBeHidden()
     await expect(editor).toBeHidden()
   }
   // delete, then undo from the toast
@@ -127,4 +131,40 @@ test("manual entry: add, edit, delete with undo, restore", async ({ as }, info) 
   await expect(page.getByText("Entry restored")).toBeVisible()
   await page.getByRole("switch", { name: "Show deleted" }).click()
   await expect(timeline("10:00", "12:15")).toBeVisible()
+})
+
+test("projects: an entry books its project; the clock switches project while working", async ({ as }, info) => {
+  // outside the team whose previous month is signed off
+  const page = await as(pick(info, "elena", "mia"))
+  // last week's Saturday: no demo entries, and "Add entry" starts on the week shown (no date picker)
+  const day = addDays(lastWeekday(0), -2)
+  await goto(page, `/time?date=${day}`)
+  await page.getByRole("button", { name: "Add entry", exact: true }).click()
+  const dialog = page.getByRole("dialog", { name: "Add entry" })
+  await dialog.getByLabel("Start").fill("09:00")
+  await dialog.getByLabel("End").fill("10:15")
+  await dialog.getByLabel("Note").fill("E2E project entry") // closes the time suggestions
+  await dialog.getByLabel(/^Reason/).fill("Forgot to clock in")
+  await dialog.getByRole("combobox", { name: "Project" }).click()
+  await page.getByRole("option", { name: /^Training/ }).click()
+  await expect(dialog.getByRole("combobox", { name: "Project" })).toHaveText("Training")
+  await dialog.getByRole("button", { name: "Save" }).click()
+  await expect(dialog).toBeHidden()
+  await expect(page.getByRole("button", { name: "Work 09:00–10:15 · Training · E2E project entry" })).toBeVisible()
+
+  test.skip(zurichHour() < 6, "daily rest after yesterday's demo entries")
+  await goto(page, "/")
+  const hero = page.getByRole("region", { name: /^You're/ })
+  const bar = page.getByRole("group", { name: "Clock" })
+  await hero.getByRole("combobox", { name: "Project" }).click()
+  await page.getByRole("option", { name: /^Internal & administration/ }).click()
+  await hero.getByRole("button", { name: "Clock in", exact: true }).click()
+  await expect(bar).toContainText("Working · INT")
+  // switching keeps the clock running: no break, the entry carries on under the new project
+  await hero.getByRole("combobox", { name: "Project" }).click()
+  await page.getByRole("option", { name: /^Training/ }).click()
+  await expect(bar).toContainText("Working · TRN")
+  await expect(hero).toHaveAccessibleName("You're clocked in")
+  await hero.getByRole("button", { name: "Clock out", exact: true }).click()
+  await expect(hero).toHaveAccessibleName("You're not clocked in")
 })

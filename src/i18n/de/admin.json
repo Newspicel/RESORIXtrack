@@ -510,14 +510,14 @@
       "vacation": "Ferien",
       "corrections": "Korrekturen und Leitung",
       "sick": "Krankmeldungen",
-      "worklog": "Tätigkeiten",
       "compliance": "Prüfungen (ArG)",
       "retention": "Aufbewahrung",
       "mfa": "Zwei-Faktor",
       "api": "API",
       "sessions": "Anmeldeprotokoll",
       "privacy": "Datenschutzhinweis",
-      "surcharges": "Sonn- und Feiertagsarbeit"
+      "surcharges": "Sonn- und Feiertagsarbeit",
+      "projects": "Projekte"
     },
     "units": {
       "hhmm": "h:mm",
@@ -541,9 +541,6 @@
       "clock_reminder_hours": "Erinnerung zum Ausstempeln nach",
       "sick_self_report_backdate_days": "Selbstmeldung rückwirkend bis",
       "sick_self_report_max_days": "Max. Dauer Selbstmeldung",
-      "worklog_mode": "Tätigkeiten",
-      "worklog_required_percent": "Erforderlicher Anteil",
-      "worklog_project_required": "Projekt erforderlich",
       "compliance_enabled": "Betrieb untersteht dem Arbeitsgesetz",
       "break_enforcement": "Einstempeln vor der gesetzlichen Mindestpause und Ruhezeit sperren",
       "weekly_max_minutes": "Gesetzliche Höchstarbeitszeit",
@@ -555,7 +552,8 @@
       "api_tokens_enabled": "Persönliche API-Tokens",
       "login_log_retention_days": "Anmeldeprotokoll aufbewahren für",
       "privacy_notice": "Text auf /privacy",
-      "holiday_work_surcharge_mode": "Zuschlag als"
+      "holiday_work_surcharge_mode": "Zuschlag als",
+      "project_mode": "Projekte auf Zeiteinträgen"
     },
     "help": {
       "default_vacation_days": "Standard für neue Personen",
@@ -566,24 +564,24 @@
       "night_work_permitted": "Befunde werden nur noch als Info angezeigt",
       "sunday_work_permitted": "Befunde werden nur noch als Info angezeigt",
       "retention_years": "Mindestens 5 (ArGV 1 Art. 73)",
-      "worklog_required_percent": "Anteil der Arbeitszeit pro Tag",
       "compliance_enabled": "Ausgenommen sind z. B. öffentliche Verwaltungen, Landwirtschaft, private Haushalte (Art. 2 ArG)",
       "break_enforcement": "Art. 15 und 15a ArG. Ein manueller Eintrag bleibt möglich.",
-      "holiday_work_surcharge_mode": "Lohn: im Bericht für die Lohnabrechnung. Zeitgutschrift: gemäss GAV."
+      "holiday_work_surcharge_mode": "Lohn: im Bericht für die Lohnabrechnung. Zeitgutschrift: gemäss GAV.",
+      "project_mode": "Pflicht: Jeder Arbeitseintrag braucht ein Projekt, bevor der Monat abgeschlossen werden kann."
     },
     "options": {
       "holiday_mode": {
         "scheduled": "An Arbeitstagen",
         "prorata": "Anteilig"
       },
-      "worklog_mode": {
-        "off": "Aus",
-        "optional": "Freiwillig",
-        "required": "Pflicht"
-      },
       "holiday_work_surcharge_mode": {
         "payroll": "Lohn",
         "time_credit": "Zeitgutschrift"
+      },
+      "project_mode": {
+        "off": "Aus",
+        "optional": "Freiwillig",
+        "required": "Pflicht"
       }
     }
   },

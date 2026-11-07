@@ -6,7 +6,7 @@
 import { and, eq, inArray } from "drizzle-orm"
 import type { z } from "zod"
 import { db } from "../db"
-import { monthSignoffs, projects, teams, type User, type WorkLog } from "../db/schema"
+import { monthSignoffs, projects, teams, type User } from "../db/schema"
 import { Forbidden, Validation } from "../errors"
 import { addDays, dayBoundsUtc, iso, localToday, monthBounds, rangeBoundsUtc } from "../time"
 import { absenceTypesById } from "./absence-types"
@@ -14,9 +14,9 @@ import { absencesInRange, clippedDays, minDay, userNames } from "./absences"
 import { computeDays, summarize, timeBalance, vacationAccount } from "./accounts"
 import { editedEntryIds, entriesBetween } from "./entries"
 import { type Actor, isManager, requireView } from "./permissions"
+import { type ProjectItem, projectItems, projectMode } from "./project-time"
 import { getAllSettings, getSetting } from "./settings"
 import { scopeUsers } from "./signoffs"
-import { logsBetween, worklogConfig } from "./worklog"
 
 export { balancesInput, rangeInput, timesheetInput } from "./reports.schemas"
 
@@ -51,7 +51,7 @@ function teamNameMap(people: Pick<User, "teamId">[]): Map<number, string> {
   )
 }
 
-function projectMap(logs: WorkLog[]) {
+function projectMap(logs: ProjectItem[]) {
   const ids = [...new Set(logs.map((w) => w.projectId).filter((x): x is number => x != null))]
   const rows = ids.length ? db.select().from(projects).where(inArray(projects.id, ids)).all() : []
   const teamsById = teamNameMap(rows)
@@ -94,13 +94,12 @@ export function timesheet(actor: Actor, raw: z.input<typeof timesheetInput>) {
       note: e.note,
     })
   }
-  const logs = logsBetween(user.id, start, end)
+  const logs = projectItems([user], start, end)
   const projectsById = projectMap(logs)
-  const worklog: Record<
+  const projectTime: Record<
     string,
     {
       project: string | null
-      customerRef: string
       note: string
       minutes: number
       start: string | null
@@ -108,13 +107,12 @@ export function timesheet(actor: Actor, raw: z.input<typeof timesheetInput>) {
     }[]
   > = {}
   for (const w of logs) {
-    pushTo(worklog, w.date, {
+    pushTo(projectTime, w.date, {
       project: w.projectId != null ? (projectsById.get(w.projectId)?.name ?? null) : null,
-      customerRef: w.customerRef,
       note: w.note,
-      minutes: w.minutes,
-      start: w.startTime,
-      end: w.endTime,
+      minutes: round(w.minutes),
+      start: w.start,
+      end: w.end,
     })
   }
   const signoff = db
@@ -132,8 +130,8 @@ export function timesheet(actor: Actor, raw: z.input<typeof timesheetInput>) {
     month,
     days,
     entries: perDay,
-    worklog,
-    worklogMode: worklogConfig().mode,
+    projectTime,
+    projectMode: projectMode(),
     summary: summarize(days),
     payroll: payrollConfig(),
     balanceBeforeMin: balanceBefore,
@@ -268,8 +266,7 @@ export type AbsencesReportData = ReturnType<typeof absencesReport>
 
 interface ProjectRow {
   projectId: number | null
-  customerRef: string
-  kind: "project" | "customer" | "none"
+  kind: "project" | "none"
   name: string | null
   code: string
   color: string
@@ -279,12 +276,12 @@ interface ProjectRow {
   people: { userId: number; name: string; minutes: number }[]
 }
 
-/** Logged minutes per project (or customer reference) and person, deleted items excluded. */
+/** Logged minutes per project and person, deleted items excluded. */
 export function projectHours(actor: Actor, raw: z.input<typeof rangeInput>) {
   const input = rangeInput.parse(raw)
   checkRange(input.from, input.to)
   const people = scopeUsers(actor, { teamId: input.teamId, userId: input.userId, periodStart: input.from })
-  const logs = people.flatMap((u) => logsBetween(u.id, input.from, input.to))
+  const logs = projectItems(people, input.from, input.to)
   const projectsById = projectMap(logs)
   const byProject = new Map<string, { row: ProjectRow; perPerson: Map<number, number> }>()
   const byPerson = new Map(
@@ -304,15 +301,14 @@ export function projectHours(actor: Actor, raw: z.input<typeof rangeInput>) {
   for (const u of people) byPerson.get(u.id)!.team = u.teamId != null ? (teamNames.get(u.teamId) ?? null) : null
   for (const w of logs) {
     const p = w.projectId != null ? projectsById.get(w.projectId) : undefined
-    const key = w.customerRef ? `c:${w.customerRef}` : `p:${w.projectId ?? ""}`
+    const key = `p:${w.projectId ?? ""}`
     let entry = byProject.get(key)
     if (!entry) {
       entry = {
         row: {
           projectId: w.projectId,
-          customerRef: w.customerRef,
-          kind: w.customerRef ? "customer" : p ? "project" : "none",
-          name: w.customerRef || p?.name || null,
+          kind: p ? "project" : "none",
+          name: p?.name ?? null,
           code: p?.code ?? "",
           color: p?.color ?? "",
           team: p?.teamName ?? null,
@@ -330,7 +326,7 @@ export function projectHours(actor: Actor, raw: z.input<typeof rangeInput>) {
     const person = byPerson.get(w.userId)!
     person.minutes += w.minutes
     person.items++
-    const label = w.customerRef || p?.name || ""
+    const label = p?.name ?? ""
     person.byProject[label] = (person.byProject[label] ?? 0) + w.minutes
   }
   for (const { row, perPerson } of byProject.values())

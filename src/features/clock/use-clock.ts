@@ -7,18 +7,20 @@
  *   pending, later actions queue behind it so their order is kept. Scheduling a clock-out ("clock out later")
  *   and cancelling it need the server and are refused offline.
  * - A rejected action (not a network problem) rolls back and shows the reason.
+ * - A clock-in books on the project chosen for the next clock-in (next-project.ts); `switch` changes the
+ *   project while working.
  */
 import { type QueryClient, queryOptions, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useNavigate } from "@tanstack/react-router"
 import { useEffect, useEffectEvent, useState, useSyncExternalStore } from "react"
 import { toast } from "sonner"
 import { clockActionFn, fetchClock, syncOfflineFn } from "@/features/time/api"
 import { errorCode, errorFields } from "@/lib/guards"
 import { useI18n } from "@/lib/i18n"
 import type { I18n } from "@/lib/i18n-core"
-import { useBootstrap, useMe } from "@/lib/session"
+import { useMe } from "@/lib/session"
 import type { ClockAction, ClockStateName, OfflineClockAction } from "@/server/services/clock"
 import { fmtClockTime, wallClock } from "../time/lib"
+import { readNextProject } from "./next-project"
 import { enqueue, isNetworkError, onQueueChange, type QueuedAction, queued, remove } from "./offline-queue"
 
 export type LiveClock = Awaited<ReturnType<typeof fetchClock>> & { receivedAt: number }
@@ -79,8 +81,9 @@ function withPending(c: LiveClock, pending: QueuedAction[]): LiveClock {
 /** The optimistic state after `action` at `at` (ISO), as of `now`. */
 export function advance(c: LiveClock, action: ClockAction, at: string, now: number): LiveClock {
   if (action === "unschedule") return { ...c, scheduledEnd: null }
+  if (action === "switch" && c.state === "working") return { ...c, since: at, entry: null }
   if (action === "stop" && schedulesLater(at, now)) return { ...c, scheduledEnd: at }
-  const state: ClockStateName = action === "start" ? "working" : "idle"
+  const state: ClockStateName = action === "stop" ? "idle" : "working"
   const t = Math.min(now, c.receivedAt + 24 * 3600_000)
   return {
     ...c,
@@ -166,10 +169,8 @@ let syncing: Promise<void> | null = null
 interface ClockDeps {
   userId: number
   me: Person
-  worklogMode: string
   qc: QueryClient
   i18n: I18n
-  navigate: ReturnType<typeof useNavigate>
 }
 
 function refreshTimeData(qc: QueryClient) {
@@ -186,7 +187,9 @@ async function replayQueue({ userId, qc, i18n: { t, tError } }: ClockDeps) {
   try {
     const items = await queued(userId)
     if (!items.length || !navigator.onLine) return
-    const res = await syncOfflineFn({ data: { actions: items.map(({ id, action, at }) => ({ id, action, at })) } })
+    const res = await syncOfflineFn({
+      data: { actions: items.map(({ id, action, at, projectId }) => ({ id, action, at, projectId })) },
+    })
     await remove(res.results.map((r) => r.id))
     setServer(qc, res.clock)
     const rejected = res.results.filter((r) => r.status === "rejected").length
@@ -206,12 +209,14 @@ function sync(deps: ClockDeps): Promise<void> {
   return syncing
 }
 
-async function runAction(
-  deps: ClockDeps,
-  action: ClockAction,
-  opts: { at?: string; custom?: boolean },
-  setActing: (acting: boolean) => void,
-) {
+export interface ActOptions {
+  at?: string
+  custom?: boolean
+  /** switch: the new project; start: defaults to the project chosen for the next clock-in */
+  projectId?: number | null
+}
+
+async function runAction(deps: ClockDeps, action: ClockAction, opts: ActOptions, setActing: (acting: boolean) => void) {
   const { userId, qc, me, i18n } = deps
   const { t, tError } = i18n
   const current = qc.getQueryData<LiveClock>(liveClockQuery().queryKey)
@@ -220,6 +225,8 @@ async function runAction(
   setActing(true)
   const clickAt = opts.at ?? new Date().toISOString()
   const later = schedulesLater(opts.at, Date.now())
+  const projectId =
+    action === "switch" ? (opts.projectId ?? null) : action === "start" ? readNextProject(userId) : undefined
   // only plain clock in/out punches can wait in the offline queue
   const queueable: OfflineClockAction | null = action === "unschedule" || later ? null : action
   const queue = async () => {
@@ -227,7 +234,7 @@ async function runAction(
       toast.error(t("errors.network"))
       return
     }
-    await enqueue({ userId, action: queueable, at: clickAt })
+    await enqueue({ userId, action: queueable, at: clickAt, projectId })
     toast.info(t("clock.queued_offline"))
     void sync(deps)
   }
@@ -238,18 +245,11 @@ async function runAction(
     }
     qc.setQueryData<LiveClock>(liveClockQuery().queryKey, advance(current, action, clickAt, Date.now()))
     try {
-      setServer(qc, await clockActionFn({ data: { action, at: opts.at ?? null, custom: Boolean(opts.custom) } }))
+      setServer(
+        qc,
+        await clockActionFn({ data: { action, at: opts.at ?? null, custom: Boolean(opts.custom), projectId } }),
+      )
       refreshTimeData(qc)
-      // clocking out is the moment to describe the day when the company requires a work log
-      if (action === "stop" && !later && deps.worklogMode === "required") {
-        toast.info(t("worklog.clock_out_prompt"), {
-          duration: 8000,
-          action: {
-            label: t("dashboard.worklog_add"),
-            onClick: () => void deps.navigate({ to: "/time", hash: "worklog" }),
-          },
-        })
-      }
     } catch (err) {
       qc.setQueryData(liveClockQuery().queryKey, current)
       if (isNetworkError(err) && queueable) {
@@ -267,8 +267,6 @@ async function runAction(
 
 export function useClock() {
   const me = useMe()
-  const worklogMode = useBootstrap().company.worklogMode
-  const navigate = useNavigate()
   const qc = useQueryClient()
   const i18n = useI18n()
   const query = useQuery(liveClockQuery())
@@ -277,7 +275,7 @@ export function useClock() {
   const [acting, setActing] = useState(false)
 
   const data = query.data ? withPending(query.data, pending) : undefined
-  const deps: ClockDeps = { userId: me.id, me, worklogMode, qc, i18n, navigate }
+  const deps: ClockDeps = { userId: me.id, me, qc, i18n }
 
   // replay on start and whenever the connection comes back
   const replay = useEffectEvent(() => void sync(deps))
@@ -298,8 +296,7 @@ export function useClock() {
     }
   }, [scheduledEnd, serverTime, receivedAt])
 
-  const act = (action: ClockAction, opts: { at?: string; custom?: boolean } = {}) =>
-    runAction(deps, action, opts, setActing)
+  const act = (action: ClockAction, opts: ActOptions = {}) => runAction(deps, action, opts, setActing)
 
   return { data, pending: pending.length, online, acting, act, isLoading: query.isLoading }
 }

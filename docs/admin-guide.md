@@ -16,7 +16,7 @@ The dashboard shows a **Getting started** checklist (company name, public holida
    - *Vacation days per year*: default for new people; each person's own value is on their profile.
    - *Pro-rate vacation by days per week*: off means you enter each person's own days; on means you enter full-time days and they are scaled.
    - Reason required for past edits, lead permissions (schedules, balances), clock-out reminder after N hours, sick self-report limits.
-   - *Work log*: Off, Optional or Required (share of worked time per day, project required). Required blocks sign-off until days are described.
+   - *Projects on time entries*: Off, Optional or Required. Each entry carries a project; Required blocks the sign-off while work has none. A company-wide project such as "Internal" covers everything else.
    Changing rules later recalculates all months; signed PDFs keep their figures.
 2. **Swiss law**: Settings → Swiss law. *Company is subject to the ArG* (off for e.g. public administrations, agriculture, private households; Art. 2), default weekly maximum 45 or 50 h (Art. 9), night and Sunday work permits (lower those findings to notes), *Sunday/holiday surcharge* (default 50 %, Art. 19) paid as *Payroll* (listed in the timesheet and balances exports) or as *Time credit* (GAV), retention in years (minimum 5). Breaks are always checked when the ArG applies. See [compliance.md](compliance.md).
 3. **Email**: configured in `.env`; Settings → Email shows the status and sends a test.
@@ -31,7 +31,7 @@ The dashboard shows a **Getting started** checklist (company name, public holida
 5. **Teams**: Administration → Teams. Name, colour, holiday calendar, leads and deputies (open-ended or for a period). A team can have several leads; a lead need not be a member. Without a lead, HR decides requests (administrators if nobody has HR).
 6. **People**: Administration → Employees → *Add employee*. Name, email, role, team, language, timezone, employment start, pensum, vacation days, legal weekly maximum (45 or 50 h), time recording (full, simplified, waived; see [compliance.md](compliance.md)), *senior executive* (Art. 3 lit. d ArG: no checks), *regular night work* (Art. 17b: 10 % of night work credited as time), optional birth date (minimum vacation). *Send invitation now* emails a link valid 7 days. Then set the work schedule (Schedule tab).
 7. **HR and Projects**: grant the capabilities on the person's Profile tab to whoever signs off months, runs company reports or answers data requests.
-8. **Projects** (if the work log is on): Team → Projects. Company-wide projects are created by people with the Projects capability, team projects by leads.
+8. **Projects** (if projects are on): Team → Projects. Company-wide projects are created by people with the Projects capability, team projects by leads.
 9. **Branding**: Settings → Company. See [customizing.md](customizing.md).
 10. **Privacy notice**: Settings → Privacy. Shown at `/privacy`, linked from the sign-in page. Fill in [privacy.md](privacy.md) for your records.
 11. **Backups**: copy them off the server. See [backup-restore.md](backup-restore.md).
@@ -39,8 +39,8 @@ The dashboard shows a **Getting started** checklist (company name, public holida
 ## Month-end routine
 
 1. Early in the month, leads open **Team → Month sign-off** for the previous month.
-2. Each person shows target, worked, difference and blockers: month not over, clock running, open requests, work log incomplete.
-3. *Sign off* locks the month for everyone: entries, absences, adjustments, work log. The person is notified; the timesheet PDF shows the seal.
+2. Each person shows target, worked, difference and blockers: month not over, clock running, open requests, work without a required project.
+3. *Sign off* locks the month for everyone: entries with their projects, absences, adjustments. The person is notified; the timesheet PDF shows the seal.
 4. HR signs off leads and people without a lead, and can sign off all teams at once. Nobody signs off their own month.
 5. To correct a signed month, HR *Reopens* it with a reason (logged, notified), corrects, and signs off again.
 
@@ -86,7 +86,7 @@ See step 4. Deleting a calendar in use makes teams and people fall back to the n
 | Tab | Contents |
 |---|---|
 | Company | Name, defaults for new people, logos, accent colour |
-| Working time | Hours and holidays, vacation, corrections and leads, sick reports, work log |
+| Working time | Hours and holidays, vacation, corrections and leads, sick reports, projects |
 | Swiss law | Checks, permits, retention |
 | Security | Two-factor required for administrators or everyone, API keys on or off, sign-in log retention (session lengths: `.env`) |
 | Privacy | Privacy notice text |

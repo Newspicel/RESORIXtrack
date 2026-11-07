@@ -55,19 +55,8 @@ const TAB_GROUPS: Partial<Record<SettingsTab, Group[]>> = {
       ],
     },
     {
-      title: "worklog",
-      fields: [
-        { key: "worklog_mode", kind: "toggle", options: ["off", "optional", "required"] },
-        {
-          key: "worklog_required_percent",
-          kind: "number",
-          min: 1,
-          max: 100,
-          unit: "percent",
-          when: ["worklog_mode", "required"],
-        },
-        { key: "worklog_project_required", kind: "switch", when: ["worklog_mode", "required"] },
-      ],
+      title: "projects",
+      fields: [{ key: "project_mode", kind: "toggle", options: ["off", "optional", "required"] }],
     },
   ],
   law: [

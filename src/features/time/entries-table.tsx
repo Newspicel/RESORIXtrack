@@ -1,6 +1,6 @@
-/** All entries of the period as a table (newest first); corrections by others show who and why. */
+/** All entries of the period as a table (newest first) with their projects; corrections by others show who and why. */
 import { History, RotateCcw } from "lucide-react"
-import { StatusBadge } from "@/components/app/status-badge"
+import { ColorDot, StatusBadge } from "@/components/app/status-badge"
 import { DataTable } from "@/components/data/data-table"
 import { tableHelper } from "@/components/data/table-helper"
 import { Button } from "@/components/ui/button"
@@ -8,6 +8,7 @@ import { fmtDay, fmtMinutes } from "@/lib/format"
 import { useI18n } from "@/lib/i18n"
 import { useMe } from "@/lib/session"
 import { cn } from "@/lib/utils"
+import { useProjectMode } from "../projects/project-picker"
 import type { Correction } from "./api"
 import type { Entry } from "./entry-dialog"
 import { fmtClockTime, wallClock } from "./lib"
@@ -61,6 +62,7 @@ export function EntriesTable({
 }) {
   const { t, intl } = useI18n()
   const hour12 = useMe().timeFormat === "12h"
+  const showProjects = useProjectMode() !== "off" || entries.some((e) => e.project)
   const rows = [...entries].sort((a, b) => b.startAt.localeCompare(a.startAt))
   const columns = [
     col.accessor("startAt", {
@@ -73,7 +75,8 @@ export function EntriesTable({
           <span className="flex flex-col gap-1">
             <span
               className={cn(
-                "flex items-center gap-2 whitespace-nowrap",
+                // phones: the badge moves below the date when the row is too narrow
+                "flex flex-wrap items-center gap-x-2 gap-y-1",
                 e.deleted && "text-muted-foreground line-through",
               )}
             >
@@ -81,7 +84,9 @@ export function EntriesTable({
                 className={cn("size-2 shrink-0 rounded-full", e.kind === "work" ? "bg-work" : "bg-break")}
                 aria-hidden
               />
-              {fmtDay(wallClock(e.startAt, tz).date, intl, { weekday: "short", day: "numeric", month: "short" })}
+              <span className="whitespace-nowrap">
+                {fmtDay(wallClock(e.startAt, tz).date, intl, { weekday: "short", day: "numeric", month: "short" })}
+              </span>
               <span className="sr-only">{t(`time.kind.${e.kind}`)}</span>
               <span className="ml-auto md:hidden">
                 <EntryFlag e={e} />
@@ -122,6 +127,25 @@ export function EntriesTable({
       meta: { numeric: true, mobileLabel: t("time.duration"), width: "7rem" },
       cell: (c) => fmtMinutes(c.getValue()),
     }),
+    ...(showProjects
+      ? [
+          col.accessor((e) => e.project?.name ?? "", {
+            id: "project",
+            header: () => t("time.project"),
+            meta: { mobileLabel: t("time.project") },
+            cell: (c) => {
+              const e = c.row.original
+              if (!e.project) return <span className="text-muted-foreground">–</span>
+              return (
+                <span className="flex min-w-0 items-center gap-2">
+                  <ColorDot color={e.project.color} />
+                  <span className="truncate">{e.project.name}</span>
+                </span>
+              )
+            },
+          }),
+        ]
+      : []),
     col.accessor("note", {
       header: () => t("common.note"),
       enableSorting: false,

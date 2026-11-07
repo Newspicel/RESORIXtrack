@@ -8,7 +8,7 @@
  * Signed-off months are additionally protected by SQLite triggers (drizzle/0001_guards.sql).
  */
 import { sql } from "drizzle-orm"
-import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core"
+import { type AnySQLiteColumn, index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core"
 import type { Json, JsonObject } from "@/lib/json"
 import { instant } from "./columns"
 
@@ -139,6 +139,8 @@ export const timeEntries = sqliteTable(
     scheduledEndAt: instant(),
     tz: text().notNull().default("Europe/Zurich"),
     note: text().notNull().default(""),
+    // what the time was spent on (company setting `project_mode`)
+    projectId: integer().references((): AnySQLiteColumn => projects.id, { onDelete: "set null" }),
     source: text().$type<"clock" | "manual" | "api" | "desktop" | "offline">().notNull().default("clock"),
     isDeleted: integer({ mode: "boolean" }).notNull().default(false),
     createdById: integer().references(() => users.id, { onDelete: "set null" }),
@@ -148,6 +150,7 @@ export const timeEntries = sqliteTable(
   (t) => [
     index("ix_time_entries_user_start").on(t.userId, t.startAt),
     index("ix_time_entries_start").on(t.startAt),
+    index("ix_time_entries_project_start").on(t.projectId, t.startAt),
     // at most one running entry per person, even under concurrent clock-in requests
     uniqueIndex("uq_time_entries_open").on(t.userId).where(sql`end_at IS NULL AND is_deleted = 0`),
   ],
@@ -416,7 +419,11 @@ export const projects = sqliteTable(
   (t) => [index("ix_projects_team").on(t.teamId)],
 )
 
-/** What a person did on a day: minutes, optional project or customer reference, free text. */
+/**
+ * Legacy work log (1.x and early 2.0): what a person did on a day, separate from the time entries. Read-only:
+ * projects now live on the time entries, and open days are merged into them (db/legacy-worklogs.ts). Rows of
+ * signed-off months stay because their seals cover them.
+ */
 export const workLogs = sqliteTable(
   "work_logs",
   {

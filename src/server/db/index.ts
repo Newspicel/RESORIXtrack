@@ -12,6 +12,7 @@ import { drizzle } from "drizzle-orm/better-sqlite3"
 import { migrate } from "drizzle-orm/better-sqlite3/migrator"
 import { z } from "zod"
 import { env } from "../env"
+import { mergeLegacyWorklogs } from "./legacy-worklogs"
 import * as schema from "./schema"
 
 export type DB = ReturnType<typeof createDb>
@@ -101,6 +102,8 @@ export function assertUpgradable(sqlite: Database.Database, folder = MIGRATIONS_
 export function runMigrations(database: DB, folder = MIGRATIONS_DIR): void {
   assertUpgradable(database.$client, folder)
   migrate(database, { migrationsFolder: folder })
+  const sqlite = database.$client
+  if (hasTable(sqlite, "work_logs")) sqlite.transaction(() => mergeLegacyWorklogs(sqlite))()
 }
 
 type Holder = { sqlite: Database.Database; db: DB }

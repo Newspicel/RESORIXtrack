@@ -43,7 +43,7 @@ export interface Bootstrap {
     brandAccent: string
     setupComplete: boolean
     defaultTimezone: string
-    worklogMode: "off" | "optional" | "required"
+    projectMode: "off" | "optional" | "required"
     apiTokensEnabled: boolean
   }
   counts: { unread: number; pendingApprovals: number }
@@ -94,7 +94,7 @@ export const getBootstrap = createServerFn({ method: "GET" })
         brandAccent: s.brand_accent,
         setupComplete: s.setup_complete,
         defaultTimezone: s.default_timezone,
-        worklogMode: s.worklog_mode,
+        projectMode: s.project_mode,
         apiTokensEnabled: s.api_tokens_enabled,
       },
       counts: actor

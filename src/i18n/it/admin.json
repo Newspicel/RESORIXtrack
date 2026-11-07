@@ -510,14 +510,14 @@
       "vacation": "Vacanze",
       "corrections": "Correzioni e responsabili",
       "sick": "Annunci di malattia",
-      "worklog": "Diario di lavoro",
       "compliance": "Controlli (LL)",
       "retention": "Conservazione",
       "mfa": "Due fattori",
       "api": "API",
       "sessions": "Registro degli accessi",
       "privacy": "Informativa sulla protezione dei dati",
-      "surcharges": "Lavoro domenicale e festivo"
+      "surcharges": "Lavoro domenicale e festivo",
+      "projects": "Progetti"
     },
     "units": {
       "hhmm": "h:mm",
@@ -541,9 +541,6 @@
       "clock_reminder_hours": "Promemoria per timbrare l'uscita dopo",
       "sick_self_report_backdate_days": "Autodichiarazione retroattiva fino a",
       "sick_self_report_max_days": "Durata max. dell'autodichiarazione",
-      "worklog_mode": "Diario di lavoro",
-      "worklog_required_percent": "Quota richiesta",
-      "worklog_project_required": "Progetto obbligatorio",
       "compliance_enabled": "L'azienda è soggetta alla Legge sul lavoro",
       "break_enforcement": "Bloccare la timbratura prima della pausa minima legale e del riposo giornaliero",
       "weekly_max_minutes": "Durata massima settimanale legale",
@@ -555,7 +552,8 @@
       "api_tokens_enabled": "Token API personali",
       "login_log_retention_days": "Conserva il registro degli accessi per",
       "privacy_notice": "Testo su /privacy",
-      "holiday_work_surcharge_mode": "Supplemento come"
+      "holiday_work_surcharge_mode": "Supplemento come",
+      "project_mode": "Progetti sulle registrazioni"
     },
     "help": {
       "default_vacation_days": "Standard per nuove persone",
@@ -566,24 +564,24 @@
       "night_work_permitted": "Le constatazioni vengono mostrate solo come info",
       "sunday_work_permitted": "Le constatazioni vengono mostrate solo come info",
       "retention_years": "Almeno 5 (art. 73 OLL 1)",
-      "worklog_required_percent": "Quota del tempo lavorato di ogni giorno",
       "compliance_enabled": "Sono esenti p. es. amministrazioni pubbliche, agricoltura, economie domestiche private (art. 2 LL)",
       "break_enforcement": "Art. 15 e 15a LL. Una registrazione manuale resta possibile.",
-      "holiday_work_surcharge_mode": "Salario: nel rapporto per la paga. Accredito di tempo: secondo CCL."
+      "holiday_work_surcharge_mode": "Salario: nel rapporto per la paga. Accredito di tempo: secondo CCL.",
+      "project_mode": "Obbligatorio: ogni registrazione di lavoro richiede un progetto prima di chiudere il mese."
     },
     "options": {
       "holiday_mode": {
         "scheduled": "Nei giorni lavorativi",
         "prorata": "Pro rata"
       },
-      "worklog_mode": {
-        "off": "Disattivato",
-        "optional": "Facoltativo",
-        "required": "Obbligatorio"
-      },
       "holiday_work_surcharge_mode": {
         "payroll": "Salario",
         "time_credit": "Accredito di tempo"
+      },
+      "project_mode": {
+        "off": "Disattivato",
+        "optional": "Facoltativo",
+        "required": "Obbligatorio"
       }
     }
   },

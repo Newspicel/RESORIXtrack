@@ -510,14 +510,14 @@
       "vacation": "Vacation",
       "corrections": "Corrections and leads",
       "sick": "Sick reports",
-      "worklog": "Work log",
       "compliance": "Checks (ArG)",
       "retention": "Retention",
       "mfa": "Two-factor",
       "api": "API",
       "sessions": "Sign-in log",
       "privacy": "Privacy notice",
-      "surcharges": "Sunday and holiday work"
+      "surcharges": "Sunday and holiday work",
+      "projects": "Projects"
     },
     "units": {
       "hhmm": "h:mm",
@@ -541,9 +541,6 @@
       "clock_reminder_hours": "Clock-out reminder after",
       "sick_self_report_backdate_days": "Backdate self-reports by",
       "sick_self_report_max_days": "Max. self-report length",
-      "worklog_mode": "Work log",
-      "worklog_required_percent": "Required share",
-      "worklog_project_required": "Project required",
       "compliance_enabled": "Company is subject to the Labour Act",
       "break_enforcement": "Block clocking in before the legal minimum break and daily rest",
       "weekly_max_minutes": "Legal weekly maximum",
@@ -555,7 +552,8 @@
       "api_tokens_enabled": "Personal API tokens",
       "login_log_retention_days": "Keep sign-in log for",
       "privacy_notice": "Text on /privacy",
-      "holiday_work_surcharge_mode": "Surcharge as"
+      "holiday_work_surcharge_mode": "Surcharge as",
+      "project_mode": "Projects on time entries"
     },
     "help": {
       "default_vacation_days": "Default for new people",
@@ -566,24 +564,24 @@
       "night_work_permitted": "Findings are then shown as info only",
       "sunday_work_permitted": "Findings are then shown as info only",
       "retention_years": "At least 5 (ArGV 1 Art. 73)",
-      "worklog_required_percent": "Share of each day's worked time",
       "compliance_enabled": "Exempt are e.g. public administrations, agriculture, private households (Art. 2 ArG)",
       "break_enforcement": "Art. 15 and 15a ArG. A manual entry stays possible.",
-      "holiday_work_surcharge_mode": "Payroll: reported for wages. Time credit: per collective agreement."
+      "holiday_work_surcharge_mode": "Payroll: reported for wages. Time credit: per collective agreement.",
+      "project_mode": "Required: every work entry needs a project before the month can be signed off."
     },
     "options": {
       "holiday_mode": {
         "scheduled": "On workdays",
         "prorata": "Pro rata"
       },
-      "worklog_mode": {
-        "off": "Off",
-        "optional": "Optional",
-        "required": "Required"
-      },
       "holiday_work_surcharge_mode": {
         "payroll": "Payroll",
         "time_credit": "Time credit"
+      },
+      "project_mode": {
+        "off": "Off",
+        "optional": "Optional",
+        "required": "Required"
       }
     }
   },

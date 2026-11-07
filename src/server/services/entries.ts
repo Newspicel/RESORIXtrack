@@ -15,6 +15,7 @@ import { ensureOpenInstants } from "./locks"
 import { notify } from "./notifications"
 import { deferMail } from "./outbox"
 import { type Actor, canManageUser, canViewUser, getUserOr404, requireView } from "./permissions"
+import { type EntryProject, entryProjects, type ProjectFields, resolveProjectFields } from "./project-time"
 import { record, serializeRevision, snapshot } from "./revisions"
 import { getSetting } from "./settings"
 
@@ -57,6 +58,8 @@ export type EntryView = {
   scheduledEndAt: string | null
   tz: string
   note: string
+  projectId: number | null
+  project: EntryProject | null
   source: EntrySource
   minutes: number
   createdById: number | null
@@ -67,8 +70,12 @@ export type EntryView = {
   updatedAt: string
 }
 
-export function serializeEntry(e: TimeEntry, flags: { edited?: boolean; corrected?: boolean } = {}): EntryView {
+export function serializeEntry(
+  e: TimeEntry,
+  flags: { edited?: boolean; corrected?: boolean; projects?: Map<number, EntryProject> } = {},
+): EntryView {
   const end = e.endAt ? ms(e.endAt) : nowInstant().epochMilliseconds
+  const projects = flags.projects ?? entryProjects([e.projectId])
   return {
     id: e.id,
     userId: e.userId,
@@ -79,6 +86,8 @@ export function serializeEntry(e: TimeEntry, flags: { edited?: boolean; correcte
     scheduledEndAt: e.endAt == null ? iso(e.scheduledEndAt) : null,
     tz: e.tz,
     note: e.note,
+    projectId: e.projectId,
+    project: e.projectId != null ? (projects.get(e.projectId) ?? null) : null,
     source: e.source,
     minutes: Math.round(Math.max(0, (end - ms(e.startAt)) / 60000) * 100) / 100,
     createdById: e.createdById,
@@ -122,7 +131,8 @@ export function serializeEntries(rows: TimeEntry[], ownerId: number): EntryView[
   const ids = rows.map((e) => e.id)
   const edited = editedEntryIds(ids)
   const corrected = correctedEntryIds(ids, ownerId)
-  return rows.map((e) => serializeEntry(e, { edited: edited.has(e.id), corrected: corrected.has(e.id) }))
+  const projects = entryProjects(rows.map((e) => e.projectId))
+  return rows.map((e) => serializeEntry(e, { edited: edited.has(e.id), corrected: corrected.has(e.id), projects }))
 }
 
 // ------------------------------------------------------------------ reads
@@ -303,7 +313,7 @@ function notifyCorrection(actor: Actor, owner: User, entry: TimeEntry, action: s
 
 // ------------------------------------------------------------------ writes
 
-export interface EntryInput {
+export interface EntryInput extends ProjectFields {
   userId?: number | null
   startAt: string
   endAt: string
@@ -329,6 +339,7 @@ export function createEntry(actor: Actor, input: EntryInput): EntryView {
   requireReason(actor, owner, reason, start)
   ensureOpenInstants(owner, start, end)
   checkOverlap(owner.id, start, end)
+  const project = resolveProjectFields(actor, owner, input, null)
   const source = input.source ?? "manual"
   const now = utcnow()
   const e = db
@@ -340,6 +351,7 @@ export function createEntry(actor: Actor, input: EntryInput): EntryView {
       endAt: end,
       tz: owner.timezone,
       note: (input.note ?? "").trim().slice(0, 500),
+      ...project,
       source,
       createdById: actor.id,
       createdAt: now,
@@ -361,7 +373,7 @@ export function createEntry(actor: Actor, input: EntryInput): EntryView {
   return serializeEntries([e], owner.id)[0]
 }
 
-export interface EntryChanges {
+export interface EntryChanges extends ProjectFields {
   startAt?: string
   /** `null` keeps a running entry open; a finished entry cannot be reopened. */
   endAt?: string | null
@@ -391,14 +403,25 @@ export function updateEntry(
   requireReason(actor, owner, reason, entry.startAt, start)
   ensureOpenInstants(owner, entry.startAt, entry.endAt, start, end)
   if (timesChanged) checkOverlap(owner.id, start, end, entry.id)
-  const next = { ...entry, startAt: timesChanged ? start : entry.startAt, endAt: timesChanged ? end : entry.endAt }
+  const next = {
+    ...entry,
+    startAt: timesChanged ? start : entry.startAt,
+    endAt: timesChanged ? end : entry.endAt,
+    ...resolveProjectFields(actor, owner, changes, entry),
+  }
   if (changes.note !== undefined) next.note = (changes.note ?? "").trim().slice(0, 500)
   const before = snapshot("time_entry", entry)
   if (JSON.stringify(snapshot("time_entry", next)) === JSON.stringify(before))
     return serializeEntries([entry], owner.id)[0]
   const updated = db
     .update(timeEntries)
-    .set({ startAt: next.startAt, endAt: next.endAt, note: next.note, updatedAt: utcnow() })
+    .set({
+      startAt: next.startAt,
+      endAt: next.endAt,
+      note: next.note,
+      projectId: next.projectId,
+      updatedAt: utcnow(),
+    })
     .where(eq(timeEntries.id, entry.id))
     .returning()
     .get()

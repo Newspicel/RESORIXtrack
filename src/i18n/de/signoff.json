@@ -43,7 +43,7 @@
     "pending_absence": "Offene Anträge",
     "not_employed": "Nicht angestellt",
     "already_signed": "Bereits abgezeichnet",
-    "worklog_incomplete": "Tätigkeiten unvollständig"
+    "projects_missing": "Projekte fehlen"
   },
   "sign": "Abzeichnen",
   "select_person": "{name} auswählen",
@@ -63,6 +63,6 @@
     "pending_absence": "Entscheide zuerst über die offenen Abwesenheitsanträge.",
     "not_employed": "In diesem Monat nicht angestellt.",
     "already_signed": "Bereits abgezeichnet.",
-    "worklog_incomplete": "An einigen Tagen fehlt das Arbeitsjournal."
+    "projects_missing": "Ein Teil der Arbeit hat kein Projekt."
   }
 }

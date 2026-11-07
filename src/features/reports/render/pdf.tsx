@@ -227,12 +227,12 @@ export function TimesheetPdf({ d, ctx }: { d: TimesheetData; ctx: PdfContext }) 
             ))}
           {day.warnings.includes("break_too_short") ? <Text style={s.small}>{L("break_warning")}</Text> : null}
         </View>
-        {(d.worklog[day.date] ?? []).map((w, i) => (
-          // rendered once to a PDF, never reconciled; worklog lines carry no id here
+        {(d.projectTime[day.date] ?? []).map((w, i) => (
+          // rendered once to a PDF, never reconciled; project lines carry no id here
           // oxlint-disable-next-line react/no-array-index-key
           <View key={`${day.date}-${i}`} style={s.logRow}>
             <Text style={[s.small, s.logText]}>
-              {w.project || w.customerRef ? `${w.project ?? w.customerRef}${w.note ? ": " : ""}` : ""}
+              {w.project ? `${w.project}${w.note ? ": " : ""}` : ""}
               {w.note}
             </Text>
             <Text style={[s.small, s.logMin]}>{hm(w.minutes)}</Text>
@@ -511,7 +511,7 @@ export function ProjectsPdf({ d, ctx }: { d: ProjectHoursData; ctx: PdfContext }
   const period = `${x.date(d.start)} – ${x.date(d.end)}`
   const rows: { key: string; kind?: RowKind; cells: ReactNode[] }[] = []
   for (const p of d.projects) {
-    const key = p.kind === "customer" ? `c${p.customerRef}` : `p${p.projectId ?? ""}`
+    const key = `p${p.projectId ?? ""}`
     rows.push({
       key,
       kind: "group",

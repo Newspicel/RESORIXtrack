@@ -37,6 +37,10 @@ const json = (name: string): Col => ({ to: name, from: name, convert: v1JsonOrNu
 const fixed = (to: string, value: unknown): Col => ({ to, convert: () => value })
 const plain = (...names: string[]) => names.map(same)
 
+/** v1 setting keys renamed in v2. */
+const RENAMED_SETTINGS: Record<string, string> = { worklog_mode: "project_mode" }
+export const settingKey = (v: unknown) => RENAMED_SETTINGS[text(v)] ?? text(v)
+
 const ANON_EMAIL = /^anonymised-\d+@invalid\.local$/
 
 export const TABLES: TableSpec[] = [
@@ -216,8 +220,11 @@ export const TABLES: TableSpec[] = [
   {
     table: "settings",
     from: "settings",
-    cols: [same("key"), { to: "value", from: "value", convert: text }],
-    filter: (row) => text(row.key) in DEFAULTS,
+    cols: [
+      { to: "key", from: "key", convert: settingKey },
+      { to: "value", from: "value", convert: text },
+    ],
+    filter: (row) => settingKey(row.key) in DEFAULTS,
   },
   {
     table: "login_attempts",

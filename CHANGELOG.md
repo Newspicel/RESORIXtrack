@@ -4,6 +4,7 @@
 
 Complete rewrite. Migrating from 1.x: [docs/migration-from-v1.md](docs/migration-from-v1.md).
 
+- Projects live on the time entries: an entry carries a project, the clock picks the project at clock-in and switches it while working (the entry ends and the next starts at the same second, no break), the week view shows each block in its project's colour. The separate work log is gone; "Required" means every work entry has a project. `rt import-v1` and the update move work log items of months that are not signed off onto the entries; signed-off months keep their rows. Sign-off seals v3 cover each entry's project. REST: `GET /projects`, `POST /clock/switch`, `projectId` on entries and clock actions.
 - Deleting a time entry always needs a reason, own entries of today included; the deletion is logged and the person is notified when someone else deletes.
 - Stack: TanStack Start (React 19, SSR), Drizzle + SQLite, Better Auth, shadcn/ui on Base UI, Node 26. One service layer for the web app, REST API, worker and CLI (`rt`).
 - Clocking: clock in and out, at a custom time or scheduled for later ("clock out later" closes the entry at the chosen time; cancel any time, "Clock out now" ends it earlier). A break is a clock-out: there is no pause state; legacy break entries are retired by migration 0006. Optional block of clock-ins before the legal minimum break and daily rest (ArG Art. 15, 15a; setting, on by default).

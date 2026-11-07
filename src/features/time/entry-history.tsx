@@ -17,10 +17,11 @@ import { fmtDateTime } from "@/lib/format"
 import { useI18n } from "@/lib/i18n"
 import { useMe } from "@/lib/session"
 import { cn } from "@/lib/utils"
+import { projectsQuery } from "../projects/api"
 import { disputeEntryFn, entryHistoryQuery } from "./api"
 import type { Entry } from "./entry-dialog"
 
-const FIELDS = ["kind", "start_at", "end_at", "note", "is_deleted"] as const
+const FIELDS = ["kind", "start_at", "end_at", "project_id", "note", "is_deleted"] as const
 /** Reasons the app writes itself for clocking; not worth showing as a reason. */
 export const HIDDEN_REASONS = new Set(["clock", "clock (offline sync: earlier time)"])
 
@@ -46,12 +47,15 @@ export function EntryHistoryDialog({
   const [message, setMessage] = useState("")
   const [disputing, setDisputing] = useState(false)
   const hour12 = me.timeFormat === "12h"
+  const projects = useQuery({ ...projectsQuery(true), enabled: open }).data?.items ?? []
+  const projectNames = new Map(projects.map((p) => [p.id, p.name]))
   const fmt = (k: string, v: unknown) => {
     if (v == null || v === "") return "–"
     if (k === "is_deleted") return v ? t("common.yes") : t("common.no")
     const s = typeof v === "string" || typeof v === "number" ? String(v) : JSON.stringify(v)
     if (k === "start_at" || k === "end_at") return fmtDateTime(s, { intl, tz, hour12 })
     if (k === "kind") return t(`time.kind.${s}`)
+    if (k === "project_id") return projectNames.get(Number(s)) ?? `#${s}`
     return s
   }
   const rows = q.data ?? []

@@ -1,7 +1,8 @@
 /**
  * Week view: one row per day with work and break segments on a 0–24 h axis, the day's total and its
  * difference to the target, holidays, absences, findings and signed-off months. Segments are buttons
- * (edit); clicking an empty part of a track adds an entry at that time (rounded to 15 minutes).
+ * (edit) and carry their project's colour and name, so a day reads as one block split by project; clicking
+ * an empty part of a track adds an entry at that time (rounded to 15 minutes).
  */
 import { Moon, PenLine, Sun } from "lucide-react"
 import type { MouseEvent } from "react"
@@ -11,6 +12,7 @@ import { useI18n } from "@/lib/i18n"
 import { useMe } from "@/lib/session"
 import { cn } from "@/lib/utils"
 import { useNow } from "../clock/use-now"
+import { projectShort } from "../projects/project-picker"
 import type { Correction, PeriodView } from "./api"
 import { dayFindings } from "./day-findings"
 import { DayChips, FindingsBadge, LockMark } from "./day-marks"
@@ -111,9 +113,9 @@ export function WeekTimeline({
               <span className={cn("flex items-center gap-1.5 text-sm font-medium", isToday && "text-primary")}>
                 {fmtWeekdayShort(d.date, intl)} {fmtDay(d.date, intl, { day: "numeric", month: "numeric" })}
                 <LockMark lock={lock} />
-                {!d.worklogOk ? (
-                  <span className="size-1.5 rounded-full bg-warning" title={t("worklog.day_missing")}>
-                    <span className="sr-only">{t("worklog.day_missing")}</span>
+                {!d.projectOk ? (
+                  <span className="size-1.5 rounded-full bg-warning" title={t("time.project_missing")}>
+                    <span className="sr-only">{t("time.project_missing")}</span>
                   </span>
                 ) : null}
               </span>
@@ -155,8 +157,11 @@ export function WeekTimeline({
                 {list.map(({ entry: e, from, to }) => {
                   const corr = corrections[e.id]
                   const time = `${fmtClockTime(wallClock(e.startAt, tz).time, hour12)}–${e.endAt ? fmtClockTime(wallClock(e.endAt, tz).time, hour12) : "…"}`
-                  const label = `${t(`time.kind.${e.kind}`)} ${time}${e.note ? ` · ${e.note}` : ""}${corr ? ` · ${t("time.changed_by", { name: corr.by })}` : ""}`
+                  const what = e.project?.name
+                  const label = `${t(`time.kind.${e.kind}`)} ${time}${what ? ` · ${what}` : ""}${e.note ? ` · ${e.note}` : ""}${corr ? ` · ${t("time.changed_by", { name: corr.by })}` : ""}`
                   const marked = e.edited || e.source === "manual"
+                  const short = e.project ? projectShort(e.project) : ""
+                  const width = to - from
                   return (
                     <button
                       key={`${e.id}-${from}`}
@@ -170,13 +175,23 @@ export function WeekTimeline({
                           ? "bg-work text-primary-foreground hover:bg-work/85"
                           : "bg-break/60 text-foreground hover:bg-break/75",
                         e.corrected && "ring-2 ring-warning ring-inset",
+                        e.project && "pl-2.5",
                       )}
                       style={{ left: pct(from), width: `calc(${pct(to - from)} - 1px)` }}
                     >
-                      {marked && to - from >= 45 ? (
-                        <PenLine className="size-3 shrink-0 opacity-80" aria-hidden />
+                      {e.project ? (
+                        // user-chosen project colour: data, not a theme colour
+                        <span
+                          className="absolute inset-y-0 left-0 w-1"
+                          style={{ backgroundColor: e.project.color }}
+                          aria-hidden
+                        />
                       ) : null}
-                      {to - from >= 150 ? <span className="hidden truncate tabular lg:inline">{time}</span> : null}
+                      {marked && width >= 45 ? <PenLine className="size-3 shrink-0 opacity-80" aria-hidden /> : null}
+                      {short && width >= 60 ? <span className="truncate">{short}</span> : null}
+                      {width >= (short ? 210 : 150) ? (
+                        <span className="hidden truncate tabular opacity-80 lg:inline">{time}</span>
+                      ) : null}
                     </button>
                   )
                 })}

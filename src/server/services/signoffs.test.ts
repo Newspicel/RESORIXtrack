@@ -56,7 +56,7 @@ describe("sign-off", () => {
     expect(so).toMatchObject({
       month: "2026-10",
       active: true,
-      sealVersion: 2,
+      sealVersion: 3,
       note: "checked",
       signedBy: { name: "Lea Lead" },
     })
@@ -99,17 +99,17 @@ describe("sign-off", () => {
     expect(sign(org.hr!.id, [org.lead.id, org.carl.id]).every((r) => r.ok)).toBe(true)
   })
 
-  it("is blocked by an unfinished month, open requests, running entries and gaps in a required work log", () => {
+  it("is blocked by an unfinished month, open requests, running entries and work without a required project", () => {
     expect(sign(org.lead.id, [org.anna.id], "2026-11")[0].error?.code).toBe("month_not_complete")
     createAbsence(loadActor(org.anna.id), { type: "vacation", startDate: "2026-10-20" })
     expect(sign(org.lead.id, [org.anna.id])[0].error?.code).toBe("pending_absence")
     makeEntry(org.ben.id, "2026-10-30T07:00:00.000000Z", null)
     expect(blockers(getUserOr404(org.ben.id), "2026-10")).toEqual(["running_entry"])
-    withSettings({ worklog_mode: "required" })
+    withSettings({ project_mode: "required" })
     expect(blockers(getUserOr404(org.lead.id), "2026-10")).toEqual([])
     makeEntry(org.lead.id, "2026-10-15T06:00:00.000000Z", "2026-10-15T10:00:00.000000Z")
-    expect(blockers(getUserOr404(org.lead.id), "2026-10")).toEqual(["worklog_incomplete"])
-    withSettings({ worklog_mode: "optional" })
+    expect(blockers(getUserOr404(org.lead.id), "2026-10")).toEqual(["projects_missing"])
+    withSettings({ project_mode: "optional" })
     expect(sign(org.hr!.id, [org.lead.id])[0].ok).toBe(true)
     expect(sign(org.hr!.id, [org.lead.id])[0].error?.code).toBe("already_signed")
   })

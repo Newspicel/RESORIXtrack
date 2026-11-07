@@ -73,7 +73,6 @@
     "first_start": "Beginn",
     "last_end": "Ende",
     "edited": "Bearbeitet",
-    "worklog": "Arbeitsjournal",
     "name": "Name",
     "team": "Team",
     "taken": "Bezogen",
@@ -120,7 +119,6 @@
     "people_one": "{count} Person",
     "people_other": "{count} Personen",
     "no_project": "Ohne Projekt",
-    "customer": "Kunde",
     "entry_id": "ID",
     "email": "E-Mail",
     "kind": "Art",
@@ -156,7 +154,8 @@
     "supplement_percent": "Zuschlag %",
     "time_credit": "Zeitgutschrift",
     "payroll": "Lohn",
-    "supplement_note": "Zuschlag Sonn-/Feiertage {percent} %"
+    "supplement_note": "Zuschlag Sonn-/Feiertage {percent} %",
+    "project_time": "Projekte"
   },
   "tab": {
     "timesheet": "Zeitnachweis",
@@ -181,7 +180,6 @@
   "all_projects": "Alle Projekte",
   "project": "Projekt",
   "people": "Personen",
-  "customer": "Kunde",
   "no_project": "Ohne Projekt",
   "no_logs": "In diesem Zeitraum nichts erfasst.",
   "project_no_hours": "Keine Stunden auf diesem Projekt in diesem Zeitraum.",

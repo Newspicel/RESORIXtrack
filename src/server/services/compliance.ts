@@ -336,7 +336,7 @@ function personOf(user: User): CompliancePerson {
 }
 
 function load(user: User, from: string, to: string) {
-  const ctx = loadContext(user, from, to, { includePending: false, worklog: false })
+  const ctx = loadContext(user, from, to, { includePending: false, projects: false })
   const nowMs = ctx.nowMs
   const entries: EntryInterval[] = ctx.entries.map((e) => ({
     kind: e.kind,
@@ -462,7 +462,7 @@ export function yearFindings(user: User, year: number): Finding[] {
   const ctx = loadContext(user, `${year}-01-01`, `${year}-12-31`, {
     includePending: false,
     entries: false,
-    worklog: false,
+    projects: false,
   })
   const s = user.employmentStart && user.employmentStart > `${year}-01-01` ? user.employmentStart : `${year}-01-01`
   const e = user.employmentEnd && user.employmentEnd < `${year}-12-31` ? user.employmentEnd : `${year}-12-31`

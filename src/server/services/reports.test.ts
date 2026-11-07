@@ -105,7 +105,7 @@ describe("reports", () => {
     })
   })
 
-  it("project hours by project, customer and person", () => {
+  it("project hours by project and person; a legacy customer reference counts as no project", () => {
     const p = db.insert(s.projects).values({ name: "Website", code: "WEB" }).returning().get()
     db.insert(s.workLogs)
       .values([
@@ -117,10 +117,7 @@ describe("reports", () => {
       ])
       .run()
     const r = projectHours(loadActor(org.lead.id), { from: "2026-10-01", to: "2026-10-31" })
-    expect(r.projects.map((x) => `${x.kind}:${x.name}:${x.minutes}`)).toEqual([
-      "project:Website:150",
-      "customer:ACME:60",
-    ])
+    expect(r.projects.map((x) => `${x.kind}:${x.name}:${x.minutes}`)).toEqual(["project:Website:150", "none:null:60"])
     expect(r.projects[0].people.map((x) => x.minutes)).toEqual([120, 30])
     expect(r.totalMin).toBe(210)
     expect(projectHours(loadActor(org.anna.id), { from: "2026-10-01", to: "2026-10-31" }).totalMin).toBe(180)

@@ -92,11 +92,19 @@ function sched(o: { validFrom?: string; perDay?: number; pensum?: number; days?:
 }
 
 let eid = 0
-function entry(day: string, start: string, end: string | null, kind: "work" | "break" = "work", tz = TZ): ContextEntry {
+const NO_PROJECT = { projectId: null }
+function entry(
+  day: string,
+  start: string,
+  end: string | null,
+  kind: "work" | "break" = "work",
+  tz = TZ,
+  project: Pick<ContextEntry, "projectId"> = NO_PROJECT,
+): ContextEntry {
   const s = at(day, start, tz)
   let e = end ? at(day, end, tz) : null
   if (e && e <= s) e = at(plus(day, 1), end!, tz)
-  return { id: ++eid, kind, startAt: s, endAt: e, source: "clock" }
+  return { id: ++eid, kind, startAt: s, endAt: e, source: "clock", ...project }
 }
 
 function absence(
@@ -147,7 +155,7 @@ function ctx(
     settings: { ...DEFAULTS, ...o.settings },
     nowMs: now.epochMilliseconds,
     today: now.toZonedDateTimeISO(TZ).toPlainDate().toString(),
-    worklogMinutes: new Map(),
+    legacyProjectMin: new Map(),
   }
 }
 
@@ -383,7 +391,16 @@ describe("entries", () => {
     expect(
       one(
         ctx(spring, spring, {
-          entries: [{ id: 1, kind: "work", startAt: at(spring, "00:00"), endAt: at(spring, "06:00"), source: "clock" }],
+          entries: [
+            {
+              id: 1,
+              kind: "work",
+              startAt: at(spring, "00:00"),
+              endAt: at(spring, "06:00"),
+              source: "clock",
+              ...NO_PROJECT,
+            },
+          ],
         }),
       ).workedMin,
     ).toBe(300)
@@ -391,14 +408,30 @@ describe("entries", () => {
     expect(
       one(
         ctx(fall, fall, {
-          entries: [{ id: 2, kind: "work", startAt: at(fall, "00:00"), endAt: at(fall, "06:00"), source: "clock" }],
+          entries: [
+            {
+              id: 2,
+              kind: "work",
+              startAt: at(fall, "00:00"),
+              endAt: at(fall, "06:00"),
+              source: "clock",
+              ...NO_PROJECT,
+            },
+          ],
         }),
       ).workedMin,
     ).toBe(420)
     const full = one(
       ctx(fall, fall, {
         entries: [
-          { id: 3, kind: "work", startAt: at(fall, "00:00"), endAt: at(plus(fall, 1), "00:00"), source: "clock" },
+          {
+            id: 3,
+            kind: "work",
+            startAt: at(fall, "00:00"),
+            endAt: at(plus(fall, 1), "00:00"),
+            source: "clock",
+            ...NO_PROJECT,
+          },
         ],
       }),
     )
@@ -417,15 +450,28 @@ describe("entries", () => {
     expect(computeDaysFrom(c).map((d) => d.workedMin)).toEqual([30, 0])
   })
 
-  it("work log requirement per day", () => {
-    const c = ctx(MON, MON, {
-      entries: [entry(MON, "08:00", "12:00")],
-      settings: { worklog_mode: "required", worklog_required_percent: 80 },
+  it("project requirement per day", () => {
+    const P = { projectId: 1 }
+    const tagged = entry(MON, "08:00", "10:00", "work", TZ, P)
+    const untagged = entry(MON, "10:00", "12:00")
+    const required = { project_mode: "required" as const }
+    expect(one(ctx(MON, MON, { entries: [tagged, untagged], settings: required }))).toMatchObject({
+      projectMin: 120,
+      projectOk: false,
     })
-    c.worklogMinutes.set(MON, 100)
-    expect(one(c)).toMatchObject({ worklogMin: 100, worklogRequiredMin: 192, worklogOk: false })
-    c.worklogMinutes.set(MON, 192)
-    expect(one(c).worklogOk).toBe(true)
+    expect(one(ctx(MON, MON, { entries: [tagged, untagged] })).projectOk).toBe(true)
+    const other = entry(MON, "10:00", "12:00", "work", TZ, { projectId: 2 })
+    expect(one(ctx(MON, MON, { entries: [tagged, other], settings: required }))).toMatchObject({
+      projectMin: 240,
+      projectOk: true,
+    })
+    // legacy work log minutes (signed-off months) count too
+    const c = ctx(MON, MON, { entries: [untagged], settings: required })
+    c.legacyProjectMin.set(MON, 120)
+    expect(one(c).projectOk).toBe(true)
+    // today is never flagged
+    const today = ctx(MON, MON, { entries: [untagged], settings: required, now: `${MON}T15:00:00Z` })
+    expect(one(today).projectOk).toBe(true)
   })
 })
 
@@ -626,7 +672,7 @@ describe("accounts with the database", () => {
     const u = setup()
     const vac = makeAbsenceType({ key: "vacation", deductsVacation: true })
     makeAbsenceRow(u.id, vac.id, "2026-11-03")
-    makeEntry(u.id, at("2026-11-03", "08:00"), null, { source: "clock" })
+    makeEntry(u.id, at("2026-11-03", "08:00"), null, { source: "clock", ...NO_PROJECT })
     const days = computeDays(u, "2026-11-02", "2026-11-05")
     expect(days[1].absences[0]).toMatchObject({ typeKey: "vacation", halves: ["am", "pm"] })
     expect(days[3].running).toBe(true)

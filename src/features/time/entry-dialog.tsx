@@ -2,7 +2,8 @@
  * Add or edit a time entry (bottom sheet on phones). Times are wall-clock times in the owner's timezone;
  * an end before the start means the next day (night shifts). Unchanged times are not sent, so clocked
  * entries keep their seconds. A reason is asked for when the change needs one (someone else's entry, or
- * past days when the company requires it). Delete runs at once with Undo.
+ * past days when the company requires it). Delete asks for its reason in a small dialog, then runs at once with Undo. With projects on, the entry says
+ * which project the time was spent on.
  */
 
 import { useStore } from "@tanstack/react-form"
@@ -10,13 +11,21 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { History, Lock, RotateCcw, Trash2, UserPen } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
+import { ReasonDialog } from "@/components/app/reason-dialog"
 import { ResponsiveDialog } from "@/components/app/responsive-dialog"
 import { Segmented } from "@/components/app/segmented"
 import { undoToast } from "@/components/app/undo-toast"
 import { focusField } from "@/components/form/focus-field"
-import { FormRoot, useAppForm } from "@/components/form/form"
+import { FormRoot, useAppForm, withForm } from "@/components/form/form"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
+import {
+  NO_PROJECT,
+  type ProjectMode,
+  type ShownProject,
+  useProjectMode,
+  useProjectOptions,
+} from "@/features/projects/project-picker"
 import { failure } from "@/lib/attempt"
 import { addDaysStr, fmtDay, fmtMinutes } from "@/lib/format"
 import { errorFields } from "@/lib/guards"
@@ -43,6 +52,8 @@ export interface EntryContext {
   lockedMonths: PeriodView["lockedMonths"]
   reasonRequired: PeriodView["reasonRequired"]
   canEdit: boolean
+  /** The period's entries: a new daily total starts where the day's last entry ends. */
+  entries: Entry[]
 }
 
 const ENTRY_MODES = ["times", "total"] as const
@@ -53,6 +64,8 @@ interface Values {
   start: string
   end: string
   total: string
+  /** Project id as text, NO_PROJECT for none (combobox value). */
+  projectId: string
   note: string
   reason: string
 }
@@ -69,6 +82,7 @@ function defaults(target: EntryTarget, ctx: EntryContext): Values {
       start: s.time,
       end,
       total: fmtMinutes(e.minutes),
+      projectId: e.projectId != null ? String(e.projectId) : NO_PROJECT,
       note: e.note,
       reason: "",
     }
@@ -84,6 +98,7 @@ function defaults(target: EntryTarget, ctx: EntryContext): Values {
     start,
     end,
     total: "",
+    projectId: NO_PROJECT,
     note: "",
     reason: "",
   }
@@ -98,6 +113,7 @@ function validateEntry(
   initial: Values,
   ctx: EntryContext,
   entry: Entry | undefined,
+  projectMode: ProjectMode,
 ): Record<string, string> {
   const f: Record<string, string> = {}
   if (!v.date) f.date = "errors.fields.required"
@@ -111,15 +127,42 @@ function validateEntry(
     if (m == null || m <= 0 || m > 24 * 60) f.total = "errors.fields.invalid"
   }
   if (reasonNeeded(v, initial, ctx) && !v.reason.trim()) f.reason = "time.reason_missing"
+  // own entries only: a lead correcting times is not forced to guess a member's project
+  if (projectMode === "required" && ctx.self && v.projectId === NO_PROJECT) f.projectId = "time.project_required"
   return f
 }
 
+/** Where a new daily total starts: after the day's last entry, 08:00 on an empty day. */
+function totalStart(date: string, ctx: EntryContext): string {
+  const ends = ctx.entries
+    .filter((e) => !e.deleted && e.endAt && wallClock(e.endAt, ctx.owner.timezone).date === date)
+    .map((e) => wallClock(e.endAt!, ctx.owner.timezone).time)
+    .sort()
+  const last = ends.at(-1)
+  return last && last > "08:00" ? last : "08:00"
+}
+
+/** The project fields to send: unchanged ones are left out on an update. */
+function projectChanges(v: Values, entry: Entry | undefined, projectMode: ProjectMode) {
+  if (projectMode === "off") return {}
+  const projectId = v.projectId !== NO_PROJECT ? Number(v.projectId) : null
+  if (entry && projectId === entry.projectId) return {}
+  return { projectId }
+}
+
 /** Creates the entry, or sends only what changed (unchanged times keep a clocked entry's seconds). */
-async function saveEntry(v: Values, initial: Values, ctx: EntryContext, entry: Entry | undefined) {
+async function saveEntry(
+  v: Values,
+  initial: Values,
+  ctx: EntryContext,
+  entry: Entry | undefined,
+  projectMode: ProjectMode,
+) {
   let start = v.start
   let end = v.end
+  const project = projectChanges(v, entry, projectMode)
   if (v.mode === "total") {
-    start = entry ? initial.start : "08:00"
+    start = entry ? initial.start : totalStart(v.date, ctx)
     end = minToHhmm(hhmmToMin(start) + (parseDuration(v.total) ?? 0))
   }
   const endDate =
@@ -137,6 +180,7 @@ async function saveEntry(v: Values, initial: Values, ctx: EntryContext, entry: E
         startAt,
         endAt: endAt ?? startAt,
         note: v.note,
+        ...project,
         reason: v.reason,
       },
     })
@@ -150,12 +194,18 @@ async function saveEntry(v: Values, initial: Values, ctx: EntryContext, entry: E
       startAt: startChanged ? startAt : undefined,
       endAt: endChanged && endAt ? endAt : undefined,
       note: v.note !== entry.note ? v.note : undefined,
+      ...project,
       reason: v.reason,
     },
   })
 }
 
-const SERVER_FIELDS: Record<string, keyof Values> = { startAt: "start", endAt: "end", reason: "reason" }
+const SERVER_FIELDS: Record<string, keyof Values> = {
+  startAt: "start",
+  endAt: "end",
+  reason: "reason",
+  projectId: "projectId",
+}
 
 /** Server field errors mapped onto the form's fields, as `[field, message key]`. */
 function serverEntryErrors(err: unknown): [keyof Values, string][] {
@@ -164,6 +214,32 @@ function serverEntryErrors(err: unknown): [keyof Values, string][] {
     return name && typeof code === "string" ? [[name, `errors.fields.${code}`]] : []
   })
 }
+
+/** The entry's project. */
+const BLANK: Values = {
+  mode: "times",
+  date: "",
+  start: "",
+  end: "",
+  total: "",
+  projectId: NO_PROJECT,
+  note: "",
+  reason: "",
+}
+
+const ProjectField = withForm({
+  defaultValues: BLANK,
+  props: { current: null as ShownProject | null },
+  render: function Render({ form, current }) {
+    const { t } = useI18n()
+    const options = useProjectOptions(current)
+    return (
+      <form.AppField name="projectId">
+        {(f) => <f.ComboboxField label={t("time.project")} options={options} placeholder={t("time.choose_project")} />}
+      </form.AppField>
+    )
+  },
+})
 
 export function EntryDialog({
   open,
@@ -184,24 +260,25 @@ export function EntryDialog({
 }) {
   const { t, tError, intl } = useI18n()
   const qc = useQueryClient()
+  const projectMode = useProjectMode()
   const entry = target.entry
   const initial = defaults(target, ctx)
   const lock = ctx.lockedMonths[initial.date.slice(0, 7)]
   const readOnly = Boolean(lock) || !ctx.canEdit || Boolean(entry?.deleted)
   const needsReason = (v: Values) => reasonNeeded(v, initial, ctx)
-  // deleting always needs a reason: the field appears when Delete is pressed without one
-  const [deleteRequested, setDeleteRequested] = useState(false)
+  // deleting always needs a reason (the history must say why time disappeared): asked in its own dialog
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   const form = useAppForm({
     defaultValues: initial,
     validators: {
       onChange: ({ value }) => {
-        const fields = validateEntry(value, initial, ctx, entry)
+        const fields = validateEntry(value, initial, ctx, entry, projectMode)
         return Object.keys(fields).length ? { fields } : undefined
       },
     },
     onSubmit: async ({ value, formApi }) => {
-      const failed = await failure(saveEntry(value, initial, ctx, entry))
+      const failed = await failure(saveEntry(value, initial, ctx, entry, projectMode))
       if (!failed) {
         await invalidateTimeData(qc)
         toast.success(t("common.saved"))
@@ -243,19 +320,7 @@ export function EntryDialog({
       onOpenChange(false)
       undoToast(t("time.deleted"), t("common.undo"), () => restoreDeleted.mutate(vars))
     },
-    onError: (err) => toast.error(tError(err)),
   })
-  const deleting = deletion.isPending
-  const remove = () => {
-    if (!entry) return
-    if (!form.state.values.reason.trim()) {
-      setDeleteRequested(true)
-      form.setFieldMeta("reason", (m) => ({ ...m, isBlurred: true }))
-      setTimeout(() => focusField(document.getElementById("entry-form"), "reason"), 0)
-      return
-    }
-    deletion.mutate({ id: entry.id, reason: form.state.values.reason })
-  }
 
   const restorable = Boolean(entry?.deleted && ctx.canEdit && !lock && onRestore)
   const title = readOnly ? t("time.entry") : entry ? t("time.edit_entry") : t("time.add_entry")
@@ -266,13 +331,7 @@ export function EntryDialog({
           label={t("time.reason_required")}
           maxLength={500}
           placeholder={t("time.reason_placeholder")}
-          description={
-            deleteRequested
-              ? t("time.reason_delete_help")
-              : ctx.self
-                ? undefined
-                : t("time.reason_other_help", { name: ctx.owner.name })
-          }
+          description={ctx.self ? undefined : t("time.reason_other_help", { name: ctx.owner.name })}
         />
       )}
     </form.AppField>
@@ -299,10 +358,9 @@ export function EntryDialog({
                 variant="ghost"
                 intent="negative"
                 className="text-destructive"
-                onClick={remove}
-                disabled={deleting}
+                onClick={() => setConfirmDelete(true)}
               >
-                {deleting ? <Spinner data-icon="inline-start" /> : <Trash2 data-icon="inline-start" />}
+                <Trash2 data-icon="inline-start" />
                 {t("common.delete")}
               </Button>
             ) : null}
@@ -432,6 +490,11 @@ export function EntryDialog({
           {otherZone ? (
             <p className="-mt-3 text-xs text-muted-foreground">{t("time.tz_hint", { tz: ctx.owner.timezone })}</p>
           ) : null}
+          {values.mode === "total" && !entry ? (
+            <p className="-mt-3 text-xs text-muted-foreground">{t("time.daily_total_help")}</p>
+          ) : null}
+
+          {projectMode !== "off" ? <ProjectField form={form} current={entry?.project ?? null} /> : null}
 
           <form.AppField name="note">
             {(f) => (
@@ -444,11 +507,22 @@ export function EntryDialog({
             )}
           </form.AppField>
 
-          {!readOnly && (needsReason(values) || deleteRequested) ? reasonField : null}
+          {!readOnly && needsReason(values) ? reasonField : null}
         </fieldset>
         {/* a deleted entry is read-only, but restoring it may need a reason too */}
         {restorable && needsReason(values) ? reasonField : null}
       </FormRoot>
+      {confirmDelete && entry ? (
+        <ReasonDialog
+          title={t("time.delete_title")}
+          description={`${fmtDay(initial.date, intl)} · ${fmtMinutes(entry.minutes)}`}
+          hint={t("time.reason_delete_help")}
+          submitLabel={t("common.delete")}
+          initialReason={values.reason}
+          onSubmit={(reason) => deletion.mutateAsync({ id: entry.id, reason })}
+          onClose={() => setConfirmDelete(false)}
+        />
+      ) : null}
     </ResponsiveDialog>
   )
 }

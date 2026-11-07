@@ -88,9 +88,10 @@ export interface Day {
   absences: DayAbsence[]
   warnings: string[] // break_too_short | outside_employment (compliance findings come from compliance.ts)
   edited: boolean
-  worklogMin: number
-  worklogRequiredMin: number
-  worklogOk: boolean
+  /** Worked minutes with a project (legacy work log rows included). */
+  projectMin: number
+  /** False on a past day with work without a project while projects are required. */
+  projectOk: boolean
 }
 
 export interface Summary {
@@ -242,7 +243,7 @@ export function accountStart(user: User): string {
 
 // ------------------------------------------------------------------ data context
 
-export type ContextEntry = Pick<TimeEntry, "id" | "kind" | "startAt" | "endAt" | "source">
+export type ContextEntry = Pick<TimeEntry, "id" | "kind" | "startAt" | "endAt" | "source" | "projectId">
 
 export interface AccountContext {
   user: User
@@ -257,14 +258,16 @@ export interface AccountContext {
   settings: Settings
   nowMs: number
   today: string
-  worklogMinutes: Map<string, number>
+  /** Legacy work log minutes per day (rows not merged into entries: signed-off months). */
+  legacyProjectMin: Map<string, number>
 }
 
 export interface ContextOptions {
   includePending?: boolean
   /** Skip loading time entries (vacation figures only). */
   entries?: boolean
-  worklog?: boolean
+  /** Skip the legacy work log (figures that do not need project coverage). */
+  projects?: boolean
 }
 
 export function loadContext(user: User, start: string, end: string, opts: ContextOptions = {}): AccountContext {
@@ -304,6 +307,7 @@ export function loadContext(user: User, start: string, end: string, opts: Contex
         startAt: timeEntries.startAt,
         endAt: timeEntries.endAt,
         source: timeEntries.source,
+        projectId: timeEntries.projectId,
       })
       .from(timeEntries)
       .where(
@@ -324,14 +328,15 @@ export function loadContext(user: User, start: string, end: string, opts: Contex
         startAt: timeEntries.startAt,
         endAt: timeEntries.endAt,
         source: timeEntries.source,
+        projectId: timeEntries.projectId,
       })
       .from(timeEntries)
       .where(and(eq(timeEntries.userId, user.id), isNull(timeEntries.endAt), eq(timeEntries.isDeleted, false)))
       .get()
     if (open && open.startAt < from) entries.unshift(open)
   }
-  const worklogMinutes = new Map<string, number>()
-  if (opts.worklog !== false) {
+  const legacyProjectMin = new Map<string, number>()
+  if (opts.projects !== false) {
     const rows = db
       .select({ date: workLogs.date, minutes: sum(workLogs.minutes) })
       .from(workLogs)
@@ -345,7 +350,7 @@ export function loadContext(user: User, start: string, end: string, opts: Contex
       )
       .groupBy(workLogs.date)
       .all()
-    for (const r of rows) worklogMinutes.set(r.date, Number(r.minutes ?? 0))
+    for (const r of rows) legacyProjectMin.set(r.date, Number(r.minutes ?? 0))
   }
   const now = nowInstant()
   return {
@@ -361,7 +366,7 @@ export function loadContext(user: User, start: string, end: string, opts: Contex
     settings: getAllSettings(),
     nowMs: now.epochMilliseconds,
     today: now.toZonedDateTimeISO(tz).toPlainDate().toString(),
-    worklogMinutes,
+    legacyProjectMin,
   }
 }
 
@@ -427,8 +432,7 @@ export function computeDaysFrom(ctx: AccountContext, opts: ComputeOptions = {}):
     for (let i = from; i <= to; i++) absByDay[i].push(a)
   }
 
-  const required = st.worklog_mode === "required"
-  const pct = st.worklog_required_percent || 0
+  const projectsRequired = st.project_mode === "required"
   const days: Day[] = []
   let si = -1
   for (let i = 0; i < n; i++) {
@@ -467,9 +471,8 @@ export function computeDaysFrom(ctx: AccountContext, opts: ComputeOptions = {}):
       absences: [],
       warnings: [],
       edited: false,
-      worklogMin: ctx.worklogMinutes.get(date) ?? 0,
-      worklogRequiredMin: 0,
-      worklogOk: true,
+      projectMin: ctx.legacyProjectMin.get(date) ?? 0,
+      projectOk: true,
     }
 
     const hol = ctx.holidays.get(date)
@@ -511,15 +514,18 @@ export function computeDaysFrom(ctx: AccountContext, opts: ComputeOptions = {}):
       let first = Number.POSITIVE_INFINITY
       let last = Number.NEGATIVE_INFINITY
       let workedMs = 0
+      let projectMs = 0
       for (const s of daySegs) {
         if (s.e.endAt == null) day.running = true
         if (s.e.source === "manual" || edited?.has(s.e.id)) day.edited = true
         if (s.e.kind !== "work") continue
         workedMs += s.b - s.a
+        if (s.e.projectId != null) projectMs += s.b - s.a
         if (s.a < first) first = s.a
         if (s.b > last) last = s.b
       }
       day.workedMin = workedMs / 60000
+      day.projectMin += projectMs / 60000
       if (workedMs > 0) {
         day.firstStart = new Date(first).toISOString()
         day.lastEnd = new Date(last).toISOString()
@@ -555,10 +561,8 @@ export function computeDaysFrom(ctx: AccountContext, opts: ComputeOptions = {}):
       day.warnings.push("break_too_short")
     }
     if (day.workedMin > 0 && !employed) day.warnings.push("outside_employment")
-    if (required && day.workedMin > 0) {
-      day.worklogRequiredMin = Math.ceil((day.workedMin * pct) / 100 - 1e-9)
-      day.worklogOk = date >= ctx.today || day.worklogMin >= day.worklogRequiredMin
-    }
+    // a minute of slack: a legacy item rounded to whole minutes never leaves a day open
+    if (projectsRequired && day.workedMin > 0 && date < ctx.today) day.projectOk = day.projectMin >= day.workedMin - 1
     days.push(opts.raw ? day : roundDay(day))
   }
   return days
@@ -631,6 +635,7 @@ function roundDay(d: Day): Day {
   d.surchargeMin = r2(d.surchargeMin)
   d.nightCreditMin = r2(d.nightCreditMin)
   d.deltaMin = r2(d.deltaMin)
+  d.projectMin = r2(d.projectMin)
   return d
 }
 
@@ -741,7 +746,7 @@ export function timeBalance(user: User, asOf?: string): TimeBalance {
   let balance = adjustmentRows(user.id, "time", upto).reduce((s, a) => s + a.amount, 0)
   let todayDelta = 0
   if (start <= today) {
-    const ctx = loadContext(user, start, upto, { includePending: false, worklog: false })
+    const ctx = loadContext(user, start, upto, { includePending: false, projects: false })
     for (const day of computeDaysFrom(ctx, { raw: true })) {
       if (day.date <= until) balance += day.deltaMin
       if (day.date === today) todayDelta = day.deltaMin
@@ -759,7 +764,7 @@ export function timeStatement(user: User, year: number): TimeStatement {
   const adjustments = adjustmentRows(user.id, "time", yEnd >= yStart ? yEnd : yStart)
   let opening = adjustments.filter((a) => a.effectiveDate < yStart).reduce((s, a) => s + a.amount, 0)
   if (start < yStart) {
-    const ctx = loadContext(user, start, addDays(yStart, -1), { includePending: false, worklog: false })
+    const ctx = loadContext(user, start, addDays(yStart, -1), { includePending: false, projects: false })
     for (const d of computeDaysFrom(ctx, { raw: true })) opening += d.deltaMin
   }
   const months: StatementMonth[] = []
@@ -767,7 +772,7 @@ export function timeStatement(user: User, year: number): TimeStatement {
   if (yEnd >= yStart) {
     const days =
       start <= yEnd
-        ? computeDaysFrom(loadContext(user, maxDay(start, yStart), yEnd, { includePending: false, worklog: false }), {
+        ? computeDaysFrom(loadContext(user, maxDay(start, yStart), yEnd, { includePending: false, projects: false }), {
             raw: true,
           })
         : []
@@ -894,7 +899,7 @@ export function vacationAccount(user: User, year: number): VacationAccount {
   const ctx = loadContext(user, `${first}-01-01`, `${year}-12-31`, {
     includePending: true,
     entries: false,
-    worklog: false,
+    projects: false,
   })
   const days = computeDaysFrom(ctx, { raw: true })
   const used = new Map<number, number>()

@@ -15,7 +15,7 @@ Self-hosted time tracking for small and mid-sized companies: clocking, time and 
 - Time account (target from the work schedule, worked, balance) and vacation account (entitlement, carry-over, half days).
 - Absence requests with a calendar of holidays and existing absences; sick report in one click with optional doctor's note.
 - Public holidays page: the calendar that applies to you (personal, team or company default), read-only.
-- Work log: what was done, as free text, project or customer reference; optional or required per company.
+- Projects on time entries: each entry says which project its time was spent on; switch projects on the clock without a break; optional or required per company.
 - Own edits are allowed and logged; corrections by others are marked and can be disputed.
 
 **Team leads and HR**

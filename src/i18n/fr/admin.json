@@ -510,14 +510,14 @@
       "vacation": "Vacances",
       "corrections": "Corrections et responsables",
       "sick": "Annonces de maladie",
-      "worklog": "Journal de travail",
       "compliance": "Contrôles (LTr)",
       "retention": "Conservation",
       "mfa": "Double authentification",
       "api": "API",
       "sessions": "Journal des connexions",
       "privacy": "Déclaration de confidentialité",
-      "surcharges": "Travail du dimanche et des jours fériés"
+      "surcharges": "Travail du dimanche et des jours fériés",
+      "projects": "Projets"
     },
     "units": {
       "hhmm": "h:mm",
@@ -541,9 +541,6 @@
       "clock_reminder_hours": "Rappel de départ après",
       "sick_self_report_backdate_days": "Annonce rétroactive jusqu'à",
       "sick_self_report_max_days": "Durée max. d'annonce",
-      "worklog_mode": "Journal de travail",
-      "worklog_required_percent": "Part requise",
-      "worklog_project_required": "Projet obligatoire",
       "compliance_enabled": "L'entreprise est soumise à la loi sur le travail",
       "break_enforcement": "Bloquer le timbrage avant la pause légale minimale et le repos quotidien",
       "weekly_max_minutes": "Durée maximale légale de la semaine",
@@ -555,7 +552,8 @@
       "api_tokens_enabled": "Jetons API personnels",
       "login_log_retention_days": "Conserver le journal des connexions",
       "privacy_notice": "Texte sur /privacy",
-      "holiday_work_surcharge_mode": "Majoration en"
+      "holiday_work_surcharge_mode": "Majoration en",
+      "project_mode": "Projets sur les saisies de temps"
     },
     "help": {
       "default_vacation_days": "Par défaut pour les nouvelles personnes",
@@ -566,24 +564,24 @@
       "night_work_permitted": "Les constats ne sont plus affichés qu'à titre d'info",
       "sunday_work_permitted": "Les constats ne sont plus affichés qu'à titre d'info",
       "retention_years": "Au moins 5 (OLT 1 art. 73)",
-      "worklog_required_percent": "Part du temps travaillé par jour",
       "compliance_enabled": "Sont exclus p. ex. les administrations publiques, l'agriculture, les ménages privés (art. 2 LTr)",
       "break_enforcement": "Art. 15 et 15a LTr. Une saisie manuelle reste possible.",
-      "holiday_work_surcharge_mode": "Salaire : rapporté pour la paie. Crédit de temps : selon CCT."
+      "holiday_work_surcharge_mode": "Salaire : rapporté pour la paie. Crédit de temps : selon CCT.",
+      "project_mode": "Obligatoire : chaque saisie de travail doit avoir un projet avant de clôturer le mois."
     },
     "options": {
       "holiday_mode": {
         "scheduled": "Jours travaillés",
         "prorata": "Au prorata"
       },
-      "worklog_mode": {
-        "off": "Désactivé",
-        "optional": "Facultatif",
-        "required": "Obligatoire"
-      },
       "holiday_work_surcharge_mode": {
         "payroll": "Salaire",
         "time_credit": "Crédit de temps"
+      },
+      "project_mode": {
+        "off": "Désactivé",
+        "optional": "Facultatif",
+        "required": "Obligatoire"
       }
     }
   },
