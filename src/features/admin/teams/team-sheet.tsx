@@ -12,7 +12,15 @@ import { applyServerErrors } from "@/components/form/server-errors"
 import { Button } from "@/components/ui/button"
 import { ColorPicker } from "@/components/ui/color-picker"
 import { Combobox } from "@/components/ui/combobox"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandHint,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
 import { DatePicker } from "@/components/ui/date-picker"
 import { Field, FieldLabel } from "@/components/ui/field"
 
@@ -209,20 +217,15 @@ function MemberPicker({
   return (
     <Command className="rounded-lg border">
       <CommandInput placeholder={t("common.search_person")} />
-      <CommandList className="max-h-64">
+      {/* fixed height (every 2rem row, capped) so filtering never resizes the box */}
+      <CommandList className="max-h-none min-h-17" style={{ height: `min(16rem, ${people.length * 2 + 0.5}rem)` }}>
         <CommandEmpty>{t("common.no_matches")}</CommandEmpty>
         <CommandGroup>
           {sorted.map((p) => {
             const on = selected.has(p.id)
             const from = p.teamId != null && p.teamId !== teamId ? teamName.get(p.teamId) : null
             return (
-              <CommandItem
-                key={p.id}
-                value={`${p.name} ${p.email}`}
-                onSelect={() => toggle(p.id)}
-                aria-selected={on}
-                data-checked={on}
-              >
+              <CommandItem key={p.id} value={`${p.name} ${p.email}`} onSelect={() => toggle(p.id)} aria-selected={on}>
                 <span
                   className={cn(
                     "flex size-4 shrink-0 items-center justify-center rounded-sm border",
@@ -232,12 +235,11 @@ function MemberPicker({
                   {on ? <Check className="size-3" /> : null}
                 </span>
                 <span className="truncate">{p.name}</span>
-                {from && on ? (
-                  <span className="ml-auto truncate text-xs text-warning">
-                    {t("admin.teams.moves_from", { team: from })}
-                  </span>
+                {from ? (
+                  <CommandHint className={cn("shrink truncate", on && "text-warning")}>
+                    {on ? t("admin.teams.moves_from", { team: from }) : from}
+                  </CommandHint>
                 ) : null}
-                {from && !on ? <span className="ml-auto truncate text-xs text-muted-foreground">{from}</span> : null}
               </CommandItem>
             )
           })}
