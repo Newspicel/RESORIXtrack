@@ -1,7 +1,0 @@
-{% set subject = actor.name ~ " hat eine Abwesenheit für dich erfasst" %}{% set cta_url = base_url ~ "/absences" %}{% set cta_label = "Abwesenheiten ansehen" %}Hallo {{ user.name }}
-
-{{ actor.name }} hat für dich «{{ type_label }}» vom {{ absence.start_date.strftime('%d.%m.%Y') }} bis {{ absence.end_date.strftime('%d.%m.%Y') }} erfasst ({{ days }} Arbeitstag{{ '' if days == 1 else 'e' }}).
-{% if type.allows_attachments %}
-Du kannst in RESORIXtrack ein Arztzeugnis oder andere Dokumente hochladen (freiwillig).{% endif %}
-
-{{ cta_url }}

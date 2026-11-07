@@ -1,0 +1,20 @@
+{
+  "openapi": "OpenAPI",
+  "auth": "Authentification",
+  "base_url": "URL de base",
+  "header": "En-tête",
+  "keys": "Clés",
+  "keys_link": "Profil › Clés API",
+  "errors": "Erreurs",
+  "endpoints": "Points d'accès",
+  "schemas": "Schémas",
+  "scope": "Portée",
+  "any_scope": "toute clé",
+  "parameters": "Paramètres",
+  "body": "Corps de la requête",
+  "response": "Réponse",
+  "no_content": "Aucun contenu",
+  "example": "Exemple",
+  "copy": "Copier",
+  "free_form": "objet libre"
+}

@@ -1,5 +1,0 @@
-{% set subject = "Die E-Mail-Adresse deines RESORIXtrack-Kontos wurde geändert" %}Hallo {{ user.name }}
-
-Die E-Mail-Adresse deines RESORIXtrack-Kontos wurde von {{ actor.name if actor else "der Administration" }} auf {{ new_email }} geändert. Diese Adresse erhält keine Nachrichten von RESORIXtrack mehr. Alle Geräte wurden abgemeldet und API-Tokens widerrufen.
-
-Falls du diese Änderung nicht erwartet hast, melde dich sofort bei deiner Administration.

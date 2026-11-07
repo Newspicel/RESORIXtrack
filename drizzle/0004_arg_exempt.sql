@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `arg_exempt` integer DEFAULT false NOT NULL;

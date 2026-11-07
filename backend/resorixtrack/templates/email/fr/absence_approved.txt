@@ -1,7 +1,0 @@
-{% set subject = "Demande approuvée: " ~ type_label %}{% set cta_url = base_url ~ "/absences" %}{% set cta_label = "Voir les absences" %}Bonjour {{ user.name }},
-
-{{ actor.name }} a approuvé votre demande «{{ type_label }}» du {{ absence.start_date.strftime('%d.%m.%Y') }} au {{ absence.end_date.strftime('%d.%m.%Y') }} ({{ days }} jour{{ '' if days == 1 else 's' }} de travail).{% if note %}
-
-Remarque: {{ note }}{% endif %}
-
-{{ cta_url }}

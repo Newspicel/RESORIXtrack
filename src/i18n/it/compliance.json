@@ -1,0 +1,28 @@
+{
+  "title": "Legge sul lavoro",
+  "none": "Nessuna segnalazione",
+  "rule": {
+    "break_min": "Pausa troppo breve",
+    "daily_rest": "Riposo inferiore a 11 h",
+    "day_span": "Giornata oltre 14 h",
+    "night_work": "Lavoro notturno",
+    "sunday_work": "Lavoro domenicale",
+    "weekly_max": "Durata massima settimanale superata",
+    "overtime_daily": "Oltre 2 h di lavoro suppletivo al giorno",
+    "overtime_yearly": "Limite annuo di lavoro suppletivo",
+    "consecutive_days": "Oltre 6 giorni consecutivi",
+    "vacation_minimum": "Vacanze sotto il minimo",
+    "vacation_block": "Nessuna vacanza di 2 settimane consecutive",
+    "compensatory_rest": "Riposo compensativo"
+  },
+  "severity": {
+    "violation": "Violazione",
+    "warning": "Avvertenza",
+    "info": "Nota"
+  },
+  "overtime": "Ore straordinarie",
+  "ueberzeit": "Lavoro suppletivo",
+  "ueberzeit_year": "Lavoro suppletivo {year}",
+  "of_limit": "{value} di {limit}",
+  "team": "Segnalazioni"
+}

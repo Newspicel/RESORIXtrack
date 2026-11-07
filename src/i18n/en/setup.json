@@ -1,0 +1,20 @@
+{
+  "step_company": "Company",
+  "step_time": "Working time",
+  "step_holidays": "Public holidays",
+  "step_admin": "Your account",
+  "progress": "Step {step} of {total}",
+  "code": "Setup code",
+  "code_help": "In the server log or via rt setup-code",
+  "company": "Company name",
+  "weekly_hours": "Full-time hours per week",
+  "hours_range": "Between 1 and 100",
+  "vacation_days": "Vacation days per year",
+  "days_range": "Between 0 and 366",
+  "holidays": "Calendar",
+  "holidays_help": "Default for everyone",
+  "no_holidays": "Skip for now",
+  "holidays_failed": "Holidays not installed. Add them under Administration.",
+  "no_smtp": "No email server set: invitations are not sent until SMTP_HOST is configured.",
+  "finish": "Finish setup"
+}

@@ -1,3 +1,0 @@
-{% set subject = "RESORIXtrack test email" %}Hello {{ user.name }},
-
-This is a test email from RESORIXtrack. If you can read this, SMTP is configured correctly.

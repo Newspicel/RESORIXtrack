@@ -1,117 +1,119 @@
 # Security
 
-This page describes how RESORIXtrack protects employee data, what the operator has to do to keep it that way, and where the limits are. It is written for the person who installs and runs RESORIXtrack. Reporting a vulnerability: see [SECURITY.md](../SECURITY.md).
+How RESORIXtrack protects employee data and what the operator must do. Reporting a vulnerability: [SECURITY.md](../SECURITY.md).
 
-## Threat model in one paragraph
+## Threat model
 
-RESORIXtrack stores personal data (working hours, absences, sick notes) for everyone in a company. It is intended for **internal hosting on the company network or behind a VPN** and is not hardened for exposure to the public internet; you run it at your own risk and RESORIX AG accepts no liability for any damage. The attackers we design against are: strangers on the internet (credential stuffing, scanning, abusing the first-run setup), a malicious or careless employee (reading colleagues' data, changing their own history after a month was signed off), a stolen laptop or session, and someone who obtains a copy of the database or a backup. We do **not** try to protect against an attacker who controls the server itself; for that, standard server hygiene (updates, SSH keys, firewall, disk encryption) applies.
-
-## Accounts and passwords
-
-- Passwords are hashed with **Argon2id** (RFC 9106 parameters: 64 MiB memory, 3 iterations, 4 lanes), salted and never stored or logged in clear text. Hashes are upgraded automatically on sign-in when parameters change.
-- Password policy: at least 10 characters, not a common password, not containing the local part of the email address.
-- Unknown-user and wrong-password errors are identical and take the same time (a dummy hash is computed), so account existence can't be probed.
-- **Sign-in throttling** per email+IP (8 failures in 15 minutes by default), plus wider ceilings per email (5×) and per IP (4×) so one attacker can't lock a user out from everywhere, and a distributed spray against one account is still stopped.
-- Password-reset emails are limited separately (3 per address and 20 per IP per hour) and never count as failed sign-ins.
-- Invitation links are valid for 72 hours, reset links for 1 hour; both are single-use, stored only as SHA-256 hashes, and carry the token in the URL **fragment** so it never reaches server access logs.
-- New passwords are also checked against **Have I Been Pwned** (k-anonymity: only the first five characters of the SHA-1 hash leave the server; disable with `PWNED_PASSWORDS_CHECK=false`; fails open when the service is unreachable).
-- **Two-factor authentication (TOTP)** can be enabled by every person under Profile & security (and required for administrators or for everyone): a 6-digit code from an authenticator app at sign-in, eight single-use recovery codes, replay protection within the 30-second step, secret encrypted at rest. Administrators can be required to use it (Settings → General); an administrator can reset it for a person who lost their phone (password confirmation, logged). The password step and the code step are throttled together.
-- Administrators can set a user's password directly (for people without email). They must confirm their *own* password to do so; the user is signed out everywhere and notified.
-- `flask resorixtrack set-password --email …` does the same from the server console.
-
-## Sessions and CSRF
-
-- Sessions are **server-side**: the browser only holds a random 256-bit token, stored hashed. Each person sees their signed-in devices in the profile and can sign any of them out.
-- Cookies are `HttpOnly`, `Secure` (over HTTPS), `SameSite=Lax`, and use the `__Host-` prefix so they are bound to the exact host.
-- "Keep me signed in" slides for the configured number of days (30 by default) and is capped at an **absolute lifetime of 90 days**, however often it is used. Without it, a session ends after 12 hours of inactivity.
-- Every state-changing request from the browser must carry the CSRF token (double-submit cookie plus a server-stored synchronizer token, compared in constant time).
-- Changing or resetting a password, an administrator setting a password, changing the email address, or deactivating an account ends **all** sessions and revokes **all** API tokens of that user.
-
-## API tokens
-
-- Personal access tokens (`rt_…`) are created in the profile, require the account password, are stored hashed, and are **scoped** (`clock`, `entries:read`, `entries:write`, `absences:read`, `absences:write`, `reports:read`, `admin`).
-- Tokens always expire: 90 days by default, 365 at most, 90 at most for `admin` scope.
-- Routes that manage the account itself (sessions, tokens, password, profile) are session-only and refuse tokens, so a token on a desktop can never escalate to full account control.
-- Tokens are fully **audited**: creation and revocation go to the audit log (with scopes, expiry, who and why), every call is counted with the last-used IP, and the first use per day and IP is written to the sign-in log. Administrators see every token in the company (*Backups & logs → API tokens*), can revoke any of them, and can switch personal tokens off company-wide.
+RESORIXtrack holds personal data (working hours, absences, sick notes) of a whole company. It is meant for **internal hosting on a company network or behind a VPN**, not for the public internet; you run it at your own risk. Designed against: strangers (credential stuffing, scanning, claiming a fresh installation), a malicious or careless employee (reading colleagues' data, changing signed months), a stolen laptop or session, a stolen database copy or backup. Not designed against an attacker who controls the server; use standard server hygiene.
 
 ## Roles
 
 | | Sees time data of | Can |
 |---|---|---|
-| **Employee** | themselves | clock, edit own entries (logged), request absences, log work |
-| **Team lead / deputy** (per team, optionally for a period) | members of their teams | correct entries, approve, record absences, sign off months, manage team projects, name deputies |
-| **HR** (capability) | everyone | reports for all, sign off anyone incl. leads, reopen months, export personal data, integrity check |
-| **Administrator** (role) | nobody (own data only) | users, teams, roles and capabilities, settings, holidays, branding, backups, sign-in log, token overview, anonymisation |
-| **Projects** (capability) | – | create and maintain all projects |
+| **Employee** | self | clock, edit own entries (logged), request absences, work log |
+| **Team lead / deputy** (per team, optionally for a period) | members of their teams | correct entries, approve, record absences, sign off, team projects, name deputies |
+| **HR** (capability) | everyone | company reports, sign off anyone, reopen months, data export, integrity check |
+| **Administrator** (role) | nobody (own data only) | people, teams, roles, settings, holidays, branding, backups, logs, anonymisation |
+| **Projects** (capability) | nobody | create and maintain all projects |
 
-Administrators therefore run the system without seeing anyone's hours; a company grants the HR capability to the people who do. Several administrators, several leads per team and deputies ("Stellvertreter") with a validity period are all supported. Backups contain the whole database but are encrypted with the server's backup password; still, keep downloads to trusted operators and the password out of their reach where appropriate.
+## Isolation
 
-## Authorization and data isolation
+- Every server function and REST endpoint checks permissions in the service layer (`src/server/services/permissions.ts`).
+- Records outside the caller's scope answer **404**, so ids cannot be probed.
+- Team calendars show "Absent" for sick leave; notes and documents only reach the person, their leads and HR.
+- `src/server/isolation.test.ts` calls every server function and REST endpoint as each persona with other people's ids and fails on any leak or foreign write; API keys are checked against owner and scopes. A new server function fails the test until it is classified.
 
-- Every endpoint checks permissions on the server as described above. Administrators without HR get `404`/`403` on every time-data endpoint, and the change log hides time entities from them.
-- Objects outside the caller's scope answer `404`, so IDs can't be enumerated to learn who exists.
-- In the team calendar, colleagues see only *that* someone is absent; sick leave is anonymised and notes are hidden.
-- An automated test (`backend/tests/test_isolation.py`) calls **every** API route as an employee (session and token) and as a lead of another team and asserts that no response contains other people's private data and nothing of theirs changed.
+## Passwords
 
-## Month sign-off: tamper evidence
+- **Argon2id** (64 MiB, 3 iterations, 4 lanes; v1 hashes work unchanged). Plaintext is never stored or logged.
+- Policy: 10 to 256 characters, not a common password, not containing the email name.
+- **Have I Been Pwned** check for new passwords: only the first 5 characters of the SHA-1 hash leave the server; fails open; `PWNED_PASSWORDS_CHECK=false` disables it.
+- Throttling by failed attempts: `LOGIN_MAX_FAILURES` (8) per email and IP within `LOGIN_WINDOW_MINUTES` (15), plus ceilings per email (×5) and per IP (×4). Reset emails: 3 per address and 20 per IP per hour. Better Auth rate limits stop floods on top.
+- Invitation links: 7 days; reset links: 2 hours. Single use, stored hashed, token in the URL fragment (never in access logs).
+- Changing or resetting a password ends all sessions and revokes all API keys.
 
-After a team lead or administrator signs off a month, that person's entries, absences and adjustments in that period are read-only for everyone, enforced on four levels: UI, service layer, **SQLite triggers** (no raw SQL can change them either), and an **HMAC-SHA256 seal chain** over a SHA-256 fingerprint of the data, keyed with `SIGNOFF_KEY` (defaults to `SECRET_KEY`). The integrity check (Team → Month sign-off → Integrity check) detects changed rows, forged or deleted sign-offs, missing triggers, and rule changes that altered a signed month's figures retroactively.
+## Two-factor, passkeys, single sign-on
 
-Keep `SIGNOFF_KEY` separate from your backups: anyone with both the database file and the key could forge seals.
+- **TOTP** with 10 single-use backup codes; the secret is encrypted with a key derived from `SECRET_KEY`. Can be required for administrators or everyone (Settings → Security); a passkey or a single sign-on link satisfies the requirement. Administrators can reset it (logged). People imported from v1 enrol again.
+- **Passkeys** (WebAuthn), bound to the host of `BASE_URL`. Phishing-resistant, so a passkey sign-in skips TOTP.
+- **OpenID Connect** (PKCE): no self-registration; an identity signs in only as an existing active person with the same verified email, or the person already linked to it. Name and email are never taken from the provider. `OIDC_ONLY=true` disables passwords; `rt reset-password` grants one break-glass password sign-in.
 
-## First-run setup
+## Sessions and CSRF
 
-The setup wizard creates the first administrator. Until that account exists, the wizard requires a **one-time setup code** that is printed to the server log on start (`docker compose logs app`) and can be regenerated with `flask resorixtrack setup-code`. Without it, a stranger who found the fresh installation (for example through certificate-transparency logs) could claim it.
+- **Better Auth** database sessions: the browser holds a random token; sessions can be listed and revoked (Profile → Signed-in devices).
+- Cookies: `HttpOnly`, `SameSite=Lax`, `Secure` with the `__Secure-` prefix when `SESSION_COOKIE_SECURE=true`.
+- Lifetime: `SESSION_REMEMBER_DAYS` with "Keep me signed in" (extended while in use); without it the session ends after `SESSION_SHORT_IDLE_HOURS` of inactivity. Every session ends `SESSION_ABSOLUTE_DAYS` after sign-in, however active. Checked on every request (`src/server/session-policy.ts`); an expired session is deleted.
+- Deactivating an account ends its sessions, API keys and passkeys.
+- **CSRF**: every state-changing request (server functions, `/api/auth`) must come from the app's own origin (TanStack Start CSRF middleware, Better Auth trusted origin = `BASE_URL`). `/api/v1` accepts only API keys, never cookies.
 
-## Web application hardening
+## API keys
 
-- **Content-Security-Policy** without `unsafe-inline` for scripts: only the app's own files plus SHA-256 hashes of the two bootstrap snippets the frontend build emits; no third-party CDNs (the API documentation UI is vendored into the image). Also `frame-ancestors 'none'`, `object-src 'none'`, `base-uri 'self'`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: same-origin`, `Cross-Origin-Opener-Policy` and `Cross-Origin-Resource-Policy: same-origin`, HSTS over TLS.
-- The interactive API docs and the OpenAPI spec require sign-in.
-- Post-login redirects (`?next=`) are restricted to same-origin paths.
-- All free-text input rejects control characters (prevents mail-header injection); email addresses are validated strictly; date ranges are bounded.
-- CSV/XLSX exports neutralise cells starting with `= + - @` so a note can't become a spreadsheet formula.
-- **Uploads** (sick notes, logos): type is detected from content, not the file name; size and count are limited; files are stored under random names outside the web root and served with `nosniff` and a `default-src 'none'` CSP. Uploaded **SVG logos** are parsed and rejected if they contain scripts, event handlers, external references or a DOCTYPE, and are additionally served with a sandboxing CSP.
-- PDF rendering (WeasyPrint) is restricted to local static files; it can't fetch URLs.
-- Error responses never include stack traces; database errors are logged without bound parameters.
+- Created under Profile → API keys after confirming the password (people who only use SSO have none to confirm). Shown once, stored hashed, prefix `rt_`.
+- Scopes: `time:read`, `time:write`, `absences:read`, `absences:write`, `reports:read`. A key never exceeds its owner's rights.
+- Expire after 30, 90, 180 or 365 days. Per-key rate limit (burst 120, 2 per second). Use count and last use are recorded.
+- Account management (password, sessions, keys, profile) is not reachable with a key.
+- Settings → Security can switch keys off company-wide.
+- Administrators see every key (owner, name, start, scopes, use, expiry) under Backups & logs → API keys, never the key itself, and can revoke one with a reason: the change log records it and the owner is notified.
+
+## Web hardening
+
+- **Content-Security-Policy** with a per-request nonce: `script-src 'self' 'nonce-…'`, `object-src 'none'`, `frame-ancestors 'none'`, `base-uri 'self'`, `form-action 'self'`, no third-party origins. Styles allow inline attributes. The API docs page (`/api/v1/docs`, signed in only) allows inline scripts.
+- `X-Content-Type-Options: nosniff`, `Referrer-Policy: same-origin`, `X-Frame-Options: DENY`, `Permissions-Policy`, `Cross-Origin-Opener-Policy` and `Cross-Origin-Resource-Policy: same-origin`, HSTS over HTTPS (also set by Caddy).
+- Inputs are validated with zod on the server.
+- **Uploads**: type detected from content (PDF, PNG, JPEG, WebP, HEIC), size limited (`ATTACHMENT_MAX_MB`), stored under random names outside the web root, served with `nosniff` and `default-src 'none'`. SVG logos are refused when they contain scripts, event handlers or external references, and served sandboxed.
+- Emails contain no remote resources; the logo is an inline attachment.
+
+## Sign-off seals
+
+A signed-off month is read-only on four levels:
+
+1. UI and services refuse changes.
+2. **SQLite triggers** refuse inserts, updates and deletes of entries, absences, adjustments, work log, schedules, employment dates and holidays in signed periods, and any change to sign-offs.
+3. **Seal**: each sign-off stores a SHA-256 fingerprint of the period's data and an HMAC-SHA256 seal keyed with `sha256("resorixtrack-signoff:" + SIGNOFF_KEY)`.
+4. **Chain**: each seal covers the person's previous seal, so deleting or reordering sign-offs is detected.
+
+| Seal version | Canonical form |
+|---|---|
+| 1 (imported from v1) | Python `json.dumps(sort_keys=True, separators=(",", ":"))`, byte-exact port |
+| 2 (v2) | RFC 8785 JSON |
+
+Checks: Team → Month sign-off → Integrity check, `rt verify-signoffs`, and the weekly worker job. Keep `SIGNOFF_KEY` away from backups: whoever has both the database and the key could forge seals.
+
+## Change log
+
+Every change to time data is a revision (who, when, before, after, why, source) in the same transaction. The `revisions` table is append-only (triggers); the only allowed change is scrubbing a person's identity on anonymisation.
+
+## Backups
+
+Always encrypted (Argon2id + ChaCha20-Poly1305), no unencrypted archive on disk. See [backup-restore.md](backup-restore.md).
+
+## Logs and retention
+
+- **Sign-in log**: every attempt with result, IP and device; kept `login_log_retention_days` (Settings → Security, default 365). Each person sees their own.
+- Read notifications are deleted after 180 days; expired sessions, links and keys are cleaned up nightly.
+- Retention of time data and anonymisation: [compliance.md](compliance.md#data-protection-revdsg-or-328b).
 
 ## Deployment
 
-The Compose stack is hardened by default:
+- App port bound to `127.0.0.1` by default; use the `tls` profile or your own proxy.
+- Forwarded headers trusted only with `TRUSTED_PROXIES >= 1`.
+- Containers: unprivileged user, read-only root filesystem, all capabilities dropped, `no-new-privileges`, PID and memory limits.
+- The app refuses to start with the placeholder or a weak `SECRET_KEY`, or without `BACKUP_PASSWORD`.
+- Secrets as files (`*_FILE`). SMTP passwords never over an unencrypted connection unless `SMTP_ALLOW_PLAINTEXT_AUTH=true`.
+- Dependencies pinned in `pnpm-lock.yaml`; licenses checked by `scripts/licenses.ts`.
 
-- The app port is bound to **127.0.0.1** unless you set `RESORIXTRACK_BIND`; the recommended deployment is the `tls` profile with the built-in Caddy (automatic Let's Encrypt), or your own reverse proxy.
-- `X-Forwarded-*` headers are only trusted when `TRUSTED_PROXIES` is at least 1 (set it to the number of proxies in front of the app; 0 when reached directly). Otherwise anyone could spoof client IPs and bypass per-IP throttling.
-- Containers run as an unprivileged user with a read-only root filesystem, all capabilities dropped, `no-new-privileges`, PID and memory limits.
-- The application refuses to start with the placeholder `SECRET_KEY` from `.env.example`, or with a short or low-entropy key.
-- Secrets can be provided as files (`SECRET_KEY_FILE`, `SIGNOFF_KEY_FILE`, `SMTP_PASSWORD_FILE`) for Docker/Compose secrets.
-- SMTP credentials are never sent over an unencrypted connection unless you explicitly set `SMTP_ALLOW_PLAINTEXT_AUTH=true`.
-- Python dependencies are installed from a hash-pinned lock file (`backend/requirements.lock`); frontend dependencies from `package-lock.json` with `npm ci`.
+## Not covered
 
-## Logs and personal data
+- The live database is not encrypted at rest; use full-disk encryption.
+- Permits for night and Sunday work are not managed.
 
-- The **sign-in log** records every attempt (success, wrong password, unknown address, disabled account, throttled) with IP and device. Unknown addresses are stored masked (`an***@example.com`) because people regularly type a password into the email field. Retention is configurable (365 days by default); each person sees their own attempts in the profile.
-- The **audit log** (`revisions` table) is append-only at database level and records who changed what, when and why, for all time-relevant data.
-- Access logs (gunicorn) contain the request path but never the query string, so no tokens.
-- Soft-deleted records are kept for the statutory record-keeping period. `flask resorixtrack purge-attachments --older-than 365` deletes the *files* of removed documents and of documents on cancelled or declined absences; the records and checksums stay.
-- Deleted documents are not included in backups.
-- Emails contain no remote resources: the company logo is embedded as an inline attachment, there are no web fonts, scripts or tracking pixels, and links are plain links to your own installation. A test enforces this for every template.
+## Operator checklist
 
-## Data-protection requests
-
-- **Access request / export:** every person can download everything stored about them (Profile & security → *Download my data*, JSON); administrators can export any person (Employees → Edit → *Export data*).
-- **Anonymisation of former employees:** Employees → Edit → *Anonymise…* (inactive accounts, password confirmation) or `flask resorixtrack anonymize --email …` (enforces a retention period, 5 years by default). Name and email become placeholders, documents are deleted, logs/sessions/tokens/notifications are removed, and the name is scrubbed from the change history; working-time records remain for the statutory period (signed-off months stay immutable). The action is logged.
-
-## What RESORIXtrack does not do (yet)
-
-- No SSO (OIDC/SAML). Keep administrator accounts to the few people who need them, enable two-factor authentication for them and use strong passphrases.
-- No encryption of the live database at rest (backups are encrypted); use full-disk encryption on the server.
-
-## Checklist for operators
-
-1. Random `SECRET_KEY` (and ideally a separate `SIGNOFF_KEY`) and a strong `BACKUP_PASSWORD`, `.env` readable only by root; both in your password manager.
-2. HTTPS everywhere; `SESSION_COOKIE_SECURE=true` (the default); `TRUSTED_PROXIES` matching your setup.
-3. App port not exposed publicly (default `127.0.0.1`), firewall for the rest.
+1. Random `SECRET_KEY`, separate `SIGNOFF_KEY`, strong `BACKUP_PASSWORD`; `.env` mode 600; all three in your password manager.
+2. HTTPS; `SESSION_COOKIE_SECURE=true`; `TRUSTED_PROXIES` matches your setup.
+3. App port not public; firewall; internal network or VPN.
 4. SMTP with STARTTLS or TLS.
-5. Two-factor authentication for every administrator, or for everyone (Settings → General → require it).
-6. Encrypted backups copied off the server regularly and a restore tested once ([backup-restore.md](backup-restore.md)).
-7. Keep the image updated; migrations run automatically and make a backup first.
-8. Review the sign-in log and the admin accounts from time to time.
+5. Two-factor or passkeys required for administrators (or everyone).
+6. Off-site copies of the encrypted backups; one restore tested.
+7. Keep the image updated.
+8. Review the sign-in log and the administrator list now and then.

@@ -1,5 +1,0 @@
-{% set subject = requester.name ~ " annonce: " ~ type_label %}{% set cta_url = base_url ~ "/team" %}{% set cta_label = "Ouvrir le calendrier de l'équipe" %}Bonjour {{ user.name }},
-
-{{ requester.name }} a annoncé «{{ type_label }}» du {{ absence.start_date.strftime('%d.%m.%Y') }} au {{ absence.end_date.strftime('%d.%m.%Y') }} ({{ days }} jour{{ '' if days == 1 else 's' }} de travail).
-
-{{ cta_url }}

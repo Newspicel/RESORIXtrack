@@ -1,0 +1,20 @@
+{
+  "step_company": "Firma",
+  "step_time": "Arbeitszeit",
+  "step_holidays": "Feiertage",
+  "step_admin": "Dein Konto",
+  "progress": "Schritt {step} von {total}",
+  "code": "Einrichtungscode",
+  "code_help": "Im Server-Log oder mit rt setup-code",
+  "company": "Firmenname",
+  "weekly_hours": "Vollzeit-Stunden pro Woche",
+  "hours_range": "Zwischen 1 und 100",
+  "vacation_days": "Ferientage pro Jahr",
+  "days_range": "Zwischen 0 und 366",
+  "holidays": "Kalender",
+  "holidays_help": "Standard für alle",
+  "no_holidays": "Später einrichten",
+  "holidays_failed": "Feiertage nicht installiert. Füge sie unter Administration hinzu.",
+  "no_smtp": "Kein E-Mail-Server: Einladungen werden erst mit SMTP_HOST versendet.",
+  "finish": "Einrichtung abschliessen"
+}

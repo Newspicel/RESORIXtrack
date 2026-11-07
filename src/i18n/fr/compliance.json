@@ -1,0 +1,28 @@
+{
+  "title": "Droit du travail",
+  "none": "Aucune constatation",
+  "rule": {
+    "break_min": "Pause trop courte",
+    "daily_rest": "Repos inférieur à 11 h",
+    "day_span": "Journée de plus de 14 h",
+    "night_work": "Travail de nuit",
+    "sunday_work": "Travail du dimanche",
+    "weekly_max": "Durée maximale dépassée",
+    "overtime_daily": "Plus de 2 h de travail supplémentaire par jour",
+    "overtime_yearly": "Limite annuelle de travail supplémentaire",
+    "consecutive_days": "Plus de 6 jours d'affilée",
+    "vacation_minimum": "Vacances sous le minimum",
+    "vacation_block": "Pas 2 semaines de vacances",
+    "compensatory_rest": "Repos compensatoire"
+  },
+  "severity": {
+    "violation": "Infraction",
+    "warning": "Avertissement",
+    "info": "Remarque"
+  },
+  "overtime": "Heures supplémentaires",
+  "ueberzeit": "Travail supplémentaire",
+  "ueberzeit_year": "Travail supplémentaire {year}",
+  "of_limit": "{value} sur {limit}",
+  "team": "Constatations"
+}

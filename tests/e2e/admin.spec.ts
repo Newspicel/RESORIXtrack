@@ -1,0 +1,72 @@
+import { expect, goto, pick, test, toast } from "./fixtures"
+
+test("admin: create a person, change team and role", async ({ as }, info) => {
+  const page = await as("admin")
+  const stamp = `${pick(info, "d", "m")}${Date.now().toString(36)}`
+  const name = `E2E Person ${stamp}`
+  const email = `e2e.${stamp}@example.nomail`
+
+  await goto(page, "/admin/users")
+  await page.getByRole("button", { name: "Add employee" }).click()
+  const sheet = page.getByRole("dialog", { name: "New employee" })
+  await sheet.getByLabel("Name").fill(name)
+  await sheet.getByLabel("Email").fill(email)
+  await sheet.getByRole("button", { name: "Invite" }).click()
+  // no mail server in this setup: the person is created, the invitation stays queued or is reported unsent
+  await expect(toast(page, new RegExp(`Invitation sent to ${email}|Added, invitation not sent`))).toBeVisible()
+  await expect(page.getByRole("heading", { level: 1, name })).toBeVisible()
+  await expect(page.getByText("Invited", { exact: true }).first()).toBeVisible()
+
+  await page.getByRole("combobox", { name: "Team" }).click()
+  await page.getByRole("option", { name: "Operations" }).click()
+  await page.getByRole("combobox", { name: "Role" }).click()
+  await page.getByRole("option", { name: "Admin" }).click()
+  await page.getByRole("button", { name: "Save" }).click()
+  await expect(toast(page, "Saved")).toBeVisible()
+
+  await page.reload()
+  await expect(page.getByRole("combobox", { name: "Team" })).toHaveText("Operations")
+  await expect(page.getByRole("combobox", { name: "Role" })).toHaveText("Admin")
+
+  await goto(page, "/admin/users")
+  await page.getByRole("searchbox", { name: "Search name or email" }).fill(stamp)
+  await expect(page.getByRole("row").or(page.getByRole("listitem")).filter({ hasText: name })).toContainText(
+    "Operations",
+  )
+})
+
+test("admin: holiday import dialog opens", async ({ as }) => {
+  const page = await as("admin")
+  await goto(page, "/admin/holidays")
+  await page.getByRole("button", { name: "Import" }).click()
+  const dialog = page.getByRole("dialog", { name: "Import public holidays" })
+  await expect(dialog).toBeVisible()
+  await dialog.getByRole("button", { name: "Cancel" }).click()
+  await expect(dialog).toBeHidden()
+})
+
+test("admin: settings save a switch", async ({ as }, info) => {
+  const page = await as("admin")
+  // each project toggles its own setting (they run in parallel against one database)
+  const label = pick(info, "Leads edit schedules", "Leads adjust balances")
+  await goto(page, "/admin/settings")
+  await page.getByRole("tab", { name: "Working time" }).click()
+  const panel = page.getByRole("tabpanel", { name: "Working time" })
+  const toggle = panel.getByRole("switch", { name: label })
+  const before = (await toggle.getAttribute("aria-checked")) === "true"
+
+  await toggle.click()
+  await panel.getByRole("button", { name: "Save" }).click()
+  await expect(toast(page, "Saved")).toBeVisible()
+  await page.reload()
+  await page.getByRole("tab", { name: "Working time" }).click()
+  await expect(toggle).toHaveAttribute("aria-checked", String(!before))
+
+  // and back
+  await toggle.click()
+  await panel.getByRole("button", { name: "Save" }).click()
+  await expect(toast(page, "Saved")).toBeVisible()
+  await page.reload()
+  await page.getByRole("tab", { name: "Working time" }).click()
+  await expect(toggle).toHaveAttribute("aria-checked", String(before))
+})

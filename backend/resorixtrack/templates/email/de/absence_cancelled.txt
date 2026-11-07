@@ -1,7 +1,0 @@
-{% set subject = type_label ~ " storniert" %}{% set cta_url = base_url ~ "/absences" %}{% set cta_label = "Abwesenheiten ansehen" %}Hallo {{ user.name }}
-
-{{ actor.name }} hat deine Abwesenheit «{{ type_label }}» vom {{ absence.start_date.strftime('%d.%m.%Y') }} bis {{ absence.end_date.strftime('%d.%m.%Y') }} storniert.
-
-Begründung: {{ reason or "–" }}
-
-{{ cta_url }}

@@ -1,0 +1,526 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/inter";
+
+/*
+ * RESORIXtrack design tokens
+ * --------------------------------------------------------------------------------------------
+ * Every colour, radius and shadow is defined here (see docs/customizing.md). The theme follows the
+ * device (prefers-color-scheme) unless the person picked one: then <html> carries `.light` or `.dark`
+ * (cookie rt_theme, rendered by the server, so no script and no flash). Dark tokens are the base; the
+ * `light` variant swaps them. The accent can be changed at runtime by an administrator
+ * (Settings → Branding), which only replaces --brand; all brand shades derive from it.
+ *
+ * Rules these tokens encode (docs/design.md):
+ * - Colours are authored in OKLCH. Status colours share one lightness and chroma and differ only
+ *   in hue, so no status shouts louder than another by accident. Colour never carries meaning
+ *   alone – always pair it with an icon or text.
+ * - Separation ladder: space → tint (--card) → hairline (--border) → shadow. Shadows are reserved
+ *   for things that float (popovers, dialogs, sheets): --shadow-overlay. Resting cards get none.
+ * - Radii nest: inner radius = outer radius − padding (cards xl, controls lg, chips md).
+ */
+
+/* explicit class first; without one the device decides */
+@custom-variant light {
+  &:is(.light, .light *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: light) {
+    &:is(:root:not(.dark), :root:not(.dark) *) {
+      @slot;
+    }
+  }
+}
+@custom-variant dark {
+  &:is(.dark, .dark *) {
+    @slot;
+  }
+  @media not (prefers-color-scheme: light) {
+    &:is(:root:not(.light), :root:not(.light) *) {
+      @slot;
+    }
+  }
+}
+
+:root {
+  color-scheme: dark;
+
+  /* brand (runtime-overridable) */
+  --brand: oklch(0.667 0.114 229.1); /* #35a1cc */
+  --brand-bright: oklch(from var(--brand) calc(l + 0.12) calc(c * 0.9) calc(h - 14));
+  --brand-ink: oklch(from var(--brand) calc(l - 0.115) c calc(h + 8));
+  --navy: oklch(0.275 0.077 264.5); /* #14254d */
+  --navy-deep: oklch(0.213 0.05 264.1);
+  --brand-soft: color-mix(in oklch, var(--brand) 14%, transparent);
+  --gradient-brand: linear-gradient(135deg, var(--brand-bright) 0%, var(--brand) 45%, var(--navy) 100%);
+  --gradient-hero:
+    radial-gradient(120% 140% at 85% 30%, color-mix(in oklch, var(--brand) 16%, transparent) 0%, transparent 55%),
+    linear-gradient(180deg, oklch(0.2 0.02 255) 0%, oklch(0.17 0.012 260) 100%);
+
+  /* surfaces (dark, neutral with a hint of blue) */
+  --background: oklch(0.145 0.002 286);
+  --foreground: oklch(0.946 0 0);
+  --card: oklch(0.192 0.004 286);
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.228 0.006 286);
+  --popover-foreground: var(--foreground);
+  --muted: oklch(0.228 0.006 286);
+  --muted-foreground: oklch(0.68 0.01 264.5);
+  --faint-foreground: oklch(0.56 0.01 264.5);
+  --secondary: oklch(0.258 0.007 286);
+  --secondary-foreground: var(--foreground);
+  --accent: oklch(0.258 0.007 286);
+  --accent-foreground: var(--foreground);
+  --primary: var(--brand);
+  --primary-foreground: oklch(0.99 0 0);
+  --destructive: oklch(0.66 0.17 23);
+  --border: oklch(0.289 0.006 271);
+  --input: oklch(0.32 0.006 271);
+  --ring: var(--brand-bright);
+
+  /* status family: one L, one C, hue varies (equal salience) */
+  --status-l: 0.74;
+  --status-c: 0.13;
+  --work: var(--brand);
+  --break: oklch(var(--status-l) var(--status-c) 76);
+  --absent: oklch(var(--status-l) var(--status-c) 293);
+  --holiday: oklch(var(--status-l) var(--status-c) 29);
+  --positive: oklch(var(--status-l) var(--status-c) 160);
+  --negative: oklch(var(--status-l) var(--status-c) 70);
+  --warning: oklch(var(--status-l) var(--status-c) 76);
+  --info: oklch(var(--status-l) var(--status-c) 229);
+  --today: oklch(0.62 0.2 27);
+
+  --chart-1: var(--brand);
+  --chart-2: var(--positive);
+  --chart-3: var(--absent);
+  --chart-4: var(--break);
+  --chart-5: var(--holiday);
+
+  --sidebar: oklch(0.165 0.003 286);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: color-mix(in oklch, var(--brand) 16%, transparent);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: oklch(0.244 0.006 271);
+  --sidebar-ring: var(--ring);
+
+  --radius: 0.625rem;
+  --shadow-overlay: 0 1px 2px oklch(0 0 0 / 0.4), 0 12px 40px oklch(0 0 0 / 0.55);
+
+  /* motion: one material for the whole app */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --dur-feedback: 160ms; /* hover / focus colour cross-fades */
+  --dur-enter: 200ms;
+  --dur-exit: 150ms;
+  --dur-sheet-in: 220ms;
+  --dur-sheet-out: 160ms;
+  --dur-dialog-in: 180ms;
+  --dur-dialog-out: 130ms;
+  --dur-popup-in: 120ms;
+  --dur-popup-out: 100ms;
+  --dur-collapse: 180ms;
+
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+:root {
+  @variant light {
+    color-scheme: light;
+    --gradient-hero:
+      radial-gradient(120% 140% at 85% 30%, color-mix(in oklch, var(--brand) 14%, transparent) 0%, transparent 55%),
+      linear-gradient(180deg, oklch(0.975 0.012 230) 0%, oklch(0.985 0.004 250) 100%);
+    --brand-soft: color-mix(in oklch, var(--brand) 12%, transparent);
+    --primary: var(--brand-ink);
+
+    --background: oklch(0.972 0.005 258);
+    --foreground: oklch(0.208 0.015 262);
+    --card: oklch(1 0 0);
+    --popover: oklch(1 0 0);
+    --muted: oklch(0.955 0.006 258);
+    --muted-foreground: oklch(0.5 0.021 261);
+    --faint-foreground: oklch(0.6 0.018 262);
+    --secondary: oklch(0.941 0.008 254);
+    --accent: oklch(0.941 0.008 254);
+    --destructive: oklch(0.55 0.19 25);
+    --border: oklch(0.911 0.011 257);
+    --input: oklch(0.88 0.012 257);
+    --ring: var(--brand);
+
+    --status-l: 0.56;
+    --status-c: 0.13;
+    --work: var(--brand-ink);
+    --today: oklch(0.56 0.2 27);
+
+    --sidebar: oklch(0.985 0.003 258);
+    --sidebar-accent: color-mix(in oklch, var(--brand) 12%, transparent);
+    --sidebar-border: oklch(0.925 0.01 257);
+
+    --shadow-overlay: 0 1px 2px oklch(0.28 0.08 265 / 0.06), 0 16px 48px oklch(0.28 0.08 265 / 0.16);
+  }
+}
+
+@theme inline {
+  --font-sans: "Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-heading: var(--font-sans);
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-faint-foreground: var(--faint-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-brand: var(--brand);
+  --color-brand-bright: var(--brand-bright);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-soft: var(--brand-soft);
+  --color-navy: var(--navy);
+  --color-work: var(--work);
+  --color-break: var(--break);
+  --color-absent: var(--absent);
+  --color-holiday: var(--holiday);
+  --color-positive: var(--positive);
+  --color-negative: var(--negative);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-today: var(--today);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+
+  --shadow-overlay: var(--shadow-overlay);
+  --ease-out: var(--ease-out);
+  --ease-in: var(--ease-in);
+  --background-image-gradient-brand: var(--gradient-brand);
+  --background-image-gradient-hero: var(--gradient-hero);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans antialiased;
+    -webkit-tap-highlight-color: transparent;
+    text-size-adjust: 100%;
+    /* reserve the scrollbar's space so the layout never shifts when a page starts or stops scrolling */
+    scrollbar-gutter: stable;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "cv11", "ss03";
+  }
+  /* Durations, balances and every other number that is compared across rows. */
+  table,
+  [data-numeric] {
+    font-variant-numeric: tabular-nums;
+  }
+  /* Touch: comfortable targets on coarse pointers without changing the desktop density. */
+  @media (pointer: coarse) {
+    [data-slot="button"]:not([data-size^="icon-xs"]),
+    [data-slot="select-trigger"],
+    [data-slot="input"],
+    [data-slot="segmented-item"] {
+      min-height: 2.5rem;
+    }
+    [data-slot="button"]:not([data-size^="icon-xs"]),
+    [data-slot="select-trigger"],
+    [data-slot="input"],
+    [data-slot="toggle-group-item"] {
+      min-height: 2.75rem;
+    }
+    [data-slot="segmented"] {
+      height: auto;
+    }
+  }
+}
+
+/*
+ * Motion set (docs/design.md, "Motion"): one place for every overlay. Keyframes on data-open/data-closed play on
+ * first mount too (overlays rendered already open), and Base UI keeps the element until the exit animation ends.
+ */
+@keyframes rt-in {
+  from {
+    opacity: 0;
+    transform: translate(var(--rt-x, 0), var(--rt-y, 0)) scale(var(--rt-scale, 1));
+  }
+}
+@keyframes rt-out {
+  to {
+    opacity: 0;
+    transform: translate(var(--rt-x, 0), var(--rt-y, 0)) scale(var(--rt-scale, 1));
+  }
+}
+@layer components {
+  /* backdrops */
+  [data-slot="sheet-overlay"],
+  [data-slot="dialog-overlay"],
+  [data-slot="alert-dialog-overlay"] {
+    &[data-open] {
+      animation: rt-in var(--dur-sheet-in) var(--ease-out);
+    }
+    &[data-closed] {
+      animation: rt-out var(--dur-sheet-out) var(--ease-in) forwards;
+    }
+  }
+  /* side and bottom sheets: slide from their edge + fade */
+  [data-slot="sheet-content"] {
+    &[data-side="right"] {
+      --rt-x: 2rem;
+    }
+    &[data-side="left"] {
+      --rt-x: -2rem;
+    }
+    &[data-side="bottom"] {
+      --rt-y: 2rem;
+    }
+    &[data-side="top"] {
+      --rt-y: -2rem;
+    }
+    &[data-open] {
+      animation: rt-in var(--dur-sheet-in) var(--ease-out);
+    }
+    &[data-closed] {
+      animation: rt-out var(--dur-sheet-out) var(--ease-in) forwards;
+    }
+  }
+  /* phone drawer: enters from the bottom edge (exit and drag are the drawer's own transitions) */
+  [data-slot="drawer-popup"][data-open]:not([data-swiping]) {
+    --rt-y: 100%;
+    animation: rt-in var(--dur-sheet-in) var(--ease-out);
+  }
+  /* dialogs: fade + slight scale */
+  [data-slot="dialog-content"],
+  [data-slot="alert-dialog-content"] {
+    --rt-scale: 0.97;
+    &[data-open] {
+      animation: rt-in var(--dur-dialog-in) var(--ease-out);
+    }
+    &[data-closed] {
+      animation: rt-out var(--dur-dialog-out) var(--ease-in) forwards;
+    }
+  }
+  /* anchored popups grow from their anchor */
+  [data-slot="popover-content"],
+  [data-slot="dropdown-menu-content"],
+  [data-slot="dropdown-menu-sub-content"],
+  [data-slot="select-content"] {
+    --rt-scale: 0.96;
+    transform-origin: var(--transform-origin);
+    &[data-open] {
+      animation: rt-in var(--dur-popup-in) var(--ease-out);
+    }
+    &[data-closed] {
+      animation: rt-out var(--dur-popup-out) var(--ease-in) forwards;
+    }
+  }
+  /* a select aligned over its trigger only fades (scaling would shift the chosen item) */
+  [data-slot="select-content"][data-align-trigger="true"] {
+    --rt-scale: 1;
+  }
+  [data-slot="tooltip-content"] {
+    &[data-open] {
+      animation: rt-in var(--dur-popup-in) var(--ease-out);
+    }
+    &[data-closed] {
+      animation: rt-out var(--dur-popup-out) var(--ease-in) forwards;
+    }
+  }
+  /* collapsible sections: height + opacity */
+  [data-slot="collapsible-content"] {
+    overflow: hidden;
+    height: var(--collapsible-panel-height);
+    transition:
+      height var(--dur-collapse) var(--ease-out),
+      opacity var(--dur-collapse) var(--ease-out);
+    &[data-starting-style],
+    &[data-ending-style] {
+      height: 0;
+      opacity: 0;
+    }
+  }
+}
+
+/* unlayered, so it outranks every layered utility without !important */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms;
+    animation-iteration-count: 1;
+    transition-property: color, background-color, border-color, opacity;
+    scroll-behavior: auto;
+  }
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@utility pb-safe {
+  padding-bottom: max(var(--safe-bottom), 0.5rem);
+}
+
+/* Small uppercase labels above key figures (used sparingly – labels are a last resort). */
+@utility eyebrow {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+/* TanStack Charts inherit currentColor; map the categorical palette to the design tokens. */
+.rt-chart {
+  color: var(--muted-foreground);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  --ts-chart-1: var(--chart-1);
+  --ts-chart-2: var(--chart-2);
+  --ts-chart-3: var(--chart-3);
+  --ts-chart-4: var(--chart-4);
+  --ts-chart-5: var(--chart-5);
+  --ts-chart-6: var(--info);
+}
+
+/* chart tooltips (portalled into the top layer, so the tokens live on their own class too) */
+.rt-chart,
+.rt-chart-tooltip {
+  --ts-chart-tooltip-background: var(--popover);
+  --ts-chart-tooltip-color: var(--popover-foreground);
+  --ts-chart-tooltip-border: 1px solid var(--border);
+  --ts-chart-tooltip-border-radius: var(--radius);
+  --ts-chart-tooltip-shadow: var(--shadow-overlay);
+  --ts-chart-tooltip-padding: 0.375rem 0.625rem;
+  --ts-chart-tooltip-font: 500 0.8125rem / 1.4 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Period navigation (PeriodContent, lib/period-transition.ts): the period content slides a short way in the
+ * direction of the step; the rest of the page updates in place. Reduced motion: cross-fade only.
+ */
+:root:active-view-transition-type(period-forward, period-back, period-jump) [data-period-target] {
+  view-transition-name: period;
+  view-transition-class: period;
+}
+:root:active-view-transition-type(period-forward, period-back, period-jump) {
+  /* no size/position morph: the content swaps in its new box, so a banner above it never drags it over */
+  &::view-transition-group(.period) {
+    animation: none;
+  }
+  &::view-transition-old(root) {
+    display: none;
+  }
+  &::view-transition-new(root) {
+    animation: none;
+  }
+  &::view-transition-old(.period) {
+    animation: var(--dur-exit) var(--ease-in) both rt-fade-out;
+  }
+  &::view-transition-new(.period) {
+    animation: var(--dur-enter) var(--ease-out) both rt-fade-in;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  :root:active-view-transition-type(period-forward) {
+    &::view-transition-old(.period) {
+      animation-name: rt-fade-out, rt-slide-to-start;
+    }
+    &::view-transition-new(.period) {
+      animation-name: rt-fade-in, rt-slide-from-end;
+    }
+  }
+  :root:active-view-transition-type(period-back) {
+    &::view-transition-old(.period) {
+      animation-name: rt-fade-out, rt-slide-to-end;
+    }
+    &::view-transition-new(.period) {
+      animation-name: rt-fade-in, rt-slide-from-start;
+    }
+  }
+}
+@keyframes rt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes rt-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes rt-slide-to-start {
+  to {
+    translate: -1.5rem 0;
+  }
+}
+@keyframes rt-slide-from-end {
+  from {
+    translate: 1.5rem 0;
+  }
+}
+@keyframes rt-slide-to-end {
+  to {
+    translate: 1.5rem 0;
+  }
+}
+@keyframes rt-slide-from-start {
+  from {
+    translate: -1.5rem 0;
+  }
+}
+
+/* react-colorful (custom colour popover) on the design tokens */
+.rt-colorful.react-colorful {
+  width: 13rem;
+  height: 10rem;
+}
+.rt-colorful .react-colorful__saturation {
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  border-bottom: none;
+}
+.rt-colorful .react-colorful__last-control {
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+}
+.rt-colorful .react-colorful__pointer {
+  width: 1.25rem;
+  height: 1.25rem;
+}

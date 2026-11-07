@@ -4,16 +4,16 @@
 
 ## Reporting a vulnerability
 
-Please do **not** open a public issue for security problems. Use GitHub's private vulnerability reporting (https://github.com/RESORIX-AG/RESORIXtrack/security/advisories/new – "Report a vulnerability" under the Security tab) so the details stay confidential until a fix is available. Describe what you found, how to reproduce it, and which version you tested. If you cannot use GitHub, write to mail@resorix.ch instead. You will get an acknowledgement within a few working days.
+Do **not** open a public issue. Use GitHub's private vulnerability reporting (https://github.com/RESORIX-AG/RESORIXtrack/security/advisories/new) and describe what you found, how to reproduce it and which version you tested. Without GitHub, write to mail@resorix.ch. You get an acknowledgement within a few working days.
 
 ## Supported versions
 
-Only the latest release receives security fixes. Updating is a `git pull` / image pull and `docker compose up -d --build`; migrations run automatically and make a backup first.
+Only the latest 2.x release receives security fixes. 1.x is no longer maintained; migrate with [docs/migration-from-v1.md](docs/migration-from-v1.md). Updating: [docs/installation.md](docs/installation.md#updates).
 
-## What is in scope
+## In scope
 
-Everything in this repository: the backend, the web frontend, the Docker setup and the scripts. Findings about third-party services you may connect (SMTP provider, reverse proxy) are out of scope unless RESORIXtrack misuses them.
+Everything in this repository: application, Docker setup, scripts. Third-party services you connect (SMTP, OIDC provider, reverse proxy) are out of scope unless RESORIXtrack misuses them.
 
-## How RESORIXtrack is secured
+## Design
 
-See [docs/security.md](docs/security.md) for the design (authentication, sessions, isolation, tamper-evident sign-offs, hardening) and the operator checklist.
+[docs/security.md](docs/security.md): authentication, sessions, isolation, sign-off seals, hardening, operator checklist.

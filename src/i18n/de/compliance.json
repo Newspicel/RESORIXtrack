@@ -1,0 +1,28 @@
+{
+  "title": "Arbeitsgesetz",
+  "none": "Keine Befunde",
+  "rule": {
+    "break_min": "Pause zu kurz",
+    "daily_rest": "Ruhezeit unter 11 h",
+    "day_span": "Tag über 14 h",
+    "night_work": "Nachtarbeit",
+    "sunday_work": "Sonntagsarbeit",
+    "weekly_max": "Höchstarbeitszeit überschritten",
+    "overtime_daily": "Über 2 h Überzeit am Tag",
+    "overtime_yearly": "Jährliche Überzeit-Grenze",
+    "consecutive_days": "Über 6 Tage am Stück",
+    "vacation_minimum": "Ferien unter Minimum",
+    "vacation_block": "Keine 2 Wochen Ferien am Stück",
+    "compensatory_rest": "Ersatzruhe"
+  },
+  "severity": {
+    "violation": "Verstoss",
+    "warning": "Warnung",
+    "info": "Hinweis"
+  },
+  "overtime": "Überstunden",
+  "ueberzeit": "Überzeit",
+  "ueberzeit_year": "Überzeit {year}",
+  "of_limit": "{value} von {limit}",
+  "team": "Befunde"
+}

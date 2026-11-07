@@ -1,0 +1,15 @@
+{
+  "vacation": "Vacanze",
+  "sick": "Malattia",
+  "accident": "Infortunio",
+  "child_sick": "Cura di un figlio malato",
+  "military": "Servizio militare / civile",
+  "training": "Formazione continua",
+  "comp_time": "Compensazione",
+  "special": "Congedo speciale",
+  "unpaid": "Congedo non pagato",
+  "absent": "Assente",
+  "parental": "Congedo parentale",
+  "compensation": "Compensazione",
+  "other": "Altra assenza"
+}

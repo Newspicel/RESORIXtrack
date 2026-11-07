@@ -1,9 +1,0 @@
-{% set subject = actor.name ~ " a modifié votre saisie de temps" %}{% set cta_url = base_url ~ "/time?date=" ~ local_start.strftime('%Y-%m-%d') %}{% set cta_label = "Vérifier la modification" %}Bonjour {{ user.name }},
-
-{{ actor.name }} a {% if action == "create" %}ajouté{% elif action == "delete" %}supprimé{% else %}modifié{% endif %} une saisie de temps du {{ local_start.strftime('%d.%m.%Y') }} ({{ local_start.strftime('%H:%M') }}{% if local_end %}–{{ local_end.strftime('%H:%M') }}{% endif %}).
-
-Motif: {{ reason or "–" }}
-
-Chaque modification est journalisée. Vous pouvez consulter l'historique complet dans RESORIXtrack et contester la modification si quelque chose est incorrect.
-
-{{ cta_url }}
