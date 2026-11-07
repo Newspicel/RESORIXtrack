@@ -45,6 +45,22 @@ test("admin: holiday import dialog opens", async ({ as }) => {
   await expect(dialog).toBeHidden()
 })
 
+test("admin: create sheets open without a record", async ({ as }) => {
+  const page = await as("admin")
+  await goto(page, "/admin/holidays")
+  await page.getByRole("button", { name: "New calendar" }).first().click()
+  const calendar = page.getByRole("dialog", { name: "New calendar" })
+  await calendar.getByRole("button", { name: "Empty" }).click()
+  await expect(calendar.getByLabel("Name")).toBeVisible()
+  await calendar.getByRole("button", { name: "Cancel" }).click()
+  await expect(calendar).toBeHidden()
+
+  await goto(page, "/admin/settings?tab=types")
+  await page.getByRole("button", { name: "New type" }).click()
+  const type = page.getByRole("dialog", { name: "New type" })
+  await expect(type.getByLabel("Label")).toBeVisible()
+})
+
 test("admin: settings save a switch", async ({ as }, info) => {
   const page = await as("admin")
   // each project toggles its own setting (they run in parallel against one database)
