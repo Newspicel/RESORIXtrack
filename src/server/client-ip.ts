@@ -33,5 +33,16 @@ export function withClientIp(request: Request): Request {
   headers.delete(CLIENT_IP_HEADER)
   const ip = clientIp(headers)
   if (ip) headers.set(CLIENT_IP_HEADER, ip)
-  return new Request(request, { headers })
+  // Built from url + init: the production server's request is not always the native Request class, and
+  // `new Request(request, …)` then fails with "Failed to parse URL from [object Request]".
+  const bodyless = request.method === "GET" || request.method === "HEAD"
+  const init: RequestInit & { duplex?: "half" } = {
+    method: request.method,
+    headers,
+    body: bodyless ? null : request.body,
+    signal: request.signal,
+    redirect: request.redirect,
+  }
+  if (!bodyless) init.duplex = "half" // a streamed body needs this in Node
+  return new Request(request.url, init)
 }
