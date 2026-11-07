@@ -5,9 +5,10 @@
 source "$(dirname "$0")/_common.sh"
 need python3; need npm
 if [ ! -x "$PY" ]; then c_info "creating virtualenv in .venv"; python3 -m venv "$VENV"; fi
-c_info "installing backend (editable, with dev extras)"
+c_info "installing backend: runtime packages exactly as in the Docker image (requirements.lock), then dev tools"
 "$VENV/bin/pip" install -q --upgrade pip
-"$VENV/bin/pip" install -q -e "$ROOT/backend[dev]"
+"$VENV/bin/pip" install -q --require-hashes --no-deps -r "$ROOT/backend/requirements.lock"
+"$VENV/bin/pip" install -q -e "$ROOT/backend[dev]"  # satisfied by the locked versions; adds pytest, ruff
 c_info "installing frontend dependencies"
 (cd "$ROOT/frontend" && npm ci --no-audit --no-fund)
 if [ "${SKIP_PLAYWRIGHT:-0}" != "1" ]; then

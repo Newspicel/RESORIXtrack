@@ -48,14 +48,21 @@ TEXT_MAP = {"MIT License": "MIT", "BSD License": "BSD-3-Clause", "Dual License":
 
 
 def backend_packages() -> list[tuple[str, str, str]]:
+    """Name and version come from requirements.lock (what the Docker image installs); only the license is read
+    from the installed metadata. So the inventory never depends on what a development environment happens
+    to have installed."""
     lock = (ROOT / "backend" / "requirements.lock").read_text()
-    names = sorted(set(re.findall(r"^([A-Za-z0-9_.\-]+)==", lock, re.M)), key=str.lower)
+    pins = dict(re.findall(r"^([A-Za-z0-9_.\-]+)==([^\s\\]+)", lock, re.M))
     rows = []
-    for name in names:
+    for name in sorted(pins, key=str.lower):
+        version = pins[name]
         try:
             dist = md.distribution(name)
         except md.PackageNotFoundError:
-            rows.append((name, "?", "NOT INSTALLED")); continue
+            rows.append((name, version, "NOT INSTALLED")); continue
+        if dist.version != version:
+            print(f"note: {name} {dist.version} is installed but the lock pins {version}; run scripts/setup.sh to sync",
+                  file=sys.stderr)
         meta = dist.metadata
         lic = meta.get("License-Expression") or ""
         if not lic:
@@ -64,7 +71,7 @@ def backend_packages() -> list[tuple[str, str, str]]:
         if not lic:
             raw = (meta.get("License") or "").strip()
             lic = TEXT_MAP.get(raw, raw.splitlines()[0][:40] if raw else "")
-        rows.append((name, dist.version, lic or "UNKNOWN"))
+        rows.append((name, version, lic or "UNKNOWN"))
     return rows
 
 
