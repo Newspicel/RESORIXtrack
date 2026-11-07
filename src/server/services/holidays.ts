@@ -1,25 +1,15 @@
 /**
- * Public holidays as seen by one person: their own calendar, else their team's, else the default calendar.
- * Calendar CRUD and imports live in holiday-calendars.ts.
+ * Public holidays as seen by one person for the target-hour calculation. Which calendar applies (own, team,
+ * company default) is decided by applicableCalendar in holiday-calendars.ts, the same function behind the
+ * person's Public holidays page; calendar CRUD and imports live there too.
  */
 import { and, eq, gte, lte } from "drizzle-orm"
 import { db } from "../db"
-import { type Holiday, holidayCalendars, holidays, teams, type User } from "../db/schema"
+import { type Holiday, holidays, type User } from "../db/schema"
+import { applicableCalendar } from "./holiday-calendars"
 
 export function resolveCalendarId(user: Pick<User, "holidayCalendarId" | "teamId">): number | null {
-  if (user.holidayCalendarId != null) return user.holidayCalendarId
-  if (user.teamId != null) {
-    const team = db.select({ cal: teams.holidayCalendarId }).from(teams).where(eq(teams.id, user.teamId)).get()
-    if (team?.cal != null) return team.cal
-  }
-  return (
-    db
-      .select({ id: holidayCalendars.id })
-      .from(holidayCalendars)
-      .where(eq(holidayCalendars.isDefault, true))
-      .limit(1)
-      .get()?.id ?? null
-  )
+  return applicableCalendar(user)?.calendar.id ?? null
 }
 
 /** Holidays of a calendar in [start, end], keyed by date. */

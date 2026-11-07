@@ -1,0 +1,15 @@
+{
+  "title": "Giorni festivi",
+  "sub": "I giorni festivi che valgono per te. Nei tuoi giorni lavorativi riducono le ore dovute; non puoi modificarli.",
+  "manage": "Gestisci calendari",
+  "source_user": "assegnato a te personalmente",
+  "source_team": "calendario del tuo team ({team})",
+  "source_default": "standard aziendale",
+  "none": "Nessun calendario festivo",
+  "none_help": "L'amministrazione non ha ancora assegnato un calendario dei giorni festivi a te, al tuo team o all'azienda.",
+  "duration": "Durata",
+  "full_day": "Giornata intera",
+  "half_day": "Pomeriggio",
+  "weekend": "Fine settimana",
+  "none_in_year": "Nessun giorno festivo nel {year}"
+}

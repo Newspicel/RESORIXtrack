@@ -1,0 +1,15 @@
+{
+  "title": "Feiertage",
+  "sub": "Die Feiertage, die für dich gelten. An deinen Arbeitstagen reduzieren sie die Sollzeit; bearbeiten kannst du sie nicht.",
+  "manage": "Kalender verwalten",
+  "source_user": "dir persönlich zugewiesen",
+  "source_team": "Kalender deines Teams ({team})",
+  "source_default": "Firmenstandard",
+  "none": "Noch kein Feiertagskalender",
+  "none_help": "Deine Administration hat dir, deinem Team oder der Firma noch keinen Feiertagskalender zugewiesen.",
+  "duration": "Dauer",
+  "full_day": "Ganzer Tag",
+  "half_day": "Nachmittag",
+  "weekend": "Wochenende",
+  "none_in_year": "Keine Feiertage im Jahr {year}"
+}

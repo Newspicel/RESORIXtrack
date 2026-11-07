@@ -1,0 +1,15 @@
+{
+  "title": "Jours fériés",
+  "sub": "Les jours fériés qui s'appliquent à vous. Vos jours de travail fériés réduisent vos heures dues; vous ne pouvez pas les modifier.",
+  "manage": "Gérer les calendriers",
+  "source_user": "attribué à vous personnellement",
+  "source_team": "calendrier de votre équipe ({team})",
+  "source_default": "valeur par défaut de l'entreprise",
+  "none": "Pas encore de calendrier de jours fériés",
+  "none_help": "Votre administration n'a pas encore attribué de calendrier de jours fériés à vous, à votre équipe ou à l'entreprise.",
+  "duration": "Durée",
+  "full_day": "Journée",
+  "half_day": "Après-midi",
+  "weekend": "Week-end",
+  "none_in_year": "Aucun jour férié en {year}"
+}

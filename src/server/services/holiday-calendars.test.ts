@@ -1,10 +1,12 @@
 import { eq } from "drizzle-orm"
 import { describe, expect, it } from "vitest"
-import { makeAdmin, makeCalendar, makeUser } from "@/test/factories"
+import { makeAdmin, makeCalendar, makeTeam, makeUser } from "@/test/factories"
 import { db } from "../db"
 import * as s from "../db/schema"
+import { freeze } from "../time"
 import {
   addCompanyDay,
+  applicableCalendar,
   calendarYear,
   calendarYearWithKinds,
   companyDayOptions,
@@ -14,6 +16,7 @@ import {
   importPreset,
   knabenschiessen,
   listCalendars,
+  myHolidays,
   presetHolidays,
   saveCalendar,
   saveHoliday,
@@ -170,5 +173,60 @@ describe("holiday top-up", () => {
     expect(notes("holidays_missing")).toHaveLength(1)
     db.insert(s.holidays).values({ calendarId: manual.id, date: "2027-01-01", name: "New Year's Day" }).run()
     expect(topUpHolidays("2027-11-01").missing).toEqual([{ calendarId: manual.id, year: 2028 }])
+  })
+})
+
+describe("the calendar that applies to a person", () => {
+  it("resolves personal, then team, then company default, else none", () => {
+    expect(applicableCalendar(makeUser())).toBeNull()
+    const def = makeCalendar({ isDefault: true })
+    const teamCal = makeCalendar({ isDefault: false })
+    const own = makeCalendar({ isDefault: false })
+    const team = makeTeam({ name: "RF Engineering", holidayCalendarId: teamCal.id })
+    const bare = makeTeam({ holidayCalendarId: null })
+    expect(applicableCalendar(makeUser())).toMatchObject({ source: "default", calendar: { id: def.id }, team: null })
+    expect(applicableCalendar(makeUser({ teamId: bare.id }))).toMatchObject({
+      source: "default",
+      calendar: { id: def.id },
+    })
+    expect(applicableCalendar(makeUser({ teamId: team.id }))).toMatchObject({
+      source: "team",
+      calendar: { id: teamCal.id },
+      team: { id: team.id, name: "RF Engineering" },
+    })
+    expect(applicableCalendar(makeUser({ teamId: team.id, holidayCalendarId: own.id }))).toMatchObject({
+      source: "user",
+      calendar: { id: own.id },
+      team: null,
+    })
+  })
+
+  it("myHolidays: one year for every role, the calendar's years plus this and next, null without a calendar", () => {
+    freeze("2026-11-05T08:00:00Z")
+    const nobody = loadActor(makeUser().id)
+    expect(myHolidays(nobody)).toBeNull()
+    const cal = makeCalendar({ isDefault: true, name: "Fribourg" }, [
+      { date: "2024-12-25", name: "Christmas Day" },
+      { date: "2026-08-01", name: "Swiss National Day" },
+      { date: "2026-12-24", name: "Christmas Eve", fraction: 0.5 },
+    ])
+    const employee = loadActor(makeUser().id)
+    const mine = myHolidays(employee)
+    expect(mine).toMatchObject({
+      source: "default",
+      team: null,
+      year: 2026,
+      years: [2024, 2026, 2027],
+      calendar: { id: cal.id, name: "Fribourg", isDefault: true },
+    })
+    expect(mine?.holidays.map((h) => [h.date, h.name, h.fraction])).toEqual([
+      ["2026-08-01", "Swiss National Day", 1],
+      ["2026-12-24", "Christmas Eve", 0.5],
+    ])
+    expect(myHolidays(employee, 2024)).toMatchObject({ year: 2024, years: [2024, 2026, 2027] })
+    expect(myHolidays(employee, 2024)?.holidays.map((h) => h.name)).toEqual(["Christmas Day"])
+    // a year outside the calendar is shown too, empty, and gets its tab
+    expect(myHolidays(employee, 2030)).toMatchObject({ year: 2030, years: [2024, 2026, 2027, 2030], holidays: [] })
+    expect(myHolidays(loadActor(makeAdmin().id))?.calendar.id).toBe(cal.id)
   })
 })

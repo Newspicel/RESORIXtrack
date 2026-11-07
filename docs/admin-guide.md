@@ -19,12 +19,12 @@ The dashboard shows a **Getting started** checklist (company name, public holida
    Changing rules later recalculates all months; signed PDFs keep their figures.
 2. **Swiss law**: Settings → Swiss law. *Company is subject to the ArG* (off for e.g. public administrations, agriculture, private households; Art. 2), default weekly maximum 45 or 50 h (Art. 9), night and Sunday work permits (lower those findings to notes), *Sunday/holiday surcharge* (default 50 %, Art. 19) paid as *Payroll* (listed in the timesheet and balances exports) or as *Time credit* (GAV), retention in years (minimum 5). Breaks are always checked when the ArG applies. See [compliance.md](compliance.md).
 3. **Email**: configured in `.env`; Settings → Email shows the status and sends a test.
-4. **Public holidays**: Administration → Public holidays.
+4. **Public holidays**: Administration → Holiday calendars.
    1. *New calendar* → *From preset* (26 cantons, City of Fribourg) or empty. 1 August is marked federal, the preset's other days cantonal.
    2. Preset calendars are topped up automatically: every 1 October (and when the worker starts) the worker adds next year's holidays and notifies administrators. It only adds missing years and never touches signed-off months. Calendars without a preset get a reminder on 1 November if next year is empty. `rt install-holidays --top-up` runs it by hand.
    3. *Import* adds a preset's holidays for one year; importing again adds only missing dates.
    4. *Add* → company days with one click (24 and 31 December afternoon, Berchtoldstag where not cantonal, Sechseläuten and Knabenschiessen afternoon in Zurich) or a custom day. Half days cover the afternoon.
-   5. Order of use: person → team → company default.
+   5. Order of use: person → team → company default. Everyone sees the calendar that applies to them under *Public holidays*.
 5. **Teams**: Administration → Teams. Name, colour, holiday calendar, leads and deputies (open-ended or for a period). A team can have several leads; a lead need not be a member. Without a lead, HR decides requests (administrators if nobody has HR).
 6. **People**: Administration → Employees → *Add employee*. Name, email, role, team, language, timezone, employment start, pensum, vacation days, legal weekly maximum (45 or 50 h), time recording (full, simplified, waived; see [compliance.md](compliance.md)), *senior executive* (Art. 3 lit. d ArG: no checks), *regular night work* (Art. 17b: 10 % of night work credited as time), optional birth date (minimum vacation). *Send invitation now* emails a link valid 7 days. Then set the work schedule (Schedule tab).
 7. **HR and Projects**: grant the capabilities on the person's Profile tab to whoever signs off months, runs company reports or answers data requests.
@@ -70,9 +70,9 @@ Search, filter by team and role. A person's page has tabs:
 
 Leads and deputies with periods, members, holiday calendar. Deleting a team keeps its members' data; they have no team afterwards.
 
-### Public holidays
+### Holiday calendars
 
-<p><img src="screenshots/admin-dark-admin_holidays.png" alt="Public holidays" width="760"></p>
+<p><img src="screenshots/admin-dark-admin_holidays.png" alt="Holiday calendars" width="760"></p>
 
 See step 4. Deleting a calendar in use makes teams and people fall back to the next one.
 

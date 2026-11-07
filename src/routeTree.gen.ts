@@ -16,6 +16,7 @@ import { Route as AppAbsencesRouteImport } from './routes/_app/absences'
 import { Route as AppAccountRouteImport } from './routes/_app/account'
 import { Route as AppAdminRouteRouteImport } from './routes/_app/admin/route'
 import { Route as AppCalendarRouteImport } from './routes/_app/calendar'
+import { Route as AppHolidaysRouteImport } from './routes/_app/holidays'
 import { Route as AppProfileRouteImport } from './routes/_app/profile'
 import { Route as AppReportsRouteImport } from './routes/_app/reports'
 import { Route as AppTeamRouteRouteImport } from './routes/_app/team/route'
@@ -79,6 +80,11 @@ const AppAdminRouteRoute = AppAdminRouteRouteImport.update({
 const AppCalendarRoute = AppCalendarRouteImport.update({
   id: '/calendar',
   path: '/calendar',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppHolidaysRoute = AppHolidaysRouteImport.update({
+  id: '/holidays',
+  path: '/holidays',
   getParentRoute: () => AppRoute,
 } as any)
 const AppProfileRoute = AppProfileRouteImport.update({
@@ -244,6 +250,7 @@ export interface FileRoutesByFullPath {
   '/absences': typeof AppAbsencesRoute
   '/account': typeof AppAccountRoute
   '/calendar': typeof AppCalendarRoute
+  '/holidays': typeof AppHolidaysRoute
   '/profile': typeof AppProfileRoute
   '/reports': typeof AppReportsRoute
   '/time': typeof AppTimeRoute
@@ -281,6 +288,7 @@ export interface FileRoutesByTo {
   '/absences': typeof AppAbsencesRoute
   '/account': typeof AppAccountRoute
   '/calendar': typeof AppCalendarRoute
+  '/holidays': typeof AppHolidaysRoute
   '/profile': typeof AppProfileRoute
   '/reports': typeof AppReportsRoute
   '/time': typeof AppTimeRoute
@@ -321,6 +329,7 @@ export interface FileRoutesById {
   '/_app/absences': typeof AppAbsencesRoute
   '/_app/account': typeof AppAccountRoute
   '/_app/calendar': typeof AppCalendarRoute
+  '/_app/holidays': typeof AppHolidaysRoute
   '/_app/profile': typeof AppProfileRoute
   '/_app/reports': typeof AppReportsRoute
   '/_app/time': typeof AppTimeRoute
@@ -362,6 +371,7 @@ export interface FileRouteTypes {
     | '/absences'
     | '/account'
     | '/calendar'
+    | '/holidays'
     | '/profile'
     | '/reports'
     | '/time'
@@ -399,6 +409,7 @@ export interface FileRouteTypes {
     | '/absences'
     | '/account'
     | '/calendar'
+    | '/holidays'
     | '/profile'
     | '/reports'
     | '/time'
@@ -438,6 +449,7 @@ export interface FileRouteTypes {
     | '/_app/absences'
     | '/_app/account'
     | '/_app/calendar'
+    | '/_app/holidays'
     | '/_app/profile'
     | '/_app/reports'
     | '/_app/time'
@@ -535,6 +547,13 @@ declare module '@tanstack/react-router' {
       path: '/calendar'
       fullPath: '/calendar'
       preLoaderRoute: typeof AppCalendarRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/holidays': {
+      id: '/_app/holidays'
+      path: '/holidays'
+      fullPath: '/holidays'
+      preLoaderRoute: typeof AppHolidaysRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/profile': {
@@ -815,6 +834,7 @@ interface AppRouteChildren {
   AppAbsencesRoute: typeof AppAbsencesRoute
   AppAccountRoute: typeof AppAccountRoute
   AppCalendarRoute: typeof AppCalendarRoute
+  AppHolidaysRoute: typeof AppHolidaysRoute
   AppProfileRoute: typeof AppProfileRoute
   AppReportsRoute: typeof AppReportsRoute
   AppTimeRoute: typeof AppTimeRoute
@@ -827,6 +847,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAbsencesRoute: AppAbsencesRoute,
   AppAccountRoute: AppAccountRoute,
   AppCalendarRoute: AppCalendarRoute,
+  AppHolidaysRoute: AppHolidaysRoute,
   AppProfileRoute: AppProfileRoute,
   AppReportsRoute: AppReportsRoute,
   AppTimeRoute: AppTimeRoute,

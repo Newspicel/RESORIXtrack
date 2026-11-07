@@ -15,6 +15,7 @@ import {
   holidays,
   notifications,
   teams,
+  type User,
   users,
 } from "../db/schema"
 import { Conflict, NotFound, Validation } from "../errors"
@@ -251,9 +252,7 @@ function getCalendar(id: number): HolidayCalendar {
   return c
 }
 
-export function calendarYear(actor: Actor, calendarId: number, year: number): Holiday[] {
-  requireAdmin(actor)
-  getCalendar(calendarId)
+function holidaysOfYear(calendarId: number, year: number): Holiday[] {
   return db
     .select()
     .from(holidays)
@@ -267,6 +266,93 @@ export function calendarYear(actor: Actor, calendarId: number, year: number): Ho
     .orderBy(asc(holidays.date))
     .all()
 }
+
+export function calendarYear(actor: Actor, calendarId: number, year: number): Holiday[] {
+  requireAdmin(actor)
+  getCalendar(calendarId)
+  return holidaysOfYear(calendarId, year)
+}
+
+// ------------------------------------------------------------------ the calendar that applies to a person
+
+export type CalendarSource = "user" | "team" | "default"
+
+export interface ApplicableCalendar {
+  calendar: HolidayCalendar
+  source: CalendarSource
+  /** The team whose calendar applies (source "team"). */
+  team: { id: number; name: string } | null
+}
+
+/**
+ * The calendar that applies to a person: their own, else their team's, else the company default. Target hours
+ * (holidays.ts) and the person's Public holidays page resolve through this one function, so what people see
+ * is what reduces their target.
+ */
+export function applicableCalendar(user: Pick<User, "holidayCalendarId" | "teamId">): ApplicableCalendar | null {
+  if (user.holidayCalendarId != null) {
+    const own = db.select().from(holidayCalendars).where(eq(holidayCalendars.id, user.holidayCalendarId)).get()
+    if (own) return { calendar: own, source: "user", team: null }
+  }
+  if (user.teamId != null) {
+    const row = db
+      .select({ team: { id: teams.id, name: teams.name }, calendar: holidayCalendars })
+      .from(teams)
+      .innerJoin(holidayCalendars, eq(holidayCalendars.id, teams.holidayCalendarId))
+      .where(eq(teams.id, user.teamId))
+      .get()
+    if (row) return { calendar: row.calendar, source: "team", team: row.team }
+  }
+  const def = db.select().from(holidayCalendars).where(eq(holidayCalendars.isDefault, true)).limit(1).get()
+  return def ? { calendar: def, source: "default", team: null } : null
+}
+
+/** Years with at least one holiday, ascending. */
+function calendarYears(calendarId: number): number[] {
+  const year = sql<string>`substr(${holidays.date}, 1, 4)`
+  return db
+    .select({ year })
+    .from(holidays)
+    .where(eq(holidays.calendarId, calendarId))
+    .groupBy(year)
+    .orderBy(year)
+    .all()
+    .map((r) => Number(r.year))
+}
+
+/**
+ * The person's own Public holidays page: the calendar that applies to them and its holidays of one year
+ * (default: their current year). Read-only for every role; never another person's data. Null when no
+ * calendar is configured for them, their team or the company.
+ */
+export function myHolidays(actor: Actor, year?: number) {
+  const applicable = applicableCalendar(actor.user)
+  if (!applicable) return null
+  const { calendar, source, team } = applicable
+  const current = Number(localToday(actor.user.timezone).slice(0, 4))
+  const shown = year ?? current
+  const years = [...new Set([...calendarYears(calendar.id), current, current + 1, shown])].sort((a, b) => a - b)
+  return {
+    calendar: {
+      id: calendar.id,
+      name: calendar.name,
+      regionCode: calendar.regionCode,
+      description: calendar.description,
+      isDefault: calendar.isDefault,
+    },
+    source,
+    team,
+    year: shown,
+    years,
+    holidays: holidaysOfYear(calendar.id, shown).map((h) => ({
+      id: h.id,
+      date: h.date,
+      name: h.name,
+      fraction: h.fraction,
+    })),
+  }
+}
+export type MyHolidays = NonNullable<ReturnType<typeof myHolidays>>
 
 export interface CalendarInput {
   name: string
