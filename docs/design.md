@@ -34,8 +34,8 @@ only when you can name the reason in one sentence.
   `Checkbox`/`SwitchField` (applies on save); 2–5 visible options → `Segmented` (`SegmentedField`); short fixed
   lists up to 6 → `Select`; dynamic or long lists (teams, people, projects, calendars, timezones, cantons) →
   searchable `Combobox` (`ComboboxField`). Both open below the trigger, never over it; action → `<button>`, navigation → `<Link>`.
-- No native pickers: dates use `DatePicker`/`DateField`, colours `ColorPicker`, files `FilePicker`, times our
-  `TimeInput` (follows 12/24 h).
+- No native pickers: dates use `DatePicker`/`DateField`, colours `ColorPicker`, files `FilePicker`, times
+  `TimeInput`/`TimeField` (follows 12/24 h, suggests times in a list). Pickers drop the leading icon when a label sits above.
 - Geometry: inputs, selects, buttons, date triggers and segmented controls are 36 px (`h-9`), icon buttons
   `size-9`; 32 px (`sm`) only inside table rows and dense table toolbars. Controls `rounded-lg`, segments and
   chips `rounded-md`, cards `rounded-xl`.
