@@ -14,10 +14,10 @@ import { type Group, SettingsForm } from "./settings-form"
 
 const TAB_GROUPS: Partial<Record<SettingsTab, Group[]>> = {
   company: [
-    { title: "company", fields: [{ key: "company_name", kind: "text" }] },
     {
-      title: "defaults",
+      title: "company",
       fields: [
+        { key: "company_name", kind: "text" },
         { key: "default_timezone", kind: "timezone" },
         { key: "default_locale", kind: "locale" },
       ],

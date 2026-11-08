@@ -1,11 +1,12 @@
 /**
  * "My time" (and a member's time for leads/HR via `userId`): week timeline or month calendar and the period's
  * entries, each with its project. State lives in the URL: `view`, `date`, `add=1` (opens the add
- * dialog; the command palette uses it), `deleted=1` (show deleted entries).
+ * dialog; the command palette uses it), `deleted=1` (show deleted entries), `fix=project` (marks the work
+ * without a project and scrolls to `date`; the dashboard's reminder links here).
  */
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Lock, Plus } from "lucide-react"
-import { useId, useState } from "react"
+import { FolderOpen, Lock, Plus } from "lucide-react"
+import { useEffect, useId, useState } from "react"
 import { toast } from "sonner"
 import { Section } from "@/components/app/page"
 import { PeriodContent, PeriodNav } from "@/components/app/period-nav"
@@ -50,6 +51,16 @@ export function TimeView({
   const view = q.data
   const correctedIds = view?.entries.filter((e) => e.corrected).map((e) => e.id) ?? []
   const corrections = useQuery(correctionsQuery({ userId: view?.user.id, ids: correctedIds })).data ?? {}
+  const fixing = search.fix === "project"
+  const unassigned = fixing
+    ? (view?.entries.filter((e) => e.kind === "work" && e.projectId == null && !e.deleted && !e.running) ?? [])
+    : []
+  const needsProject = new Set(unassigned.map((e) => e.id))
+  const loaded = view != null
+  useEffect(() => {
+    if (fixing && loaded && search.date)
+      document.querySelector(`[data-day="${search.date}"]`)?.scrollIntoView({ block: "center", behavior: "smooth" })
+  }, [fixing, loaded, search.date])
 
   const [target, setTarget] = useState<EntryTarget>({ date: today })
   const [editOpen, setEditOpenRaw] = useState(false)
@@ -130,6 +141,36 @@ export function TimeView({
           })}
         </Notice>
       ))}
+      {fixing ? (
+        unassigned.length ? (
+          <Notice
+            icon={FolderOpen}
+            tone="info"
+            action={
+              view.canEdit ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    openEdit(
+                      unassigned.find((e) => wallClock(e.startAt, view.user.timezone).date === search.date) ??
+                        unassigned[0],
+                    )
+                  }
+                >
+                  {t("dashboard.project_fix")}
+                </Button>
+              ) : null
+            }
+          >
+            {t("time.project_fix_hint", { count: unassigned.length })}
+          </Notice>
+        ) : (
+          <Notice icon={FolderOpen} tone="positive">
+            {t("time.project_fix_done")}
+          </Notice>
+        )
+      ) : null}
 
       <section className="flex flex-col gap-4 rounded-xl border bg-card p-4 sm:p-5" aria-label={label}>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
@@ -186,7 +227,13 @@ export function TimeView({
         </div>
         <PeriodContent className={q.isPlaceholderData ? "opacity-60 transition-opacity" : undefined}>
           {mode === "week" ? (
-            <WeekTimeline view={view} corrections={corrections} onEdit={openEdit} onAdd={openAdd} />
+            <WeekTimeline
+              view={view}
+              corrections={corrections}
+              needsProject={needsProject}
+              onEdit={openEdit}
+              onAdd={openAdd}
+            />
           ) : (
             <MonthView view={view} onPick={(date) => go({ view: undefined, date })} />
           )}
@@ -199,6 +246,7 @@ export function TimeView({
           entries={view.entries}
           tz={view.user.timezone}
           corrections={corrections}
+          needsProject={needsProject}
           canEdit={view.canEdit}
           onEdit={openEdit}
           onHistory={openHistory}

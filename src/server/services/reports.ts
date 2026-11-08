@@ -85,10 +85,13 @@ export function timesheet(actor: Actor, raw: z.input<typeof timesheetInput>) {
   const [startUtc, endUtc] = rangeBoundsUtc(start, end, tz)
   const entries = entriesBetween(user.id, startUtc, endUtc)
   const edited = editedEntryIds(entries.map((e) => e.id))
-  const perDay: Record<string, { kind: string; start: string; end: string | null; edited: boolean; note: string }[]> =
-    {}
+  const perDay: Record<
+    string,
+    { id: number; kind: string; start: string; end: string | null; edited: boolean; note: string }[]
+  > = {}
   for (const e of entries) {
     pushTo(perDay, localDate(e.startAt, tz), {
+      id: e.id,
       kind: e.kind,
       start: localTime(e.startAt, tz),
       end: e.endAt ? localTime(e.endAt, tz) : null,
@@ -101,6 +104,7 @@ export function timesheet(actor: Actor, raw: z.input<typeof timesheetInput>) {
   const projectTime: Record<
     string,
     {
+      entryId: number
       project: string | null
       note: string
       minutes: number
@@ -110,6 +114,7 @@ export function timesheet(actor: Actor, raw: z.input<typeof timesheetInput>) {
   > = {}
   for (const w of logs) {
     pushTo(projectTime, w.date, {
+      entryId: w.entryId,
       project: w.projectId != null ? (projectsById.get(w.projectId)?.name ?? null) : null,
       note: w.note,
       minutes: round(w.minutes),

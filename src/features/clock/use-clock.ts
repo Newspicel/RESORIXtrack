@@ -9,6 +9,8 @@
  * - A rejected action (not a network problem) rolls back and shows the reason.
  * - A clock-in books on the project chosen for the next clock-in (next-project.ts); `switch` changes the
  *   project while working. With projects required, a clock-in without one is refused before anything else.
+ * - `pause` clocks out for a break; ending it (a clock-in) continues the paused project unless another one
+ *   was chosen meanwhile.
  */
 import { type QueryClient, queryOptions, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
@@ -21,7 +23,7 @@ import type { I18n } from "@/lib/i18n-core"
 import { useBootstrap, useMe } from "@/lib/session"
 import type { ClockAction, ClockStateName, OfflineClockAction } from "@/server/services/clock"
 import { fmtClockTime, wallClock } from "../time/lib"
-import { promptProject, readNextProject } from "./next-project"
+import { promptProject, readNextProject, visibleProjectPicker, writeNextProject } from "./next-project"
 import { enqueue, isNetworkError, onQueueChange, type QueuedAction, queued, remove } from "./offline-queue"
 
 export type LiveClock = Awaited<ReturnType<typeof fetchClock>> & { receivedAt: number }
@@ -41,9 +43,14 @@ const OPTIMISTIC_DELAY_MS = 300
 export const schedulesLater = (at: string | null | undefined, now: number): boolean =>
   at != null && Date.parse(at) > now + SCHEDULE_AHEAD_MS
 
-/** The primary action for a state: clock in or clock out. */
+/** The primary action for a state: clock in, clock out, or end the break (a clock-in). */
 export function primaryAction(state: ClockStateName): ClockAction {
-  return state === "idle" ? "start" : "stop"
+  return state === "working" ? "stop" : "start"
+}
+
+/** The secondary action: start a break while working, end the day while on one. */
+export function secondaryAction(state: ClockStateName): ClockAction | null {
+  return state === "working" ? "pause" : state === "on_break" ? "stop" : null
 }
 
 type Person = { timezone: string; timeFormat: string }
@@ -67,7 +74,7 @@ export function liveWorkedMin(c: LiveClock, now: number): number {
   return c.todayWorkedMin + elapsed / 60000
 }
 
-/** Seconds since the current state started (0 when idle). */
+/** Seconds since the current state started: the running entry or the break (0 when idle). */
 export function liveSinceSec(c: LiveClock, now: number): number {
   return c.since ? Math.max(0, (serverNow(c, now) - Date.parse(c.since)) / 1000) : 0
 }
@@ -84,14 +91,16 @@ function withPending(c: LiveClock, pending: QueuedAction[]): LiveClock {
 export function advance(c: LiveClock, action: ClockAction, at: string, now: number): LiveClock {
   if (action === "unschedule") return { ...c, scheduledEnd: null }
   if (action === "switch" && c.state === "working") return { ...c, since: at, entry: null }
-  if (action === "stop" && schedulesLater(at, now)) return { ...c, scheduledEnd: at }
-  const state: ClockStateName = action === "stop" ? "idle" : "working"
+  if (action === "stop" && c.state === "working" && schedulesLater(at, now)) return { ...c, scheduledEnd: at }
+  if (action === "pause" && c.state !== "working") return c
+  const state: ClockStateName = action === "stop" ? "idle" : action === "pause" ? "on_break" : "working"
   const t = Math.min(now, c.receivedAt + 24 * 3600_000)
   return {
     ...c,
     state,
     since: state === "idle" ? null : at,
     scheduledEnd: null,
+    breakProjectId: state === "on_break" ? (c.entry?.projectId ?? null) : null,
     entry: null,
     todayWorkedMin: liveWorkedMin(c, t),
     serverTime: new Date(serverNow(c, t)).toISOString(),
@@ -226,26 +235,33 @@ async function runAction(deps: ClockDeps, action: ClockAction, opts: ActOptions,
   const { t, tError } = i18n
   const current = qc.getQueryData<LiveClock>(liveClockQuery().queryKey)
   if (busy || !current) return
-  if (action === "start" && deps.projectRequired && readNextProject(userId) == null) {
+  // ending a break continues its project unless another one was chosen during it
+  const nextProject = readNextProject(userId) ?? (current.state === "on_break" ? current.breakProjectId : null)
+  if (action === "start" && deps.projectRequired && nextProject == null) {
     promptProject()
+    // the picker is focused where it is shown; phones and narrow windows choose on the dashboard
     const choose = { label: t("time.choose_project"), onClick: deps.toDashboard }
-    toast.error(t("time.project_required"), window.location.pathname === "/" ? undefined : { action: choose })
+    toast.error(t("time.project_required"), visibleProjectPicker() ? undefined : { action: choose })
     return
   }
   busy = true
   setActing(true)
   const clickAt = opts.at ?? new Date().toISOString()
   const later = schedulesLater(opts.at, Date.now())
-  const projectId =
-    action === "switch" ? (opts.projectId ?? null) : action === "start" ? readNextProject(userId) : undefined
+  const projectId = action === "switch" ? (opts.projectId ?? null) : action === "start" ? nextProject : undefined
   // only plain clock in/out punches can wait in the offline queue
   const queueable: OfflineClockAction | null = action === "unschedule" || later ? null : action
+  // the choice for the next clock-in is used up by it, and by a clock-out, so it never carries over
+  const spendChoice = () => {
+    if (action === "start" || action === "stop") writeNextProject(userId, null)
+  }
   const queue = async () => {
     if (!queueable) {
       toast.error(t("errors.network"))
       return
     }
     await enqueue({ userId, action: queueable, at: clickAt, projectId })
+    spendChoice()
     toast.info(t("clock.queued_offline"))
     void sync(deps)
   }
@@ -264,6 +280,7 @@ async function runAction(deps: ClockDeps, action: ClockAction, opts: ActOptions,
       })
       clearTimeout(optimistic)
       setServer(qc, next)
+      spendChoice()
       refreshTimeData(qc)
     } catch (err) {
       clearTimeout(optimistic)

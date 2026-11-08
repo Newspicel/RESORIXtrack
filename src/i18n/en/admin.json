@@ -1,5 +1,6 @@
 {
   "common": {
+    "changes_from_title": "When do the changes apply?",
     "range": "{from}–{to} of {total}"
   },
   "roles": {
@@ -67,7 +68,7 @@
     "regular_night_work": "Regular night work",
     "regular_night_work_help": "ArG Art. 17b: 10 % time credit",
     "terms_from": "Changes apply from",
-    "terms_from_help": "Earlier days keep the previous values. Empty: today.",
+    "terms_from_help": "Earlier days keep the previous values.",
     "vacation_days_help": "Full-time, 5-day week; fewer working days reduce it",
     "earlier": "Earlier",
     "earlier_terms": "Terms until {date}",
@@ -528,7 +529,6 @@
     },
     "groups": {
       "company": "Company",
-      "defaults": "Defaults for new people",
       "hours": "Hours and holidays",
       "vacation": "Vacation",
       "corrections": "Corrections and leads",
@@ -551,8 +551,8 @@
     },
     "fields": {
       "company_name": "Company name",
-      "default_timezone": "Timezone",
-      "default_locale": "Language",
+      "default_timezone": "Company timezone",
+      "default_locale": "Default language",
       "default_vacation_days": "Vacation days / year",
       "fulltime_weekly_minutes": "Full-time week",
       "holiday_mode": "Holidays reduce the target",
@@ -578,6 +578,8 @@
       "project_mode": "Projects on time entries"
     },
     "help": {
+      "default_timezone": "Counts the company's days (sign-off, reminders); preset for new people.",
+      "default_locale": "Preset for new people and the sign-in page.",
       "default_vacation_days": "Default for new people",
       "fulltime_weekly_minutes": "Default schedule, e.g. 42:00",
       "holiday_work_surcharge_percent": "ArG Art. 19: 50 % for temporary work",
@@ -607,7 +609,7 @@
       }
     },
     "valid_from": "Changes apply from",
-    "valid_from_help": "Earlier days keep the previous rules; never before the last signed-off month. Empty: today."
+    "valid_from_help": "Earlier days keep the previous rules; never before the last signed-off month."
   },
   "api_keys": {
     "revoked": "Revoked",

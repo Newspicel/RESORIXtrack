@@ -22,7 +22,12 @@ test("admin: create a person, change team and role", async ({ as }, info) => {
   await page.getByRole("combobox", { name: "Role" }).click()
   await page.getByRole("option", { name: "Admin" }).click()
   await page.getByRole("button", { name: "Save" }).click()
+  // the team is a dated term: the save asks from which day it applies (empty: today)
+  const when = page.getByRole("dialog", { name: "When do the changes apply?" })
+  await expect(when.getByRole("button", { name: "Changes apply from" })).toHaveText("Today")
+  await when.getByRole("button", { name: "Save" }).click()
   await expect(toast(page, "Saved")).toBeVisible()
+  await expect(when).toBeHidden()
 
   await page.reload()
   await expect(page.getByRole("combobox", { name: "Team" })).toHaveText("Operations")

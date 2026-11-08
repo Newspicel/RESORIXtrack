@@ -25,6 +25,7 @@ import {
   countAbsenceDays,
   createAdjustment,
   deleteAdjustment,
+  firstAccountYear,
   setEntitlement,
   summarize,
   timeBalance,
@@ -583,6 +584,16 @@ describe("accounts with the database", () => {
     makeSchedule(hire.id, { validFrom: "2027-01-01" })
     createAdjustment(hr, hire.id, { account: "vacation", amount: 3, reason: "Carry-over" })
     expect(vacationAccount(hire, 2027)).toMatchObject({ carriedOver: 3, remaining: 28 })
+  })
+
+  it("first year: the account start, an earlier booking, never before what a lead may see", () => {
+    setup()
+    const hr = loadActor(makeUser({ capabilities: ["hr"] }).id)
+    const u = makeUser({ employmentStart: "2026-03-15" })
+    expect(firstAccountYear(u)).toBe(2026)
+    createAdjustment(hr, u.id, { account: "time", amount: 600, reason: "Opening", effectiveDate: "2025-12-31" })
+    expect(firstAccountYear(u)).toBe(2025)
+    expect(firstAccountYear(u, "2026-06-01")).toBe(2026)
   })
 
   it("adjustments: permission, reason, notification, revisions, sign-off lock (service and trigger)", () => {

@@ -81,7 +81,16 @@ export function TeamCalendarView({
 
   return (
     <div className={cn("flex flex-col gap-4", className)}>
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {onTeam && cal.teams.length > 1 ? (
+          <Combobox
+            className="mr-auto h-8 w-auto min-w-40"
+            aria-label={t("common.team")}
+            options={teamItems}
+            value={teamId ? String(teamId) : "all"}
+            onChange={(v) => onTeam(v === "all" || v == null ? null : Number(v))}
+          />
+        ) : null}
         <PeriodNav
           label={fmtMonth(month, intl)}
           onPrev={() => onMonth(addMonthsStr(month, -1))}
@@ -90,15 +99,6 @@ export function TeamCalendarView({
           isCurrent={month === today.slice(0, 7)}
           startTransition={startTransition}
         />
-        {onTeam && cal.teams.length > 1 ? (
-          <Combobox
-            className="h-8 w-auto min-w-40"
-            aria-label={t("common.team")}
-            options={teamItems}
-            value={teamId ? String(teamId) : "all"}
-            onChange={(v) => onTeam(v === "all" || v == null ? null : Number(v))}
-          />
-        ) : null}
       </div>
 
       {!cal.rows.length ? (

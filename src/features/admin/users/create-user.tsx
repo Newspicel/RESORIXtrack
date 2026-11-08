@@ -52,7 +52,6 @@ export function CreateUserSheet({ open, onOpenChange }: { open: boolean; onOpenC
     regularNightWork: false,
     recordingMode: "full",
     pensumPercent: 100,
-    termsFrom: "",
     sendInvite: true,
   }
   const form = useUserForm(defaults, async (v, formApi) => {

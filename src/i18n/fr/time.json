@@ -90,5 +90,8 @@
   "inactive": "inactif",
   "project_required": "Choisis un projet.",
   "project_missing": "Travail sans projet",
+  "project_fix_hint_one": "1 saisie n'a pas encore de projet. Elle est marquée ci-dessous.",
+  "project_fix_hint_other": "{count} saisies n'ont pas encore de projet. Elles sont marquées ci-dessous.",
+  "project_fix_done": "Toutes les saisies ont un projet.",
   "daily_total_help": "Plusieurs totaux par jour, un par projet, sont saisis l'un après l'autre."
 }

@@ -1,7 +1,8 @@
 /**
- * The project the next clock-in books on, remembered per person in this browser (a convenience; the server
- * keeps nothing). With projects required, a clock-in without one is refused in the browser and flags the
- * picker (`useProjectPrompt`) until a project is chosen.
+ * The project chosen for the next clock-in, kept per person in this browser until that clock-in (or the
+ * clock-out) uses it up, so nothing from an earlier session is preselected; the server keeps nothing. With
+ * projects required, a clock-in without one is refused in the browser and flags the picker
+ * (`useProjectPrompt`) until a project is chosen.
  */
 import { useSyncExternalStore } from "react"
 
@@ -40,6 +41,18 @@ export function promptProject(): void {
 }
 
 export const isProjectPrompted = (): boolean => prompted
+
+/** Marks the wrapper of each clock project picker: "hero" (dashboard) or "topbar". */
+export const PICKER_ATTR = "data-clock-project"
+
+/** The clock project picker in view, the dashboard's first; null when none is shown (phones, narrow bars). */
+export function visibleProjectPicker(): HTMLElement | null {
+  for (const place of ["hero", "topbar"]) {
+    const el = document.querySelector<HTMLElement>(`[${PICKER_ATTR}=${place}] [role=combobox]`)
+    if (el && el.getClientRects().length > 0) return el
+  }
+  return null
+}
 
 export function useProjectPrompt(): boolean {
   return useSyncExternalStore(subscribe, isProjectPrompted, () => false)

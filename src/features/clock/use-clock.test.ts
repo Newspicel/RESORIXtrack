@@ -9,6 +9,7 @@ import {
   primaryAction,
   scheduledTimeText,
   schedulesLater,
+  secondaryAction,
 } from "./use-clock"
 
 const base: LiveClock = {
@@ -18,6 +19,7 @@ const base: LiveClock = {
   scheduledEnd: null,
   todayWorkedMin: 60,
   todayBreakMin: 0,
+  breakProjectId: null,
   serverTime: "2026-11-06T08:00:00.000Z",
   receivedAt: 1_000_000,
 }
@@ -44,6 +46,10 @@ describe("live clock figures", () => {
   it("picks the primary action per state", () => {
     expect(primaryAction("idle")).toBe("start")
     expect(primaryAction("working")).toBe("stop")
+    expect(primaryAction("on_break")).toBe("start")
+    expect(secondaryAction("idle")).toBeNull()
+    expect(secondaryAction("working")).toBe("pause")
+    expect(secondaryAction("on_break")).toBe("stop")
   })
 })
 
@@ -68,6 +74,18 @@ describe("optimistic transitions", () => {
       state: "working",
       since: "2026-11-06T08:00:00Z",
     })
+  })
+
+  it("a break keeps the project for the clock-in that ends it", () => {
+    const entry = { projectId: 7 } as NonNullable<LiveClock["entry"]>
+    const paused = advance({ ...base, entry }, "pause", "2026-11-06T08:00:00Z", now)
+    expect(paused).toMatchObject({ state: "on_break", since: "2026-11-06T08:00:00Z", breakProjectId: 7, entry: null })
+    expect(advance(paused, "pause", "2026-11-06T08:05:00Z", now)).toBe(paused)
+    expect(advance(paused, "start", "2026-11-06T08:30:00Z", now)).toMatchObject({
+      state: "working",
+      breakProjectId: null,
+    })
+    expect(advance(paused, "stop", "2026-11-06T08:30:00Z", now)).toMatchObject({ state: "idle", since: null })
   })
 })
 

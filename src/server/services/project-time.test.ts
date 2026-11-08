@@ -154,6 +154,24 @@ describe("clock with projects", () => {
     expect(computeDays(anna, TODAY, TODAY)[0]).toMatchObject({ workedMin: 180, breakMin: 0, projectMin: 180 })
   })
 
+  it("ending a break continues its project unless another one is chosen", () => {
+    const { anna, pm, internal } = org()
+    const A = loadActor(anna.id)
+    const client = saveProject(loadActor(pm.id), { name: "Client" })
+    freeze(at(-120))
+    clockAction(A, "start", { projectId: internal.id })
+    freeze(at(-60))
+    expect(clockAction(A, "pause")).toMatchObject({ state: "on_break", breakProjectId: internal.id })
+    freeze(at(-50))
+    clockAction(A, "start")
+    expect(openEntry(anna.id)?.projectId).toBe(internal.id)
+    freeze(at(-30))
+    clockAction(A, "pause")
+    freeze(at(-20))
+    clockAction(A, "start", { projectId: client.id })
+    expect(openEntry(anna.id)?.projectId).toBe(client.id)
+  })
+
   it("a switch after hours of work is not a clock-in: the legal-rest check does not apply", () => {
     const { anna, internal } = org()
     const A = loadActor(anna.id)
@@ -247,7 +265,7 @@ describe("coverage, sign-off and reports", () => {
     expect(report.totalMin).toBe(330)
     expect(report.projects.map((r) => [r.kind, r.name, r.minutes])).toEqual([["project", "Internal", 330]])
     expect(timesheet(loadActor(anna.id), { year: 2026, month: 11 }).projectTime["2026-11-04"]).toEqual([
-      { project: "Internal", note: "", minutes: 90, start: "08:00", end: "09:30" },
+      { entryId: expect.any(Number), project: "Internal", note: "", minutes: 90, start: "08:00", end: "09:30" },
     ])
   })
 })

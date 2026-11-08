@@ -2,7 +2,8 @@
  * Week view: one row per day with work and break segments on a 0–24 h axis, the day's total and its
  * difference to the target, holidays, absences, findings and signed-off months. Segments are buttons
  * (edit) and carry their project's colour and name, so a day reads as one block split by project; clicking
- * an empty part of a track adds an entry at that time (rounded to 15 minutes).
+ * an empty part of a track adds an entry at that time (rounded to 15 minutes). `needsProject` entries (work
+ * without a required project) are outlined.
  */
 import { Moon, PenLine, Sun } from "lucide-react"
 import type { MouseEvent } from "react"
@@ -56,11 +57,13 @@ const pct = (min: number) => `${(min / 1440) * 100}%`
 export function WeekTimeline({
   view,
   corrections,
+  needsProject,
   onEdit,
   onAdd,
 }: {
   view: PeriodView
   corrections: Record<number, Correction>
+  needsProject?: ReadonlySet<number>
   onEdit: (e: Entry) => void
   onAdd: (date: string, start?: string) => void
 }) {
@@ -107,6 +110,7 @@ export function WeekTimeline({
         return (
           <div
             key={d.date}
+            data-day={d.date}
             className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-1.5 border-b py-3 last:border-b-0 md:grid-cols-[9rem_1fr_7.5rem] md:py-2"
           >
             <div className="flex min-w-0 flex-col">
@@ -122,6 +126,8 @@ export function WeekTimeline({
               <span className="truncate text-xs text-muted-foreground">
                 {d.scheduledMin > 0 ? t("time.target_short", { t: fmtMinutes(d.targetMin) }) : t("time.free")}
               </span>
+              {/* findings belong to the day, like the lock and the missing-project mark */}
+              <FindingsBadge findings={findings} className="mt-1 self-start" />
             </div>
 
             <div className="col-span-2 row-start-2 md:col-span-1 md:row-start-auto">
@@ -174,6 +180,7 @@ export function WeekTimeline({
                           ? "bg-work text-primary-foreground hover:bg-work/85"
                           : "bg-break/60 text-foreground hover:bg-break/75",
                         e.corrected && "ring-2 ring-warning ring-inset",
+                        needsProject?.has(e.id) && "outline-2 outline-offset-1 outline-info",
                         e.project && "pl-2.5",
                       )}
                       style={{ left: pct(from), width: `calc(${pct(to - from)} - 1px)` }}
@@ -206,12 +213,7 @@ export function WeekTimeline({
                   <span className="absolute inset-y-0 w-0.5 bg-today" style={{ left: pct(nowMin) }} aria-hidden />
                 ) : null}
               </div>
-              {(list.length > 0 && (d.holiday || d.absences.length)) || findings.length ? (
-                <div className="mt-1.5 flex flex-wrap items-center gap-1">
-                  {list.length > 0 ? <DayChips day={d} /> : null}
-                  <FindingsBadge findings={findings} />
-                </div>
-              ) : null}
+              {list.length > 0 && (d.holiday || d.absences.length) ? <DayChips day={d} className="mt-1.5" /> : null}
             </div>
 
             <div className="col-start-2 row-start-1 flex flex-col items-end gap-0.5 md:col-start-auto md:row-start-auto">

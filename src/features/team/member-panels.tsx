@@ -69,7 +69,7 @@ export function AbsencesPanel({ userId, onEdit }: { userId: number; onEdit: (a: 
   ]
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex justify-end">
         <PeriodNav
           label={String(year)}
           onPrev={() => setYear(year - 1)}

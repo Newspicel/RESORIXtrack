@@ -45,6 +45,7 @@ export function EntriesTable({
   entries,
   tz,
   corrections,
+  needsProject,
   canEdit,
   onEdit,
   onHistory,
@@ -54,6 +55,8 @@ export function EntriesTable({
   entries: Entry[]
   tz: string
   corrections: Record<number, Correction>
+  /** work that still needs a project: tinted, with a badge */
+  needsProject?: ReadonlySet<number>
   canEdit: boolean
   onEdit: (e: Entry) => void
   onHistory: (e: Entry) => void
@@ -135,6 +138,12 @@ export function EntriesTable({
             meta: { mobileLabel: t("time.project") },
             cell: (c) => {
               const e = c.row.original
+              if (needsProject?.has(e.id))
+                return (
+                  <StatusBadge tone="info" icon="warning">
+                    {t("time.project_missing")}
+                  </StatusBadge>
+                )
               if (!e.project) return <span className="text-muted-foreground">–</span>
               return (
                 <span className="flex min-w-0 items-center gap-2">
@@ -217,7 +226,9 @@ export function EntriesTable({
       toolbar={toolbar}
       pageSize={false}
       empty={<p className="py-6 text-center text-sm text-muted-foreground">{t("time.no_entries")}</p>}
-      rowClassName={(e) => (e.corrected && !e.deleted ? "bg-warning/5" : undefined)}
+      rowClassName={(e) =>
+        needsProject?.has(e.id) ? "bg-info/10" : e.corrected && !e.deleted ? "bg-warning/5" : undefined
+      }
     />
   )
 }

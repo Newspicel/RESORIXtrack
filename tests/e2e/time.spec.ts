@@ -20,14 +20,19 @@ test("clock in, clock out, clock in again from the bar; dashboard follows", asyn
   await expect(hero).toHaveAccessibleName("You're clocked in")
   await expect(hero).toContainText(/since \d{2}:\d{2}/)
 
-  // a break is simply a clock-out followed by a clock-in
+  // a break: the clock counts it, ending it clocks in again; a clock-out during one ends the day
+  await bar.getByRole("button", { name: "Start break", exact: true }).click()
+  await expect(bar).toContainText("On break")
+  await expect(hero).toHaveAccessibleName("You're on a break")
+  await bar.getByRole("button", { name: "End break", exact: true }).click()
+  await expect(bar).toContainText("Working")
+  await expect(hero).toHaveAccessibleName("You're clocked in")
+  await bar.getByRole("button", { name: "Start break", exact: true }).click()
+  await expect(hero).toHaveAccessibleName("You're on a break")
   await bar.getByRole("button", { name: "Clock out", exact: true }).click()
   await expect(bar).toContainText("Not clocked in")
   await expect(hero).toHaveAccessibleName("You're not clocked in")
-  await bar.getByRole("button", { name: "Clock in", exact: true }).click()
-  await expect(hero).toHaveAccessibleName("You're clocked in")
-  await bar.getByRole("button", { name: "Clock out", exact: true }).click()
-  await expect(bar).toContainText("Not clocked in")
+  await page.reload()
   await expect(hero).toHaveAccessibleName("You're not clocked in")
 
   // the punches are on My time
@@ -133,7 +138,9 @@ test("manual entry: add, edit, delete with undo, restore", async ({ as }, info) 
   await expect(timeline("10:00", "12:15")).toBeVisible()
 })
 
-test("projects: an entry books its project; the clock switches project while working", async ({ as }, info) => {
+test("projects: an entry books its project, the reminder marks work without one, the clock switches", async ({
+  as,
+}, info) => {
   // outside the team whose previous month is signed off
   const page = await as(pick(info, "elena", "mia"))
   // last week's Saturday: no demo entries, and "Add entry" starts on the week shown (no date picker)
@@ -152,6 +159,32 @@ test("projects: an entry books its project; the clock switches project while wor
   await expect(dialog).toBeHidden()
   await expect(page.getByRole("button", { name: "Work 09:00–10:15 · Training · E2E project entry" })).toBeVisible()
 
+  // work without a project: the dashboard reminder's link marks it on the day
+  await page.getByRole("button", { name: "Add entry", exact: true }).click()
+  await dialog.getByLabel("Start").fill("13:00")
+  await dialog.getByLabel("End").fill("14:00")
+  await dialog.getByLabel("Note").fill("E2E no project")
+  await dialog.getByLabel(/^Reason/).fill("Forgot to clock in")
+  await dialog.getByRole("button", { name: "Save" }).click()
+  await expect(dialog).toBeHidden()
+  await goto(page, `/time?date=${day}&fix=project`)
+  await expect(page.getByText(/(entry still needs|entries still need) a project/)).toBeVisible()
+  const unassigned = page
+    .locator("main")
+    .getByText("Work without a project", { exact: true })
+    .filter({ visible: true })
+    .first()
+  await expect(unassigned).toBeVisible()
+  await page.getByRole("button", { name: "Assign", exact: true }).click()
+  const editor = page.getByRole("dialog", { name: "Edit entry" })
+  await expect(editor.getByLabel("Note")).toHaveValue("E2E no project")
+  await editor.getByRole("combobox", { name: "Project" }).click()
+  await page.getByRole("option", { name: /^Training/ }).click()
+  await editor.getByLabel(/^Reason/).fill("Project added")
+  await editor.getByRole("button", { name: "Save" }).click()
+  await expect(editor).toBeHidden()
+  await expect(page.getByRole("button", { name: "Work 13:00–14:00 · Training · E2E no project" })).toBeVisible()
+
   test.skip(zurichHour() < 6, "daily rest after yesterday's demo entries")
   await goto(page, "/")
   const hero = page.getByRole("region", { name: /^You're/ })
@@ -159,14 +192,32 @@ test("projects: an entry books its project; the clock switches project while wor
   await hero.getByRole("combobox", { name: "Project" }).click()
   await page.getByRole("option", { name: /^Internal & administration/ }).click()
   await hero.getByRole("button", { name: "Clock in", exact: true }).click()
-  await expect(bar).toContainText("Working · INT")
+  // desktop: the top bar has its own picker; mobile: the bar names the project
+  const running = async (name: string, code: string) => {
+    if (isMobile(info)) await expect(bar).toContainText(`Working · ${code}`)
+    else await expect(bar.getByRole("combobox", { name: "Project" })).toHaveText(name)
+  }
+  await running("Internal & administration", "INT")
   // switching keeps the clock running: no break, the entry carries on under the new project
   await hero.getByRole("combobox", { name: "Project" }).click()
   await page.getByRole("option", { name: /^Training/ }).click()
-  await expect(bar).toContainText("Working · TRN")
+  await running("Training", "TRN")
   await expect(hero).toHaveAccessibleName("You're clocked in")
   await hero.getByRole("button", { name: "Clock out", exact: true }).click()
   await expect(hero).toHaveAccessibleName("You're not clocked in")
+  // the choice is used up: nothing is preselected for the next clock-in
+  await expect(hero.getByRole("combobox", { name: "Project" })).toHaveText("No project")
+  if (isMobile(info)) return
+
+  // the top bar picks the project too, on any page
+  await goto(page, "/reports")
+  await bar.getByRole("combobox", { name: "Project" }).click()
+  await page.getByRole("option", { name: /^Training/ }).click()
+  await bar.getByRole("button", { name: "Clock in", exact: true }).click()
+  await expect(bar).toContainText("Working")
+  await expect(bar.getByRole("combobox", { name: "Project" })).toHaveText("Training")
+  await bar.getByRole("button", { name: "Clock out", exact: true }).click()
+  await expect(bar).toContainText("Not clocked in")
 })
 
 test("dashboard: Add time opens the entry dialog in place", async ({ as }, info) => {

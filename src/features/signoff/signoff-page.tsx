@@ -147,33 +147,32 @@ export function SignoffPage({
 
   const allSigned = ov.rows.length > 0 && ov.rows.every((r) => r.signoff || signing.has(r.user.id))
   const columns = [
-    // nothing to tick in a fully signed month: no empty checkbox column
-    !allSigned &&
-      col.display({
-        id: "select",
-        header: () =>
-          signable.length ? (
-            <Checkbox
-              checked={chosen.length === signable.length}
-              indeterminate={chosen.length > 0 && chosen.length < signable.length}
-              onCheckedChange={(v) => setSelected(v ? new Set(signable.map((r) => r.user.id)) : new Set())}
-              aria-label={t("signoff.select_all")}
-            />
-          ) : null,
-        meta: { className: "w-10", hideOnMobile: true },
-        cell: (c) =>
-          ready(c.row.original) && !signing.has(c.row.original.user.id) ? (
-            <Checkbox
-              checked={selected.has(c.row.original.user.id)}
-              onCheckedChange={(v) => toggle(c.row.original.user.id, v)}
-              aria-label={t("signoff.select_person", { name: c.row.original.user.name })}
-            />
-          ) : null,
-      }),
+    // kept in a fully signed month too, so the columns line up when switching months
+    col.display({
+      id: "select",
+      header: () =>
+        signable.length ? (
+          <Checkbox
+            checked={chosen.length === signable.length}
+            indeterminate={chosen.length > 0 && chosen.length < signable.length}
+            onCheckedChange={(v) => setSelected(v ? new Set(signable.map((r) => r.user.id)) : new Set())}
+            aria-label={t("signoff.select_all")}
+          />
+        ) : null,
+      meta: { hideOnMobile: true, width: "2.75rem" },
+      cell: (c) =>
+        ready(c.row.original) && !signing.has(c.row.original.user.id) ? (
+          <Checkbox
+            checked={selected.has(c.row.original.user.id)}
+            onCheckedChange={(v) => toggle(c.row.original.user.id, v)}
+            aria-label={t("signoff.select_person", { name: c.row.original.user.name })}
+          />
+        ) : null,
+    }),
     col.accessor((r) => r.user.name, {
       id: "name",
       header: () => t("common.name"),
-      meta: { primary: true },
+      meta: { primary: true, width: "13rem" },
       cell: (c) => {
         const r = c.row.original
         return (
@@ -207,32 +206,32 @@ export function SignoffPage({
     col.accessor((r) => r.summary.targetMin, {
       id: "target",
       header: () => t("reports.target"),
-      meta: { numeric: true, mobileLabel: t("reports.target") },
+      meta: { numeric: true, mobileLabel: t("reports.target"), width: "6.5rem" },
       cell: (c) => fmtMinutes(c.getValue()),
     }),
     col.accessor((r) => r.summary.workedCompleteMin, {
       id: "worked",
       header: () => t("reports.worked"),
-      meta: { numeric: true, mobileLabel: t("reports.worked") },
+      meta: { numeric: true, mobileLabel: t("reports.worked"), width: "6.5rem" },
       cell: (c) => fmtMinutes(c.getValue()),
     }),
     col.accessor((r) => r.summary.deltaMin, {
       id: "delta",
       header: () => t("reports.delta"),
-      meta: { numeric: true, mobileLabel: t("reports.delta") },
+      meta: { numeric: true, mobileLabel: t("reports.delta"), width: "6.5rem" },
       cell: (c) => <Duration minutes={c.getValue()} balance />,
     }),
     col.display({
       id: "status",
       header: () => t("common.status"),
-      meta: { mobileLabel: t("common.status") },
+      meta: { mobileLabel: t("common.status"), width: "14rem" },
       cell: (c) => <Status r={c.row.original} signing={signing.has(c.row.original.user.id)} />,
     }),
     me.isHr &&
       col.display({
         id: "actions",
         header: () => <span className="sr-only">{t("signoff.reopen")}</span>,
-        meta: { className: "w-24 text-right" },
+        meta: { className: "text-right", width: "8rem" },
         cell: (c) =>
           c.row.original.signoff ? (
             <Button intent="negative" variant="ghost" size="sm" onClick={() => setReopen(c.row.original.signoff)}>

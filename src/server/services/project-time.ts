@@ -105,6 +105,8 @@ export function firstDayMissingProject(user: User, daysBack = 14): string | null
 
 /** Minutes of one person on one local day spent on a project. */
 export interface ProjectItem {
+  /** the time entry this piece of a day comes from */
+  entryId: number
   userId: number
   date: string
   projectId: number | null
@@ -134,6 +136,7 @@ export function projectItems(people: Pick<User, "id" | "timezone">[], from: stri
   const fromAt = new Date(Date.parse(earliest) - DAY_MS).toISOString().replace("Z", "000Z")
   const rows = db
     .select({
+      id: timeEntries.id,
       userId: timeEntries.userId,
       startAt: timeEntries.startAt,
       endAt: timeEntries.endAt,
@@ -167,6 +170,7 @@ export function projectItems(people: Pick<User, "id" | "timezone">[], from: stri
         .toZonedDateTime({ timeZone: zone(tz) }).epochMilliseconds
       const b = Math.min(end, next)
       out.push({
+        entryId: r.id,
         userId: r.userId,
         date,
         projectId: r.projectId,

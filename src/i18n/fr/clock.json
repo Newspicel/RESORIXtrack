@@ -2,15 +2,20 @@
   "label": "Pointeuse",
   "start": "Timbrer l'arrivée",
   "stop": "Timbrer la sortie",
+  "break": "Commencer la pause",
+  "break_short": "Pause",
+  "resume": "Terminer la pause",
   "stop_now": "Timbrer la sortie maintenant",
   "stop_later": "Timbrer la sortie plus tard",
   "state": {
     "idle": "Non timbré",
-    "working": "Au travail"
+    "working": "Au travail",
+    "on_break": "En pause"
   },
   "headline": {
     "idle": "Tu n'as pas timbré",
-    "working": "Tu es au travail"
+    "working": "Tu es au travail",
+    "on_break": "Tu es en pause"
   },
   "offline": "Hors ligne",
   "pending_one": "Hors ligne, {count} en attente",

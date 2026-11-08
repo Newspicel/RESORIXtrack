@@ -75,23 +75,9 @@ export function LogsPage({
   onKeys: (f: ApiKeyFilters) => void
 }) {
   const { t } = useI18n()
-  const create = useAction(() => createBackupFn({ data: { includeAttachments: true } }), {
-    success: t("admin.backups.created"),
-    invalidate: [["admin", "backups"]],
-  })
   return (
     <Page>
-      <PageHeader
-        title={t("admin.backups.page_title")}
-        actions={
-          tab === "backups" ? (
-            <Button onClick={() => create.mutate(undefined)} disabled={create.isPending}>
-              {create.isPending ? <Spinner data-icon="inline-start" /> : <DatabaseBackup data-icon="inline-start" />}
-              {t("admin.backups.create")}
-            </Button>
-          ) : null
-        }
-      />
+      <PageHeader title={t("admin.backups.page_title")} />
       <Tabs
         value={tab}
         onValueChange={(v) => {
@@ -132,6 +118,10 @@ function BackupsTab() {
   const dt = useDateTime()
   const { data } = useSuspenseQuery(backupsQuery)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const create = useAction(() => createBackupFn({ data: { includeAttachments: true } }), {
+    success: t("admin.backups.created"),
+    invalidate: [["admin", "backups"]],
+  })
   const remove = useAction((name: string) => deleteBackupFn({ data: { name } }), {
     success: t("admin.backups.deleted"),
     invalidate: [["admin", "backups"]],
@@ -193,8 +183,8 @@ function BackupsTab() {
   ]
   return (
     <Section
-      actions={
-        <span className="flex items-center gap-3 text-sm text-muted-foreground">
+      description={
+        <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <Tooltip>
             <TooltipTrigger render={<span className="flex items-center gap-1.5" />}>
               <Lock className="size-4" />
@@ -210,6 +200,12 @@ function BackupsTab() {
             <TooltipContent className="max-w-xs">{t("admin.backups.restore_help")}</TooltipContent>
           </Tooltip>
         </span>
+      }
+      actions={
+        <Button onClick={() => create.mutate(undefined)} disabled={create.isPending}>
+          {create.isPending ? <Spinner data-icon="inline-start" /> : <DatabaseBackup data-icon="inline-start" />}
+          {t("admin.backups.create")}
+        </Button>
       }
     >
       <DataTable

@@ -90,5 +90,8 @@
   "inactive": "inaktiv",
   "project_required": "Wähle ein Projekt.",
   "project_missing": "Arbeit ohne Projekt",
+  "project_fix_hint_one": "1 Eintrag braucht noch ein Projekt. Er ist unten markiert.",
+  "project_fix_hint_other": "{count} Einträge brauchen noch ein Projekt. Sie sind unten markiert.",
+  "project_fix_done": "Alle Einträge haben ein Projekt.",
   "daily_total_help": "Mehrere Totale pro Tag, eines pro Projekt, werden nacheinander erfasst."
 }

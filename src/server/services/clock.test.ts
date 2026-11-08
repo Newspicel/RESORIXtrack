@@ -48,6 +48,39 @@ describe("clock", () => {
     expect(clockAction(A, "unschedule").state).toBe("idle")
   })
 
+  it("a pause is a clock-out that the next clock-in ends; a clock-out during it ends the day", () => {
+    const A = anna()
+    clockAction(A, "start")
+    setNow(60)
+    expect(clockAction(A, "pause")).toMatchObject({ state: "on_break", since: t(60), entry: null })
+    expect(openEntry(A.id)).toBeUndefined()
+    expect(clockAction(A, "pause").state).toBe("on_break")
+    expect(reasons(A.id).some((r) => r.reason === "clock (break)")).toBe(true)
+    setNow(90)
+    expect(clockAction(A, "start")).toMatchObject({ state: "working", since: t(90) })
+    setNow(120)
+    clockAction(A, "pause")
+    setNow(130)
+    expect(clockAction(A, "stop")).toMatchObject({ state: "idle", since: null })
+    expect(clockState(A.user)).toMatchObject({ state: "idle", todayWorkedMin: 90, todayBreakMin: 30 })
+    expect(listEntries(A, A.id, TODAY, TODAY)).toHaveLength(2)
+    // nothing to pause while idle
+    expect(clockAction(A, "pause").state).toBe("idle")
+  })
+
+  it("a break left open expires after 12 h; reporting sick ends it", () => {
+    const A = anna()
+    clockAction(A, "start")
+    setNow(30)
+    clockAction(A, "pause")
+    setNow(30 + 12 * 60)
+    expect(clockState(A.user).state).toBe("idle")
+    setNow(30)
+    expect(clockState(A.user).state).toBe("on_break")
+    stopRunning(A.user, A, "Reported sick")
+    expect(clockState(A.user).state).toBe("idle")
+  })
+
   it("accepts backdated times within limits", () => {
     const A = anna()
     expect(clockAction(A, "start", { at: t(-20) }).since).toMatch(/^2026-11-05T13:40/)

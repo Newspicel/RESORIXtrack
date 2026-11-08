@@ -1,5 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query"
+import { useState } from "react"
 import { toast } from "sonner"
+import { EffectiveDateDialog } from "@/components/app/effective-date-dialog"
 import { Segmented } from "@/components/app/segmented"
 import { SaveBar, SettingRow, SettingsGroup } from "@/components/app/settings"
 import { FormRoot, useAppForm } from "@/components/form/form"
@@ -58,11 +60,8 @@ export function SettingsForm({
   const { t, tError, has } = useI18n()
   const qc = useQueryClient()
   const specs = groups.flatMap((g) => g.fields)
-  const defaults: Values = {
-    ...Object.fromEntries(specs.map((s) => [s.key, toForm(s, settings[s.key])])),
-    validFrom: "",
-  }
-  const dated = specs.filter((s) => (VERSIONED_SETTINGS as readonly string[]).includes(s.key))
+  const defaults: Values = Object.fromEntries(specs.map((s) => [s.key, toForm(s, settings[s.key])]))
+  const [asking, setAsking] = useState<{ changes: Record<string, unknown>; value: Values } | null>(null)
   const form = useAppForm({
     defaultValues: defaults,
     onSubmit: async ({ value, formApi }) => {
@@ -79,20 +78,25 @@ export function SettingsForm({
         return
       }
       if (!Object.keys(changes).length) return
-      try {
-        const validFrom = typeof value.validFrom === "string" && value.validFrom ? value.validFrom : undefined
-        await saveSettingsFn({ data: { changes, validFrom } })
-        await Promise.all([
-          qc.invalidateQueries({ queryKey: ["admin"] }),
-          qc.invalidateQueries({ queryKey: ["bootstrap"] }),
-        ])
-        toast.success(t("common.saved"))
-        formApi.reset({ ...value, validFrom: "" })
-      } catch (err) {
-        if (!applyServerErrors(formApi, err)) toast.error(tError(err))
+      if (Object.keys(changes).some((k) => (VERSIONED_SETTINGS as readonly string[]).includes(k))) {
+        setAsking({ changes, value })
+        return
       }
+      await save(changes, "", value).catch(fail)
     },
   })
+  async function save(changes: Record<string, unknown>, validFrom: string, value: Values) {
+    await saveSettingsFn({ data: { changes, validFrom: validFrom || undefined } })
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ["admin"] }),
+      qc.invalidateQueries({ queryKey: ["bootstrap"] }),
+    ])
+    toast.success(t("common.saved"))
+    form.reset(value)
+  }
+  function fail(err: unknown) {
+    if (!applyServerErrors(form, err)) toast.error(tError(err))
+  }
   const label = (k: string) => t(`admin.settings.fields.${k}`)
   const help = (k: string) => (has(`admin.settings.help.${k}`) ? t(`admin.settings.help.${k}`) : undefined)
 
@@ -139,6 +143,7 @@ export function SettingsForm({
               <f.SelectField
                 row
                 label={label(s.key)}
+                description={help(s.key)}
                 options={LOCALES.map((l) => ({ value: l.code, label: l.label }))}
               />
             )}
@@ -266,26 +271,6 @@ export function SettingsForm({
             )}
           </SettingsGroup>
         ))}
-        {dated.length ? (
-          <form.Subscribe selector={(st) => dated.some((s) => st.values[s.key] !== defaults[s.key])}>
-            {(changed) =>
-              changed ? (
-                <SettingsGroup title={t("admin.settings.valid_from")}>
-                  <form.AppField name="validFrom">
-                    {(f) => (
-                      <f.DateField
-                        row
-                        far
-                        label={t("admin.settings.valid_from")}
-                        description={t("admin.settings.valid_from_help")}
-                      />
-                    )}
-                  </form.AppField>
-                </SettingsGroup>
-              ) : null
-            }
-          </form.Subscribe>
-        ) : null}
         <form.Subscribe selector={(st) => !st.isDefaultValue}>
           {(dirty) => (
             <SaveBar dirty={dirty} label={t("admin.settings.unsaved")}>
@@ -299,6 +284,16 @@ export function SettingsForm({
           )}
         </form.Subscribe>
       </FormRoot>
+      {asking ? (
+        <EffectiveDateDialog
+          label={t("admin.settings.valid_from")}
+          hint={t("admin.settings.valid_from_help")}
+          errorField="validFrom"
+          onSubmit={(from) => save(asking.changes, from, asking.value)}
+          onFail={fail}
+          onClose={() => setAsking(null)}
+        />
+      ) : null}
     </form.AppForm>
   )
 }

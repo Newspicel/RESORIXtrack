@@ -1,6 +1,6 @@
 /**
  * The dashboard's clock card: a ring that fills towards today's target, the live time, the state, a scheduled
- * clock-out ("clock out later"), the project (switch while working) and the actions (clock in/out, custom time,
+ * clock-out ("clock out later"), the project (switch while working) and the actions (clock in/out, break, custom time,
  * add time manually in place, report sick).
  */
 import { useQuery, useQueryClient } from "@tanstack/react-query"
@@ -86,7 +86,7 @@ export function HeroClock({
   const tz = me.timezone
   const since = c.since ? wallClock(c.since, tz) : null
   // still running from a previous day (forgot to clock out)
-  const overnight = c.state !== "idle" && since && since.date < today.date ? since : null
+  const overnight = c.state === "working" && since && since.date < today.date ? since : null
   const isSick = today.absences.some((a) => a.category === "sick" && a.status === "approved")
   const meta = [
     c.since && c.state !== "idle"
@@ -142,9 +142,9 @@ export function HeroClock({
           {projectMode !== "off" ? (
             <div className="flex w-full max-w-xs flex-col gap-1.5 text-left">
               <label htmlFor={projectId} className="text-xs text-muted-foreground">
-                {c.state === "idle" ? t("clock.next_project") : t("clock.project")}
+                {c.state === "working" ? t("clock.project") : t("clock.next_project")}
               </label>
-              <ClockProject clock={clock} id={projectId} />
+              <ClockProject clock={clock} place="hero" id={projectId} />
             </div>
           ) : null}
           <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">

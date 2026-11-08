@@ -1,5 +1,6 @@
 {
   "common": {
+    "changes_from_title": "Da quando valgono le modifiche?",
     "range": "{from}–{to} di {total}"
   },
   "roles": {
@@ -67,7 +68,7 @@
     "regular_night_work": "Lavoro notturno regolare",
     "regular_night_work_help": "LL art. 17b: 10 % di accredito di tempo",
     "terms_from": "Modifiche valide dal",
-    "terms_from_help": "I giorni precedenti mantengono i valori di prima. Vuoto: oggi.",
+    "terms_from_help": "I giorni precedenti mantengono i valori di prima.",
     "vacation_days_help": "Tempo pieno, settimana di 5 giorni; meno giorni lavorativi la riducono",
     "earlier": "Precedente",
     "earlier_terms": "Condizioni fino al {date}",
@@ -528,7 +529,6 @@
     },
     "groups": {
       "company": "Azienda",
-      "defaults": "Standard per nuove persone",
       "hours": "Ore e giorni festivi",
       "vacation": "Vacanze",
       "corrections": "Correzioni e responsabili",
@@ -551,8 +551,8 @@
     },
     "fields": {
       "company_name": "Nome dell'azienda",
-      "default_timezone": "Fuso orario",
-      "default_locale": "Lingua",
+      "default_timezone": "Fuso orario dell'azienda",
+      "default_locale": "Lingua predefinita",
       "default_vacation_days": "Giorni di vacanza / anno",
       "fulltime_weekly_minutes": "Settimana a tempo pieno",
       "holiday_mode": "I giorni festivi riducono il tempo previsto",
@@ -578,6 +578,8 @@
       "project_mode": "Progetti sulle registrazioni"
     },
     "help": {
+      "default_timezone": "Conta i giorni dell'azienda (chiusura, promemoria); proposta per le nuove persone.",
+      "default_locale": "Proposta per le nuove persone e la pagina di accesso.",
       "default_vacation_days": "Standard per nuove persone",
       "fulltime_weekly_minutes": "Modello standard, p. es. 42:00",
       "holiday_work_surcharge_percent": "LL art. 19: 50 % per il lavoro temporaneo",
@@ -607,7 +609,7 @@
       }
     },
     "valid_from": "Modifiche valide dal",
-    "valid_from_help": "I giorni precedenti mantengono le regole di prima; mai prima dell'ultimo mese chiuso. Vuoto: oggi."
+    "valid_from_help": "I giorni precedenti mantengono le regole di prima; mai prima dell'ultimo mese chiuso."
   },
   "api_keys": {
     "revoked": "Revocato",

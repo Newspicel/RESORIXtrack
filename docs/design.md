@@ -54,6 +54,8 @@ only when you can name the reason in one sentence.
 ## Layout
 
 - One page width (`Page`: `max-w-screen-2xl`); reading text keeps a measure on the text block (`max-w-prose`).
+- Nothing above a tab bar changes with the active tab, so the bar never moves: a tab's own actions sit in
+  its panel (`Section` actions), not in the `PageHeader`.
 - Settings, profile and person detail use `SettingsGroup` + `SettingRow`: a titled card, rows split by
   hairlines, label and short hint left (at most half), control right; stacked below `md`. Save bar spans the
   page and sticks to the bottom only while there are unsaved changes.
@@ -117,6 +119,8 @@ pagination off (`pageSize={false}`): above 150 rows the DataTable renders only t
 container with a sticky header, with fixed column widths (`meta.width`) so nothing jumps. Server logs load older
 rows while scrolling (cursor pages, `infinite`) instead of page buttons. Rows stay keyboard reachable (↑/↓,
 Enter) and screen readers hear the full size.
+A table whose rows change with a period or filter (month, year, team) gives every column a `meta.width`, so
+switching never moves a column; below that width the table scrolls inside its card.
 
 ## Component checklist (run for every new element)
 

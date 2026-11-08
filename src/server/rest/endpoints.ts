@@ -187,7 +187,7 @@ const CLOCK_PATHS = [
     "in",
     "start",
     "Clock in",
-    `${IDEMPOTENT} A break is simply a clock-out followed by a clock-in. Refused outside the employment period (409 employment_ended), in signed-off months (409 period_signed_off) and, when the company enforces the legal minimums, before the minimum break (409 break_required, fields required/taken/earliest) or the daily rest of 11 h (409 rest_required, fields requiredMin/earliest).`,
+    `${IDEMPOTENT} Ends a break (see /clock/pause) and continues its project unless \`projectId\` is given. Refused outside the employment period (409 employment_ended), in signed-off months (409 period_signed_off) and, when the company enforces the legal minimums, before the minimum break (409 break_required, fields required/taken/earliest) or the daily rest of 11 h (409 rest_required, fields requiredMin/earliest).`,
   ],
   [
     "out",
@@ -200,6 +200,12 @@ const CLOCK_PATHS = [
     "switch",
     "Switch project",
     "Carry on working on another project (`projectId`): the running entry ends and the next one starts at the same second, so no break appears. Clocks in when idle; no-op when the project is the same.",
+  ],
+  [
+    "pause",
+    "pause",
+    "Start a break",
+    `${IDEMPOTENT} Closes the running entry like a clock-out; the state becomes \`on_break\` until the next clock-in (which continues the same project) or clock-out (which ends the day). A break left open expires after 12 h. No-op when not working.`,
   ],
   ["unschedule", "unschedule", "Cancel a scheduled clock-out", "No-op when nothing is scheduled."],
 ] as const
@@ -218,10 +224,11 @@ const clockActions = CLOCK_PATHS.map(([path, action, summary, description]) =>
   }),
 )
 
-const clockSyncAction = z.enum(["in", "out", "switch"])
+const clockSyncAction = z.enum(["in", "out", "pause", "switch"])
 const ACTION_OF: Record<z.output<typeof clockSyncAction>, OfflineClockAction> = {
   in: "start",
   out: "stop",
+  pause: "pause",
   switch: "switch",
 }
 

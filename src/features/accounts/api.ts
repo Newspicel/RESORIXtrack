@@ -5,6 +5,7 @@ import { authed, tx } from "@/server/middleware"
 import {
   createAdjustment,
   deleteAdjustment,
+  firstAccountYear,
   setEntitlement,
   statementFrom,
   timeBalance,
@@ -29,11 +30,14 @@ export const fetchAccount = createServerFn({ method: "GET" })
   .handler(({ data, context: { actor } }) => {
     const user = target(actor, data.userId)
     const y = data.year ?? Number(localToday(user.timezone).slice(0, 4))
+    const from = dataFrom(actor, user)
     return {
       user: { id: user.id, name: user.name, timezone: user.timezone },
       year: y,
+      /** the year navigation stops here: nothing to show before it */
+      firstYear: firstAccountYear(user, from),
       balance: timeBalance(user),
-      statement: statementFrom(timeStatement(user, y), dataFrom(actor, user)),
+      statement: statementFrom(timeStatement(user, y), from),
       vacation: vacationAccount(user, y),
       overtime: overtimeYear(user, y),
       canAdjust: canAdjustBalance(actor, user),

@@ -34,7 +34,7 @@ describe("reports", () => {
     expect(ts.user).toMatchObject({ name: "Anna Muster", team: "Team A", timezone: "Europe/Zurich" })
     expect(ts.days).toHaveLength(31)
     expect(ts.entries["2026-10-14"]).toEqual([
-      { kind: "work", start: "08:00", end: "12:00", edited: true, note: "Kunde" },
+      { id: expect.any(Number), kind: "work", start: "08:00", end: "12:00", edited: true, note: "Kunde" },
     ])
     expect(ts.entries["2026-10-15"]).toBeUndefined()
     expect(ts.summary.workedMin).toBe(240)

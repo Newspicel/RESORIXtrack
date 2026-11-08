@@ -54,7 +54,8 @@ function parseSignedHours(text: string): number | null {
 export function AccountPanel({ userId }: { userId: number }) {
   const { t, intl } = useI18n()
   const me = useMe()
-  const [year, setYear] = useState(() => Number(todayIn(me.timezone).slice(0, 4)))
+  const thisYear = Number(todayIn(me.timezone).slice(0, 4))
+  const [year, setYear] = useState(thisYear)
   const [pending, startTransition] = useTransition()
   // both at once: the account no longer has to answer before the adjustments are requested
   const [{ data: a }, { data: items }] = useSuspenseQueries({
@@ -119,6 +120,8 @@ export function AccountPanel({ userId }: { userId: number }) {
           label={String(a.year)}
           onPrev={() => setYear(a.year - 1)}
           onNext={() => setYear(a.year + 1)}
+          canPrev={a.year > a.firstYear}
+          canNext={a.year <= thisYear}
           startTransition={startTransition}
         />
       </div>

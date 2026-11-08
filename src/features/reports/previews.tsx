@@ -78,7 +78,7 @@ export function TimesheetPreview({ d, today }: { d: TimesheetData; today: string
         c.getValue().length ? (
           <span className="flex flex-wrap gap-x-2">
             {c.getValue().map((e) => (
-              <span key={`${e.start}-${e.end}`} className="whitespace-nowrap" title={e.note || undefined}>
+              <span key={e.id} className="whitespace-nowrap" title={e.note || undefined}>
                 {e.start}–{e.end ?? "…"}
                 {e.edited ? (
                   <Pencil className="ml-0.5 inline size-3 text-warning" aria-label={t("reports.edited")} />
@@ -121,7 +121,7 @@ export function TimesheetPreview({ d, today }: { d: TimesheetData; today: string
               ) : null}
             </div>
             {day.logs.map((w) => (
-              <span key={`${w.project}-${w.note}-${w.minutes}-${w.start}`} className="text-xs text-muted-foreground">
+              <span key={w.entryId} className="text-xs text-muted-foreground">
                 {w.project ? <span className="text-foreground">{w.project}</span> : null}
                 {w.note ? ` ${w.note}` : ""} · {fmtMinutes(w.minutes)}
               </span>

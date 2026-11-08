@@ -11,6 +11,7 @@ import { addDays, iso, localToday, monthBounds, weekStart } from "../time"
 import { absenceTypesById, serializeAbsenceType } from "./absence-types"
 import { absencesInRange, clippedDays, minDay, serializeAbsences } from "./absences"
 import { computeDays, personAccounts, summarize, timeBalance, vacationAccount } from "./accounts"
+import { openBreaks } from "./clock"
 import { countFindings, periodFindings, teamComplianceSummary } from "./compliance"
 import {
   type Actor,
@@ -30,7 +31,7 @@ import { overviewInput } from "./team.schemas"
 
 export type PresenceState = "working" | "break" | "off"
 
-/** Running entries of these people: one query. */
+/** Running entries and open breaks of these people: two queries. */
 function presence(userIds: number[]): Map<number, { state: PresenceState; since: string }> {
   if (!userIds.length) return new Map()
   const rows = db
@@ -38,9 +39,11 @@ function presence(userIds: number[]): Map<number, { state: PresenceState; since:
     .from(timeEntries)
     .where(and(inArray(timeEntries.userId, userIds), isNull(timeEntries.endAt), eq(timeEntries.isDeleted, false)))
     .all()
-  return new Map(
-    rows.map((r) => [r.userId, { state: r.kind === "break" ? "break" : "working", since: iso(r.startAt) }]),
-  )
+  const out = new Map<number, { state: PresenceState; since: string }>()
+  for (const [userId, b] of openBreaks(userIds)) out.set(userId, { state: "break", since: b.since })
+  // a running entry wins over a break left behind
+  for (const r of rows) out.set(r.userId, { state: r.kind === "break" ? "break" : "working", since: iso(r.startAt) })
+  return out
 }
 
 function teamNames(people: User[]): Map<number, string> {

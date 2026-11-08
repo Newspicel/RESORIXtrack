@@ -1,5 +1,6 @@
 {
   "common": {
+    "changes_from_title": "Dès quand les modifications s'appliquent-elles ?",
     "range": "{from}–{to} sur {total}"
   },
   "roles": {
@@ -67,7 +68,7 @@
     "regular_night_work": "Travail de nuit régulier",
     "regular_night_work_help": "LTr art. 17b : 10 % de crédit de temps",
     "terms_from": "Modifications valables dès le",
-    "terms_from_help": "Les jours précédents gardent les anciennes valeurs. Vide : aujourd'hui.",
+    "terms_from_help": "Les jours précédents gardent les anciennes valeurs.",
     "vacation_days_help": "Plein temps, semaine de 5 jours ; moins de jours de travail la réduisent",
     "earlier": "Antérieur",
     "earlier_terms": "Conditions jusqu'au {date}",
@@ -528,7 +529,6 @@
     },
     "groups": {
       "company": "Entreprise",
-      "defaults": "Valeurs par défaut",
       "hours": "Heures et jours fériés",
       "vacation": "Vacances",
       "corrections": "Corrections et responsables",
@@ -551,8 +551,8 @@
     },
     "fields": {
       "company_name": "Nom de l'entreprise",
-      "default_timezone": "Fuseau horaire",
-      "default_locale": "Langue",
+      "default_timezone": "Fuseau horaire de l'entreprise",
+      "default_locale": "Langue par défaut",
       "default_vacation_days": "Jours de vacances / an",
       "fulltime_weekly_minutes": "Semaine à plein temps",
       "holiday_mode": "Les fériés réduisent le dû",
@@ -578,6 +578,8 @@
       "project_mode": "Projets sur les saisies de temps"
     },
     "help": {
+      "default_timezone": "Compte les jours de l'entreprise (validation, rappels) ; valeur proposée pour les nouvelles personnes.",
+      "default_locale": "Valeur proposée pour les nouvelles personnes et la page de connexion.",
       "default_vacation_days": "Par défaut pour les nouvelles personnes",
       "fulltime_weekly_minutes": "Horaire par défaut, p. ex. 42:00",
       "holiday_work_surcharge_percent": "LTr art. 19 : 50 % pour le travail temporaire",
@@ -607,7 +609,7 @@
       }
     },
     "valid_from": "Modifications valables dès le",
-    "valid_from_help": "Les jours précédents gardent les anciennes règles ; jamais avant le dernier mois validé. Vide : aujourd'hui."
+    "valid_from_help": "Les jours précédents gardent les anciennes règles ; jamais avant le dernier mois validé."
   },
   "api_keys": {
     "revoked": "Révoquée",

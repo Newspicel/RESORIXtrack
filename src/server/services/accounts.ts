@@ -220,6 +220,20 @@ export function accountStart(user: User, timeline: PersonTimeline = personTimeli
   return firstSchedule ? minDay(firstSchedule, created) : created
 }
 
+/**
+ * Earliest year the accounts hold anything for: the account start or an earlier booking (an opening balance),
+ * never before `visibleFrom` (a lead sees their team from the day they took it over).
+ */
+export function firstAccountYear(user: User, visibleFrom: string | null = null): number {
+  const booked = db
+    .select({ d: min(balanceAdjustments.effectiveDate) })
+    .from(balanceAdjustments)
+    .where(and(eq(balanceAdjustments.userId, user.id), eq(balanceAdjustments.isDeleted, false)))
+    .get()?.d
+  const first = booked ? minDay(booked, accountStart(user)) : accountStart(user)
+  return Number((visibleFrom ? maxDay(first, visibleFrom) : first).slice(0, 4))
+}
+
 // ------------------------------------------------------------------ data context
 
 export type ContextEntry = Pick<TimeEntry, "id" | "kind" | "startAt" | "endAt" | "source" | "projectId">

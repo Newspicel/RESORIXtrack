@@ -22,13 +22,13 @@ The theme follows your device. Pick System, Light or Dark with the sun/moon butt
 
 ### Clocking
 
-- **Clock in**, **Clock out**. A break is simply a clock-out; clock in again when it ends. The clock is on every page.
+- **Clock in**, **Clock out**, **Start break** (key B). During a break the clock counts it; **End break** clocks you in again on the same project (pick another one first to change it), **Clock out** ends the day. A break is the gap between two entries. The clock is on every page.
 - Keys: **S** clock in or out (when no field is focused). **⌘K** / **Ctrl K** search.
 - Offline: punches are stored and synced with their original time.
 - **Other time**: clock in up to 48 h back, or clock out at a chosen time. A past time closes the entry there. A future time (up to 24 h after the clock-in) clocks you out automatically then: the card shows *Clocks out automatically at 17:30* with *Cancel*; *Clock out now* ends the entry earlier. Such entries are marked manual.
 - Legal minimums: when your company enforces them, clocking in is refused until the minimum break (15 min after 5½ h, 30 min after 7 h, 60 min after 9 h of work) or the daily rest of 11 h is complete; the message says from when you can clock in. If you did work, add the entry under *My time*; it gets the usual finding.
 - Forgot to clock out: the dashboard warns you; clock out, then fix the end time under *My time*. A reminder email follows after a set number of hours.
-- **Project** (if your company uses projects): pick it on the dashboard before you clock in (*Clock in on*). While working, picking another project switches: the running entry ends and the next one starts at the same second, so no break appears. The top bar shows the current project.
+- **Project** (if your company uses projects): pick it before you clock in, on the dashboard (*Clock in on*) or in the top bar. Nothing is preselected: each clock-in uses up the choice. While working, picking another project switches: the running entry ends and the next one starts at the same second, so no break appears.
 
 ### Report sick
 
@@ -55,7 +55,7 @@ Times are shown in the timezone your employer set for you (usually Europe/Zurich
 If your company uses projects, every entry says which **project** its time was spent on. The week view shows each block in its project's colour and code; one day often reads as one block split by project.
 
 - Switch projects with the clock (see *Clocking*) or split an entry under *My time*.
-- Days before today with work but no project are marked with a dot; the dashboard links to the first one.
+- Days before today with work but no project are marked with a dot; the dashboard links to the first one and marks the entries that need a project (*Assign* opens the first).
 - **Required** mode: every work entry needs a project before the month can be signed off. Today is never flagged.
 - Without exact times (2 h meeting, sometime today): only with simplified recording, as a daily total per project. Full recording keeps start and end by law (ArGV 1 Art. 73).
 

@@ -255,7 +255,7 @@ export function ProjectReminder({ day }: { day: string | null }) {
       icon={FolderOpen}
       tone="info"
       action={
-        <ButtonLink variant="ghost" size="sm" render={<Link to="/time" search={{ date: day }} />}>
+        <ButtonLink variant="ghost" size="sm" render={<Link to="/time" search={{ date: day, fix: "project" }} />}>
           {t("dashboard.project_fix")}
           <ChevronRight data-icon="inline-end" />
         </ButtonLink>

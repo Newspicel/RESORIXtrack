@@ -1,6 +1,6 @@
 /**
- * Dated terms on the person's profile: the day changed terms apply from, the earlier terms and employment
- * periods (read-only), and rehiring a former employee.
+ * Dated terms on the person's profile: which fields are dated, the earlier terms and employment periods
+ * (read-only), and rehiring a former employee.
  */
 import { useQueryClient } from "@tanstack/react-query"
 import { useId, useState } from "react"
@@ -15,7 +15,6 @@ import { fmtDay } from "@/lib/format"
 import { useI18n } from "@/lib/i18n"
 import type { UserDetail } from "@/server/services/users"
 import { rehireFn } from "../api/users"
-import type { UserForm } from "./user-fields"
 import type { UserFormValues } from "./user-form"
 
 const TERM_FIELDS = [
@@ -29,29 +28,9 @@ const TERM_FIELDS = [
   "regularNightWork",
 ] as const satisfies readonly (keyof UserFormValues)[]
 
-/** "Changes apply from", shown once a dated term differs from the saved value. */
-export function TermsFromField({ form, saved }: { form: UserForm; saved: UserFormValues }) {
-  const { t } = useI18n()
-  return (
-    <form.Subscribe selector={(st) => TERM_FIELDS.some((k) => st.values[k] !== saved[k])}>
-      {(changed) =>
-        changed ? (
-          <SettingsGroup title={t("admin.users.terms_from")}>
-            <form.AppField name="termsFrom">
-              {(f) => (
-                <f.DateField
-                  row
-                  far
-                  label={t("admin.users.terms_from")}
-                  description={t("admin.users.terms_from_help")}
-                />
-              )}
-            </form.AppField>
-          </SettingsGroup>
-        ) : null
-      }
-    </form.Subscribe>
-  )
+/** A dated term differs from the saved value, so the save asks from which day it applies. */
+export function termsChanged(v: UserFormValues, saved: UserFormValues): boolean {
+  return TERM_FIELDS.some((k) => v[k] !== saved[k])
 }
 
 /** Earlier terms and employment periods, and rehiring once the employment has an end. */

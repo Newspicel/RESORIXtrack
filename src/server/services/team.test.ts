@@ -5,6 +5,7 @@ import { createAbsence } from "./absences"
 import { vacationAccount } from "./accounts"
 import { pendingApprovals } from "./approvals"
 import { pendingApprovalCount } from "./approvals-count"
+import { clockAction } from "./clock"
 import { getUserOr404 } from "./permissions"
 import { memberDetail, teamOverview } from "./team"
 
@@ -38,6 +39,17 @@ describe("team overview", () => {
     expect(byId.get(org.anna.id)?.vacation.planned).toBe(1)
     expect(ov.totals).toEqual({ people: 3, working: 1, absentToday: 1 })
     expect(byId.get(org.anna.id)?.findings).not.toBeNull()
+  })
+
+  it("shows a break as presence until the next clock-in", () => {
+    const ben = loadActor(org.ben.id)
+    clockAction(ben, "start", { at: "2026-11-05T07:00:00Z" })
+    clockAction(ben, "pause")
+    const presence = () =>
+      teamOverview(loadActor(org.lead.id)).members.find((m) => m.user.id === org.ben.id)?.presence.state
+    expect(presence()).toBe("break")
+    clockAction(ben, "stop")
+    expect(presence()).toBe("off")
   })
 
   it("shows the lead's own findings on their own row", () => {

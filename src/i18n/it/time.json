@@ -90,5 +90,8 @@
   "inactive": "inattivo",
   "project_required": "Scegli un progetto.",
   "project_missing": "Lavoro senza progetto",
+  "project_fix_hint_one": "1 registrazione non ha ancora un progetto. È evidenziata qui sotto.",
+  "project_fix_hint_other": "{count} registrazioni non hanno ancora un progetto. Sono evidenziate qui sotto.",
+  "project_fix_done": "Tutte le registrazioni hanno un progetto.",
   "daily_total_help": "Più totali al giorno, uno per progetto, vengono registrati uno dopo l'altro."
 }

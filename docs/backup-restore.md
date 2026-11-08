@@ -27,7 +27,7 @@ All data lives in the Docker volume `resorixtrack-data`, mounted at `/data`:
 | Trigger | Notes |
 |---|---|
 | Nightly 02:00 (worker) | `-auto`, with documents; the last `BACKUP_KEEP` (14) are kept |
-| Administration → Backups & logs → Create backup | Choose whether to include documents; download from the list |
+| Administration → Backups & logs → Create backup | With documents; download from the list |
 | `docker compose exec app rt backup [--label x] [--no-attachments]` | Manual |
 | Update with pending migrations (`rt migrate` on start) | `-premigrate`, without documents (migrations do not touch them) |
 
