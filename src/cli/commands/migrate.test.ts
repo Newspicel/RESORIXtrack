@@ -91,13 +91,13 @@ describe("rt migrate", () => {
     olderDatabase(file, true)
     expect(await migrateDatabase({ file, check: true, log })).toBe(1)
     expect(lines.at(-1)).toMatch(
-      /^pending: 0002_passkeys, 0003_guards_v2, 0004_arg_exempt, 0005_regular_night_work, 0006_clock_out_later, 0007_canton_presets, 0008_entry_projects$/,
+      /^pending: 0002_passkeys, 0003_guards_v2, 0004_arg_exempt, 0005_regular_night_work, 0006_clock_out_later, 0007_canton_presets, 0008_entry_projects, 0009_attachment_guards, 0010_signoff_calendar$/,
     )
     expect(await migrateDatabase({ file, log })).toBe(0)
     const backups = readdirSync(path.join(dir, "backups"))
     expect(backups).toHaveLength(1)
     expect(backups[0]).toMatch(/-premigrate\.zip\.enc$/)
-    expect(lines.some((l) => l.startsWith("applying 7 migration(s)"))).toBe(true)
+    expect(lines.some((l) => l.startsWith("applying 9 migration(s)"))).toBe(true)
     expect(migrationStatus(rawSqlite()).pending).toEqual([])
     // a user exists: no setup code
     expect(lines.join("\n")).not.toContain("first-run setup")

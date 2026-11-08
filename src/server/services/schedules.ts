@@ -8,7 +8,7 @@ import { type User, WEEKDAYS, type Weekday, type WorkSchedule, workSchedules } f
 import { Conflict, Forbidden, NotFound, Validation } from "../errors"
 import { localToday, weekday } from "../time"
 import { ensureScheduleChangeAllowed } from "./locks"
-import { type Actor, canEditSchedule, requireProfile } from "./permissions"
+import { type Actor, beforeCover, canEditSchedule, requireProfile, seesDate } from "./permissions"
 import { record, snapshot } from "./revisions"
 import { getSetting } from "./settings"
 
@@ -138,9 +138,11 @@ function validate(input: ScheduleInput): void {
   }
 }
 
-function requireEditor(actor: Actor, userId: number): User {
+function requireEditor(actor: Actor, userId: number, ...validFrom: string[]): User {
   const target = requireProfile(actor, userId)
   if (!canEditSchedule(actor, target)) throw new Forbidden("Not allowed to change work schedules")
+  // a lead covering from a later day changes no schedule version that starts before it
+  for (const d of validFrom) if (!seesDate(actor, target, d)) throw beforeCover(actor, target)
   return target
 }
 
@@ -180,9 +182,22 @@ function overwrite(actor: Actor, target: User, row: WorkSchedule, input: Schedul
   return updated
 }
 
+/** The first schedule of a new account (setup): no editor check, nobody else exists yet. */
+export function createFirstSchedule(actor: Actor, target: User, input: ScheduleInput): WorkSchedule {
+  if (hasSchedules(target.id)) throw new Conflict("This person already has a schedule", { code: "invalid_state" })
+  validate(input)
+  const created = db
+    .insert(workSchedules)
+    .values({ userId: target.id, ...columns(input) })
+    .returning()
+    .get()
+  record({ entity: "schedule", row: created, action: "create", actor, subjectUserId: target.id, before: null })
+  return created
+}
+
 /** New version; a version starting on the same day is replaced rather than duplicated (as in v1). */
 export function createSchedule(actor: Actor, userId: number, input: ScheduleInput, reason = ""): WorkSchedule {
-  const target = requireEditor(actor, userId)
+  const target = requireEditor(actor, userId, input.validFrom)
   validate(input)
   ensureScheduleChangeAllowed(target, input.validFrom)
   requireReasonForPast(target, input.validFrom, reason, !hasSchedules(target.id))
@@ -199,7 +214,7 @@ export function createSchedule(actor: Actor, userId: number, input: ScheduleInpu
 
 export function updateSchedule(actor: Actor, scheduleId: number, input: ScheduleInput, reason = ""): WorkSchedule {
   const existing = getSchedule(scheduleId)
-  const target = requireEditor(actor, existing.userId)
+  const target = requireEditor(actor, existing.userId, existing.validFrom, input.validFrom)
   validate(input)
   ensureScheduleChangeAllowed(target, input.validFrom)
   ensureScheduleChangeAllowed(target, existing.validFrom)
@@ -214,7 +229,7 @@ export function updateSchedule(actor: Actor, scheduleId: number, input: Schedule
 
 export function deleteSchedule(actor: Actor, scheduleId: number, reason = ""): void {
   const s = getSchedule(scheduleId)
-  const target = requireEditor(actor, s.userId)
+  const target = requireEditor(actor, s.userId, s.validFrom)
   const n = db.select({ n: count() }).from(workSchedules).where(eq(workSchedules.userId, target.id)).get()?.n ?? 0
   if (n <= 1) throw new Conflict("A person needs at least one work schedule", { code: "last_schedule" })
   ensureScheduleChangeAllowed(target, s.validFrom)

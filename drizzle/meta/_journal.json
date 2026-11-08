@@ -64,6 +64,20 @@
       "when": 1794069077248,
       "tag": "0008_entry_projects",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1794094451620,
+      "tag": "0009_attachment_guards",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1794095270893,
+      "tag": "0010_signoff_calendar",
+      "breakpoints": true
     }
   ]
 }

@@ -505,6 +505,7 @@ export function EntryDialog({
                 label={t("common.note")}
                 maxLength={500}
                 placeholder={t("time.note_placeholder")}
+                description={t("common.note_no_personal")}
                 className="min-h-32"
               />
             )}

@@ -265,7 +265,14 @@
       "minutes_fri": "Fr",
       "minutes_sat": "Sa",
       "minutes_sun": "So",
-      "scheduled_end_at": "Geplantes Ausstempeln"
+      "scheduled_end_at": "Geplantes Ausstempeln",
+      "capabilities": "Berechtigungen",
+      "locale": "Sprache",
+      "legal_weekly_max_hours": "Gesetzliche Höchstarbeitszeit",
+      "recording_mode": "Zeiterfassung",
+      "arg_exempt": "Vom Arbeitsgesetz ausgenommen",
+      "regular_night_work": "Regelmässige Nachtarbeit",
+      "birth_date": "Geburtsdatum"
     },
     "sources": {
       "web": "Web",
@@ -330,7 +337,8 @@
       "reset_requested": "Reset angefordert",
       "mfa_failed": "Falscher Zwei-Faktor-Code",
       "invalid_mfa": "Falscher Zwei-Faktor-Code",
-      "passkey": "Mit Passkey angemeldet"
+      "passkey": "Mit Passkey angemeldet",
+      "mfa_required": "Passwort allein nicht erlaubt"
     }
   },
   "branding": {
@@ -490,7 +498,8 @@
     "key_invalid": "Verwende Kleinbuchstaben, Ziffern und _",
     "sort": "Reihenfolge",
     "delete_title": "{name} löschen?",
-    "deleted": "Art gelöscht"
+    "deleted": "Art gelöscht",
+    "counting_locked": "In Verwendung: Kategorie und Anrechnung sind fest."
   },
   "settings": {
     "title": "Einstellungen",

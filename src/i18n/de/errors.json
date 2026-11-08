@@ -95,5 +95,10 @@
   "backup_password_missing": "Setze BACKUP_PASSWORD (mind. 12 Zeichen) auf dem Server.",
   "type_in_use": "Diese Art wird verwendet. Deaktiviere sie stattdessen.",
   "projects_missing": "Ein Teil der Arbeit hat kein Projekt.",
-  "projects_off": "Projekte sind für diese Firma ausgeschaltet."
+  "projects_off": "Projekte sind für diese Firma ausgeschaltet.",
+  "not_for_yourself": "Das muss jemand anderes für dich erledigen: ein anderer Admin, HR oder deine Teamleitung.",
+  "type_in_use_counting": "Diese Art wird verwendet. Kategorie und Anrechnung lassen sich nicht mehr ändern; lege stattdessen eine neue Art an.",
+  "oidc_only": "Melde dich mit Single Sign-on an.",
+  "mfa_enrolment_required": "Richte zuerst die Zwei-Faktor-Anmeldung ein.",
+  "before_cover": "Du siehst und änderst die Daten dieser Person ab dem Tag, an dem deine Leitungsrolle begann."
 }

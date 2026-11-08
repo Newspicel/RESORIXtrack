@@ -134,7 +134,7 @@
     "reject_title": "Antrag ablehnen",
     "reject_title_n": "{count} Anträge ablehnen",
     "decision_note": "Notiz",
-    "decision_note_help": "Optional, geht an die Person",
+    "decision_note_help": "Optional, geht an die Person. Keine Gesundheitsangaben.",
     "vacation_after": "Danach {n} übrig",
     "vacation_left": "Ferien übrig",
     "exceeds": "Übersteigt Ferien",

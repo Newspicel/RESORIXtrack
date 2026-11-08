@@ -43,7 +43,7 @@ import { addDays, localToday, nowInstant, zone } from "../time"
 import { type Half, holidayHalves, holidaysFor } from "./holidays"
 import { ensureOpenDates } from "./locks"
 import { notify } from "./notifications"
-import { type Actor, canAdjustBalance, requireView } from "./permissions"
+import { type Actor, beforeCover, canAdjustBalance, requireDate, requireView, seesDate } from "./permissions"
 import { record, snapshot } from "./revisions"
 import { minutesOnWeekday, schedulesOf, workdaysPerWeek } from "./schedules"
 import { getAllSettings, type Settings } from "./settings"
@@ -812,6 +812,21 @@ export function timeStatement(user: User, year: number): TimeStatement {
   }
 }
 
+/**
+ * The statement as a lead covering from `from` sees it: totals stay (balance, opening, closing), months that
+ * ended before and the adjustments dated before are left out.
+ */
+export function statementFrom(s: TimeStatement, from: string | null): TimeStatement {
+  if (from == null) return s
+  const monthEnd = (m: number) =>
+    addDays(`${s.year + Math.floor(m / 12)}-${String((m % 12) + 1).padStart(2, "0")}-01`, -1)
+  return {
+    ...s,
+    months: s.months.filter((m) => monthEnd(m.month) >= from),
+    adjustments: s.adjustments.filter((a) => a.effectiveDate >= from),
+  }
+}
+
 // ------------------------------------------------------------------ vacation
 
 /** Average scheduled days per week over [s, e] divided by 5 (1.0 for a five-day schedule). */
@@ -1002,6 +1017,7 @@ export function createAdjustment(actor: Actor, userId: number, input: Adjustment
     throw new Validation("Amount must not be zero", { fields: { amount: "zero" } })
   }
   const effectiveDate = input.effectiveDate || localToday(target.timezone)
+  if (!seesDate(actor, target, effectiveDate)) throw beforeCover(actor, target)
   ensureOpenDates(target, effectiveDate)
   const row = db
     .insert(balanceAdjustments)
@@ -1033,6 +1049,7 @@ export function deleteAdjustment(actor: Actor, adjustmentId: number, reason: str
   const adj = db.select().from(balanceAdjustments).where(eq(balanceAdjustments.id, adjustmentId)).get()
   if (!adj || adj.isDeleted) throw new NotFound("Adjustment not found")
   const target = requireAdjuster(actor, adj.userId)
+  requireDate(actor, target, adj.effectiveDate, "Adjustment")
   if (!reason.trim()) throw new Validation("A reason is required", { fields: { reason: "required" } })
   ensureOpenDates(target, adj.effectiveDate)
   const before = snapshot("adjustment", adj)

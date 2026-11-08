@@ -20,7 +20,7 @@ import { type ClockAction, clockAction, clockState, type OfflineClockAction, syn
 import { createEntry, deleteEntry, getEntry, listEntries, updateEntry } from "../services/entries"
 import { myHolidays } from "../services/holiday-calendars"
 import { withOutbox } from "../services/outbox"
-import { type Actor, isManager, requireView, visibleUserIds } from "../services/permissions"
+import { type Actor, isManager, requireView, seesDate, visibleUserIds } from "../services/permissions"
 import { projectMode } from "../services/project-time"
 import { visibleProjects } from "../services/projects"
 import { timesheet } from "../services/reports"
@@ -297,7 +297,10 @@ const days = endpoint({
   handler: (ctx) => {
     const user = subject(ctx, ctx.query.userId)
     checkRange(ctx.query.from, ctx.query.to)
-    const list = computeDaysFrom(loadContext(user, ctx.query.from, ctx.query.to))
+    // a lead covering from a later day sees the days from then on
+    const list = computeDaysFrom(loadContext(user, ctx.query.from, ctx.query.to)).filter((d) =>
+      seesDate(ctx.actor, user, d.date),
+    )
     return {
       user: { id: user.id, name: user.name, timezone: user.timezone },
       from: ctx.query.from,

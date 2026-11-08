@@ -12,7 +12,15 @@ import { absenceTypesById, serializeAbsenceType } from "./absence-types"
 import { absencesInRange, clippedDays, minDay, serializeAbsences } from "./absences"
 import { computeDays, summarize, timeBalance, vacationAccount } from "./accounts"
 import { countFindings, periodFindings, teamComplianceSummary } from "./compliance"
-import { type Actor, canAdjustBalance, canEditSchedule, canManageUser, isManager, requireView } from "./permissions"
+import {
+  type Actor,
+  canAdjustBalance,
+  canEditSchedule,
+  canManageUser,
+  isManager,
+  requireView,
+  seesDate,
+} from "./permissions"
 import { scheduleOn, schedulesOf } from "./schedules"
 import { monthStatus, parseMonth, scopeUsers } from "./signoffs"
 
@@ -60,7 +68,10 @@ export function teamOverview(actor: Actor, raw: z.input<typeof overviewInput> = 
   const wStart = weekStart(today)
   const wEnd = addDays(wStart, 6)
   const types = absenceTypesById()
-  const week = absencesInRange(ids, wStart, wEnd, ["approved", "pending"])
+  const byId = new Map(people.map((u) => [u.id, u]))
+  const week = absencesInRange(ids, wStart, wEnd, ["approved", "pending"]).filter((a) =>
+    seesDate(actor, byId.get(a.userId)!, a.endDate),
+  )
   const running = presence(ids)
   const signed = monthStatus(ids, month)
   const names = teamNames(people)
@@ -137,8 +148,10 @@ export function memberDetail(actor: Actor, userId: number) {
       ? db.select({ id: teams.id, name: teams.name }).from(teams).where(eq(teams.id, u.teamId)).get()
       : null
   const recentFrom = addDays(today, -13)
-  const recent = computeDays(u, recentFrom, today)
-  const upcoming = absencesInRange([u.id], today, addDays(today, 180), ["approved", "pending"])
+  const recent = computeDays(u, recentFrom, today).filter((d) => seesDate(actor, u, d.date))
+  const upcoming = absencesInRange([u.id], today, addDays(today, 180), ["approved", "pending"]).filter((a) =>
+    seesDate(actor, u, a.endDate),
+  )
   const lastEntry = db
     .select({ startAt: timeEntries.startAt })
     .from(timeEntries)

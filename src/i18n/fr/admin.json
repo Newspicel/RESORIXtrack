@@ -265,7 +265,14 @@
       "minutes_fri": "Ve",
       "minutes_sat": "Sa",
       "minutes_sun": "Di",
-      "scheduled_end_at": "Sortie planifiée"
+      "scheduled_end_at": "Sortie planifiée",
+      "capabilities": "Autorisations",
+      "locale": "Langue",
+      "legal_weekly_max_hours": "Durée max. légale",
+      "recording_mode": "Saisie du temps",
+      "arg_exempt": "Exclu de la loi sur le travail",
+      "regular_night_work": "Travail de nuit régulier",
+      "birth_date": "Date de naissance"
     },
     "sources": {
       "web": "Web",
@@ -330,7 +337,8 @@
       "reset_requested": "Réinitialisation demandée",
       "mfa_failed": "Code incorrect",
       "invalid_mfa": "Code incorrect",
-      "passkey": "Connecté avec une clé d'accès"
+      "passkey": "Connecté avec une clé d'accès",
+      "mfa_required": "Mot de passe seul non autorisé"
     }
   },
   "branding": {
@@ -490,7 +498,8 @@
     "key_invalid": "Utilise des minuscules, chiffres et _",
     "sort": "Ordre",
     "delete_title": "Supprimer {name} ?",
-    "deleted": "Type supprimé"
+    "deleted": "Type supprimé",
+    "counting_locked": "Utilisé : catégorie et décompte sont fixes."
   },
   "settings": {
     "title": "Paramètres",

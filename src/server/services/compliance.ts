@@ -26,7 +26,7 @@ import {
   loadContext,
   workdaysFactor,
 } from "./accounts"
-import { type Actor, isManager, requireView, visibleUserIds } from "./permissions"
+import { type Actor, dataFrom, isManager, requireView, seesDate, visibleUserIds } from "./permissions"
 import { getAllSettings, type Settings } from "./settings"
 
 export const RULES = {
@@ -497,16 +497,27 @@ export function countFindings(findings: Finding[]): FindingCounts {
   return c
 }
 
+/** Findings a lead covering from a later day may see: none about days or weeks before it. */
+function coveredFindings(actor: Actor, user: User, findings: Finding[]): Finding[] {
+  if (dataFrom(actor, user) == null) return findings
+  return findings.filter(
+    (f) =>
+      (f.date == null || seesDate(actor, user, f.date)) &&
+      (f.week == null || seesDate(actor, user, addDays(f.week, 6))),
+  )
+}
+
 export function findingsFor(actor: Actor, userId: number, start: string, end: string) {
   const user = requireView(actor, userId)
-  const findings = periodFindings(user, start, end)
+  const findings = coveredFindings(actor, user, periodFindings(user, start, end))
   return { userId: user.id, start, end, findings, counts: countFindings(findings) }
 }
 
 export function yearFindingsFor(actor: Actor, userId: number, year: number) {
   const user = requireView(actor, userId)
   const overtime = overtimeYear(user, year)
-  return { overtime, findings: yearFindings(user, year) }
+  const weeks = overtime.weeks.filter((w) => seesDate(actor, user, addDays(w.week, 6)))
+  return { overtime: { ...overtime, weeks }, findings: coveredFindings(actor, user, yearFindings(user, year)) }
 }
 
 export interface TeamComplianceRow {
@@ -542,7 +553,7 @@ export function teamComplianceSummary(
     .orderBy(asc(users.name))
     .all()
   return people.map((u) => {
-    const findings = periodFindings(u, start, end)
+    const findings = coveredFindings(actor, u, periodFindings(u, start, end))
     const rules: Partial<Record<RuleKey, number>> = {}
     for (const f of findings) rules[f.rule] = (rules[f.rule] ?? 0) + 1
     return { userId: u.id, name: u.name, teamId: u.teamId, counts: countFindings(findings), rules }

@@ -49,7 +49,7 @@ The archives are encrypted, so any destination works, as long as the password is
 
 ## Restore
 
-Replaces the database, documents and logos. The current database is kept as `resorixtrack.db.before-restore-<time>`.
+Replaces the database, documents and logos. The current database is kept as `resorixtrack.db.before-restore-<time>`, the current documents as `attachments.before-restore-<time>` (unless the backup has no documents).
 
 1. Stop the app and worker:
    ```bash

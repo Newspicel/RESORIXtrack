@@ -86,9 +86,9 @@ vi.mock("@tanstack/react-start", async (importOriginal) => {
 
 // ------------------------------------------------------------------ the company
 
-type Key = "anna" | "ben" | "carl" | "lea" | "dora" | "hanna" | "ada" | "hugo"
-const KEYS: Key[] = ["anna", "ben", "carl", "lea", "dora", "hanna", "ada", "hugo"]
-const PERSONAS: Key[] = ["anna", "carl", "lea", "dora", "hanna", "ada", "hugo"]
+type Key = "anna" | "ben" | "carl" | "lea" | "dora" | "hanna" | "ada" | "hugo" | "tina"
+const KEYS: Key[] = ["anna", "ben", "carl", "lea", "dora", "hanna", "ada", "hugo", "tina"]
+const PERSONAS: Key[] = ["anna", "carl", "lea", "dora", "hanna", "ada", "hugo", "tina"]
 
 const PEOPLE: Record<Key, { name: string; team?: "A" | "B"; role?: "admin"; hr?: boolean }> = {
   anna: { name: "Anna Muster", team: "A" }, // employee
@@ -99,7 +99,12 @@ const PEOPLE: Record<Key, { name: string; team?: "A" | "B"; role?: "admin"; hr?:
   hanna: { name: "Hanna HR", hr: true },
   ada: { name: "Ada Admin", role: "admin" }, // administrator without HR
   hugo: { name: "Hugo Admin", role: "admin", hr: true }, // administrator with HR
+  tina: { name: "Tina Temporary" }, // deputy of team B from 2026-10-15: Carl's data from that day on
 }
+
+/** A lead or deputy with a start date sees a member's data from that day on only. */
+const COVER_FROM = "2026-10-15"
+const PARTIAL: Partial<Record<Key, Key>> = { tina: "carl" }
 
 /** Whose time data a persona may see. */
 const TIME_SCOPE: Record<Key, Key[] | "all"> = {
@@ -111,6 +116,7 @@ const TIME_SCOPE: Record<Key, Key[] | "all"> = {
   hanna: "all",
   ada: ["ada"],
   hugo: "all",
+  tina: ["tina", "carl"],
 }
 /** Whose name, email and user id a persona may see (own team calendar, user administration). */
 const PEOPLE_SCOPE: Record<Key, Key[] | "all"> = {
@@ -122,6 +128,7 @@ const PEOPLE_SCOPE: Record<Key, Key[] | "all"> = {
   hanna: "all",
   ada: "all",
   hugo: "all",
+  tina: ["tina", "carl"],
 }
 /** HR acts on everyone's data (signs months off), so her name appears legitimately everywhere. */
 const ACTORS = new Set<Key>(["hanna", "hugo"])
@@ -139,6 +146,9 @@ interface Seeded {
   vacation: number
   sick: number
   attachment: number
+  /** Carl only: a sick day before Tina's cover started, with its document */
+  oldSick?: number
+  oldAttachment?: number
   adjustment: number
   worklog: number
   notification: number
@@ -202,6 +212,9 @@ async function seed() {
   P.lea.leadRows = [makeLead(teams.A.id, P.lea.user.id).id]
   P.dora.leadRows = [
     makeLead(teams.B.id, P.dora.user.id, { role: "deputy", validFrom: "2025-01-01", validTo: "2025-12-31" }).id,
+  ]
+  P.tina.leadRows = [
+    makeLead(teams.B.id, P.tina.user.id, { role: "deputy", validFrom: COVER_FROM, validTo: "2026-12-31" }).id,
   ]
   for (const k of KEYS) {
     const p = P[k]
@@ -301,6 +314,35 @@ async function seed() {
       })
       .returning()
       .get().id
+    if (k === "carl") {
+      p.oldSick = db
+        .insert(s.absences)
+        .values({
+          id: b + 103,
+          userId: uid,
+          typeId: sickType.id,
+          startDate: "2026-10-06",
+          endDate: "2026-10-06",
+          status: "approved",
+          note: `${m}-oldsick`,
+        })
+        .returning()
+        .get().id
+      p.oldAttachment = db
+        .insert(s.attachments)
+        .values({
+          id: b + 202,
+          absenceId: p.oldSick,
+          filename: `${m}-oldnote.pdf`,
+          contentType: "application/pdf",
+          size: 10,
+          sha256: "x",
+          storageName: `${k}-olddoc`,
+          uploadedById: uid,
+        })
+        .returning()
+        .get().id
+    }
     p.adjustment = db
       .insert(s.balanceAdjustments)
       .values({
@@ -390,8 +432,15 @@ function hiddenFor(persona: Key): Hidden {
       timeUsers.push(p.user.id)
       markers.push(timeMarker(k))
       for (const id of [...p.entries, p.sick, p.attachment, p.adjustment, p.worklog, p.notification]) ids.add(id)
+      if (p.oldSick) ids.add(p.oldSick).add(p.oldAttachment!)
       // a colleague's (non-sensitive) vacation shows in the own team calendar
       if (!seesPerson) ids.add(p.vacation)
+    }
+    if (PARTIAL[persona] === k) {
+      // dated before the cover started: September and October entries, the October adjustment, the sign-off
+      const m = timeMarker(k)
+      markers.push(`${m}-sept`, `${m}-october`, `${m}-adjustment`, `${m}-signoff`, `${m}-oldsick`, `${m}-oldnote`)
+      for (const id of [p.entries[0], p.entries[2], p.adjustment, p.oldSick!, p.oldAttachment!]) ids.add(id)
     }
     if (!seesPerson && !ACTORS.has(k)) {
       names.push(p.user.name, p.user.email)
@@ -471,9 +520,23 @@ const rowsOf = (sqlText: string, ids: number[]) =>
         .all(...(sqlText.includes("reference_id") ? ids.map(String) : ids))
     : []
 
+const one = (table: string, id: number) => rawSqlite().prepare(`SELECT * FROM ${table} WHERE id = ?`).get(id)
+
 /** Rows a persona must never change: others' time data outside scope; for non-admins also others' accounts. */
 function fingerprint(persona: Key, h: Hidden): string {
   const out: unknown[] = TIME_TABLES.map((t) => rowsOf(t, h.timeUsers))
+  const partial = PARTIAL[persona]
+  if (partial) {
+    const p = P[partial]
+    out.push(
+      one("time_entries", p.entries[0]),
+      one("time_entries", p.entries[2]),
+      one("balance_adjustments", p.adjustment),
+      one("month_signoffs", p.signoff),
+      one("absences", p.oldSick!),
+      one("attachments", p.oldAttachment!),
+    )
+  }
   if (PEOPLE[persona].role !== "admin") {
     const others = h.otherUsers.filter((id) => !inScope(TIME_SCOPE[persona], keyOf(id)))
     out.push(...ACCOUNT_TABLES.map((t) => rowsOf(t, others)))
@@ -513,7 +576,9 @@ function records(t: Key, kind: RecordKind): number[] {
     case "entry":
       return p.entries
     case "absence":
-      return [p.sick, p.vacation]
+      return [p.sick, p.vacation, ...(p.oldSick ? [p.oldSick] : [])]
+    case "attachment":
+      return [p.attachment, ...(p.oldAttachment ? [p.oldAttachment] : [])]
     case "lead":
       return p.leadRows
     case "team":
@@ -772,7 +837,26 @@ const SPECS: Record<string, Spec> = {
   "features/admin/api/settings#setAccentFn": {},
   "features/admin/api/settings#sendTestMailFn": { noSuccess: "SMTP is not configured in tests" },
   "features/admin/api/settings#fetchAbsenceTypesAdmin": {},
-  "features/admin/api/settings#saveAbsenceTypeFn": { id: "absenceType" },
+  "features/admin/api/settings#saveAbsenceTypeFn": {
+    id: "absenceType",
+    // the vacation type is in use: its counting stays as it is
+    data: () => ({
+      id: fixed.absenceType,
+      key: "vacation",
+      input: {
+        label: "Probe",
+        color: "#35a1cc",
+        category: "vacation",
+        creditsTime: true,
+        deductsVacation: true,
+        requiresApproval: true,
+        allowsAttachments: false,
+        employeeCanRequest: true,
+        isActive: true,
+        sort: 10,
+      },
+    }),
+  },
   "features/admin/api/settings#patchAbsenceTypeFn": { id: "absenceType" },
   "features/admin/api/settings#deleteAbsenceTypeFn": { id: "absenceType", noSuccess: "built-in types are in use" },
   "features/admin/api/settings#fetchGettingStarted": {},
@@ -824,6 +908,7 @@ const SPECS: Record<string, Spec> = {
   "features/profile/api#deleteApiKey": { id: "apikey" },
   "features/profile/api#fetchLoginHistory": {},
   "features/profile/api#fetchPasskeys": {},
+  "features/profile/api#confirmPasskeyRegistration": { noSuccess: "the password probe is wrong on purpose" },
   "features/profile/api#renameOwnPasskey": { id: "passkey" },
   "features/profile/api#deleteOwnPasskey": { id: "passkey" },
   "features/reports/api#fetchTimesheet": {},
@@ -837,7 +922,11 @@ const SPECS: Record<string, Spec> = {
   "features/signoff/api#fetchSignoffs": {},
   "features/signoff/api#fetchSignoff": { id: "signoff" },
   "features/signoff/api#signOffFn": {},
-  "features/signoff/api#reopenFn": { id: "signoff" },
+  // HR reopens someone else's month (never their own)
+  "features/signoff/api#reopenFn": {
+    id: "signoff",
+    data: (t) => ({ id: P[t === "hanna" || t === "hugo" ? "carl" : t].signoff, reason: "probe reason" }),
+  },
   "features/signoff/api#verifySignoffsFn": {},
   "features/team/api#fetchTeamOverview": {},
   "features/team/api#fetchTeamCalendar": {},
@@ -905,7 +994,7 @@ async function callFn(fn: ServerFn, data: unknown, cookie: string): Promise<Outc
   let out: { result?: unknown; error?: unknown } | undefined
   const request = new Request("http://localhost:3210/_serverFn/crawl", {
     method: fn.method ?? "POST",
-    headers: { cookie, "user-agent": "crawler", "x-real-ip": "10.9.9.9" },
+    headers: { cookie, "user-agent": "crawler", "x-resorixtrack-peer": "10.9.9.9" },
   })
   const entry = createServerEntry({
     fetch: async (req: Request) => {

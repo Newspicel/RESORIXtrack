@@ -265,7 +265,14 @@
       "minutes_fri": "Fri",
       "minutes_sat": "Sat",
       "minutes_sun": "Sun",
-      "scheduled_end_at": "Scheduled clock-out"
+      "scheduled_end_at": "Scheduled clock-out",
+      "capabilities": "Permissions",
+      "locale": "Language",
+      "legal_weekly_max_hours": "Legal weekly max",
+      "recording_mode": "Time recording",
+      "arg_exempt": "Exempt from the Labour Act",
+      "regular_night_work": "Regular night work",
+      "birth_date": "Date of birth"
     },
     "sources": {
       "web": "Web",
@@ -330,7 +337,8 @@
       "reset_requested": "Reset requested",
       "mfa_failed": "Wrong two-factor code",
       "invalid_mfa": "Wrong two-factor code",
-      "passkey": "Signed in with passkey"
+      "passkey": "Signed in with passkey",
+      "mfa_required": "Password alone not allowed"
     }
   },
   "branding": {
@@ -490,7 +498,8 @@
     "key_invalid": "Use lowercase letters, digits and _",
     "sort": "Order",
     "delete_title": "Delete {name}?",
-    "deleted": "Type deleted"
+    "deleted": "Type deleted",
+    "counting_locked": "In use: category and counting are fixed."
   },
   "settings": {
     "title": "Settings",

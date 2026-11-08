@@ -117,10 +117,15 @@ export function checkSvg(text: string): void {
   const lower = text.toLowerCase()
   if (!/<svg[\s>]/.test(lower)) throw new Validation("Not an SVG image", { fields: { file: "type" } })
   if (lower.includes("<!doctype") || lower.includes("<!entity")) throw unsafeSvg("DOCTYPE or entities")
-  if (/<\s*(script|foreignobject|iframe|embed|object|audio|video|animate\w*|set|handler|listener)[\s/>]/.test(lower))
+  // any namespace prefix, e.g. <x:script xmlns:x="http://www.w3.org/2000/svg">
+  if (
+    /<\s*([\w.-]+:)?(script|foreignobject|iframe|embed|object|audio|video|animate\w*|set|handler|listener)[\s/>]/.test(
+      lower,
+    )
+  )
     throw unsafeSvg("active element")
   if (/\son[a-z]+\s*=/.test(lower)) throw unsafeSvg("event handler")
-  for (const m of lower.matchAll(/(?:xlink:)?href\s*=\s*["']([^"']*)["']/g)) {
+  for (const m of lower.matchAll(/(?:[\w.-]+:)?href\s*=\s*["']([^"']*)["']/g)) {
     if (!m[1].trim().startsWith("#") && !m[1].trim().startsWith("data:image/")) throw unsafeSvg("external link")
   }
   if (/url\s*\(\s*["']?\s*(?!#)/.test(lower) || lower.includes("@import") || lower.includes("expression("))
@@ -249,6 +254,12 @@ export function updateAbsenceType(actor: Actor, id: number, input: Partial<Absen
   const t = db.select().from(absenceTypes).where(eq(absenceTypes.id, id)).get()
   if (!t) throw new NotFound("Absence type not found")
   validateType(input)
+  // past absences (signed months, team calendar privacy) were counted and shown by these
+  const counting = (["category", "creditsTime", "deductsVacation"] as const).some(
+    (k) => input[k] !== undefined && input[k] !== t[k],
+  )
+  if (counting && db.select({ id: absences.id }).from(absences).where(eq(absences.typeId, t.id)).get())
+    throw new Conflict("This type is in use; create a new type instead", { code: "type_in_use_counting" })
   const next = { ...input, ...(input.label !== undefined ? { label: input.label.trim() } : {}) }
   return serializeAbsenceType(db.update(absenceTypes).set(next).where(eq(absenceTypes.id, t.id)).returning().get())
 }

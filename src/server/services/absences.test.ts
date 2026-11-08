@@ -151,8 +151,10 @@ describe("vacation workflow", () => {
     ).toBe("not_found")
   })
 
-  it("HR's own requests need no approval", () => {
-    expect(vac(org.hr!.id, "2026-12-14").status).toBe("approved")
+  it("HR's own requests go to someone else like everybody's", () => {
+    const a = vac(org.hr!.id, "2026-12-14")
+    expect(a.status).toBe("pending")
+    expect(err(() => decideAbsence(loadActor(org.hr!.id), a.id, true)).code).toBe("forbidden")
   })
 
   it("previews days and vacation left", () => {

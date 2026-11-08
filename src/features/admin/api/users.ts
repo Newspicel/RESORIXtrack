@@ -1,13 +1,14 @@
 import { queryOptions } from "@tanstack/react-query"
 import { createServerFn } from "@tanstack/react-start"
-import { and, asc, eq } from "drizzle-orm"
+import { asc } from "drizzle-orm"
 import { z } from "zod"
+import { passwordMatches } from "@/features/profile/server"
 import { localeSchema } from "@/lib/locales"
 import { db } from "@/server/db"
-import { account, holidayCalendars, teams, users } from "@/server/db/schema"
+import { holidayCalendars, teams, users } from "@/server/db/schema"
 import { Validation } from "@/server/errors"
 import { authed, tx } from "@/server/middleware"
-import { hashPassword, verifyPassword } from "@/server/password"
+import { hashPassword } from "@/server/password"
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "@/server/password-policy"
 import { sendInvite } from "@/server/services/invites"
 import { withOutbox } from "@/server/services/outbox"
@@ -58,12 +59,7 @@ const profileShape = {
 /** Step-up check: the administrator confirms with their own password before sensitive actions. */
 async function confirmOwnPassword(actor: Actor, password: string) {
   requireAdmin(actor)
-  const row = db
-    .select({ p: account.password })
-    .from(account)
-    .where(and(eq(account.userId, actor.id), eq(account.providerId, "credential")))
-    .get()
-  if (!row?.p || !(await verifyPassword({ hash: row.p, password }))) {
+  if (!(await passwordMatches(actor.id, password))) {
     throw new Validation("Your password is not correct", {
       code: "invalid_admin_password",
       fields: { adminPassword: "invalid" },

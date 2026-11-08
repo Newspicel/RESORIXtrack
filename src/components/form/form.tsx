@@ -210,10 +210,12 @@ export function SelectField({
   controlClassName,
   options,
   placeholder,
+  disabled,
 }: BaseProps & {
   /** `short` is shown in the closed trigger when the full label is long */
   options: { value: string; label: ReactNode; short?: ReactNode }[]
   placeholder?: string
+  disabled?: boolean
 }) {
   const { field, error, id } = useFieldFrame()
   return (
@@ -237,6 +239,7 @@ export function SelectField({
           field.handleChange(v ?? "")
           field.handleBlur()
         }}
+        disabled={disabled}
       >
         <SelectTrigger id={id} data-field={field.name} aria-invalid={error ? true : undefined} className="w-full">
           <SelectValue placeholder={placeholder} />
@@ -254,12 +257,18 @@ export function SelectField({
 }
 
 /** A form-submitted on/off (checkbox semantics). For immediate settings use a plain Switch outside forms. */
-export function SwitchField({ label, description, row }: Omit<BaseProps, "srLabel" | "controlClassName">) {
+export function SwitchField({
+  label,
+  description,
+  row,
+  disabled,
+}: Omit<BaseProps, "srLabel" | "controlClassName"> & { disabled?: boolean }) {
   const { field, id } = useFieldFrame()
   const control = (
     <Switch
       id={id}
       data-field={field.name}
+      disabled={disabled}
       checked={Boolean(field.state.value)}
       onCheckedChange={(v) => field.handleChange(v)}
     />

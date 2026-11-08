@@ -369,7 +369,12 @@ function RequestForm({ mode, ctx, onDone }: { mode: RequestMode; ctx: RequestCon
 
         <form.AppField name="note">
           {(f) => (
-            <f.TextareaField label={t("absences.note")} placeholder={t("absences.note_placeholder")} maxLength={1000} />
+            <f.TextareaField
+              label={t("absences.note")}
+              placeholder={t("absences.note_placeholder")}
+              description={t("common.note_no_personal")}
+              maxLength={1000}
+            />
           )}
         </form.AppField>
 

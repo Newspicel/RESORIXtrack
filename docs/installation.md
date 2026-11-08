@@ -81,7 +81,7 @@ Optional, any OIDC provider (e.g. Pocket ID).
 2. Set `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` (and `OIDC_NAME` for the button label).
 3. Restart: `docker compose up -d`.
 
-A sign-in succeeds only for an existing active person with the same email (verified by the provider unless `OIDC_REQUIRE_VERIFIED_EMAIL=false`); nobody is created. With `OIDC_ONLY=true` password sign-in is off; break-glass: `docker compose exec app rt reset-password --email <email> --password '<password>'` allows one password sign-in.
+A sign-in succeeds only for an existing active person with the same email (verified by the provider unless `OIDC_REQUIRE_VERIFIED_EMAIL=false`); nobody is created. With `OIDC_ONLY=true` password sign-in is off; break-glass: `docker compose exec app rt reset-password --email <email>` asks for a password and allows one password sign-in.
 
 ## Updates
 
@@ -128,7 +128,7 @@ Run inside the container: `docker compose exec app rt <command>`. `rt help` list
 | `setup-code` | Fresh one-time code for the setup wizard |
 | `migrate [--check] [--no-backup]` | Back up, then apply pending migrations (runs on start); `--check` exits 1 when pending |
 | `create-admin --email --name --password` | Create an administrator |
-| `reset-password --email --password` | Set a password, end all sessions (break-glass with `OIDC_ONLY`) |
+| `reset-password --email [--password]` | Set a password (asked when left out), end all sessions and API keys (break-glass with `OIDC_ONLY`) |
 | `backup [--label x] [--no-attachments]` | Encrypted backup now |
 | `restore <file> [--yes] [--ask-password]` | Restore a backup (app stopped), see [backup-restore.md](backup-restore.md) |
 | `decrypt-backup <file> --out <dir> [--ask-password]` | Decrypt a v1 or v2 backup into an empty directory without restoring it |
@@ -157,7 +157,7 @@ Secrets can be read from files by appending `_FILE` (`SECRET_KEY_FILE`, `SIGNOFF
 | Variable | Default | Description |
 |---|---|---|
 | `SIGNOFF_KEY` | `SECRET_KEY` | Key for sign-off seals. Keep it apart from backups. After a v1 import: the key v1 sealed with. |
-| `TRUSTED_PROXIES` | `0` | Proxies in front of the app. Forwarded headers are trusted only when `>= 1`. |
+| `TRUSTED_PROXIES` | `0` | Proxies in front of the app. Forwarded headers are trusted only when `>= 1`; with `0` the TCP peer is the client. |
 | `SESSION_COOKIE_SECURE` | `true` | Cookies over HTTPS only. `false` only for a plain-HTTP test. |
 | `SESSION_REMEMBER_DAYS` | `30` | Session lifetime with "Keep me signed in" (extended while in use). |
 | `SESSION_SHORT_IDLE_HOURS` | `12` | Idle timeout without "Keep me signed in". |

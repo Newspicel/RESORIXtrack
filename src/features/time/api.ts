@@ -24,10 +24,11 @@ import {
 } from "@/server/services/entries"
 import { lockedMonths } from "@/server/services/locks"
 import { withOutbox } from "@/server/services/outbox"
-import { type Actor, canManageUser, requireView } from "@/server/services/permissions"
+import { type Actor, canManageUser, dataFrom, requireView } from "@/server/services/permissions"
 import { firstDayMissingProject, projectMode } from "@/server/services/project-time"
+import { revisionVisible } from "@/server/services/revisions"
 import { getAllSettings } from "@/server/services/settings"
-import { addDays, iso, localToday, monthBounds, rangeBoundsUtc, weekStart } from "@/server/time"
+import { addDays, iso, localDateOf, localToday, monthBounds, rangeBoundsUtc, weekStart } from "@/server/time"
 
 const id = z.number().int().positive()
 const day = z.iso.date()
@@ -74,10 +75,17 @@ function periodView(actor: Actor, p: z.output<typeof periodInput>) {
   const [from, to] = resolveRange(p)
   const ctx = loadContext(user, from, to)
   const [s, e] = rangeBoundsUtc(from, to, user.timezone)
-  const rows = entriesBetween(user.id, s, e, p.includeDeleted)
+  // a lead covering from a later day sees the days from then on
+  const first = dataFrom(actor, user)
+  const visible = (d: string) => first == null || d >= first
+  const rows = entriesBetween(user.id, s, e, p.includeDeleted).filter((r) =>
+    visible(localDateOf(r.startAt, user.timezone)),
+  )
   const edited = editedEntryIds(rows.map((r) => r.id))
-  const days = computeDaysFrom(ctx, { editedEntryIds: edited })
-  const findings = periodFindings(user, from, to)
+  const days = computeDaysFrom(ctx, { editedEntryIds: edited }).filter((d) => visible(d.date))
+  const findings = periodFindings(user, from, to).filter(
+    (f) => (f.date == null || visible(f.date)) && (f.week == null || visible(addDays(f.week, 6))),
+  )
   const own = user.id === actor.id
   return {
     user: { id: user.id, name: user.name, timezone: user.timezone, recordingMode: user.recordingMode },
@@ -251,13 +259,7 @@ export const fetchCorrections = createServerFn({ method: "GET" })
     const out: Record<number, Correction> = {}
     if (!data.ids.length) return out
     const rows = db
-      .select({
-        id: revisions.entityId,
-        reason: revisions.reason,
-        at: revisions.at,
-        action: revisions.action,
-        by: users.name,
-      })
+      .select({ rev: revisions, by: users.name })
       .from(revisions)
       .leftJoin(users, eq(users.id, revisions.actorId))
       .where(
@@ -271,7 +273,9 @@ export const fetchCorrections = createServerFn({ method: "GET" })
       )
       .orderBy(desc(revisions.at), desc(revisions.id))
       .all()
-    for (const r of rows) out[r.id] ??= { by: r.by ?? "", reason: r.reason, at: iso(r.at), action: r.action }
+      .filter((r) => revisionVisible(actor, owner, r.rev))
+    for (const { rev, by } of rows)
+      out[rev.entityId] ??= { by: by ?? "", reason: rev.reason, at: iso(rev.at), action: rev.action }
     return out
   })
 

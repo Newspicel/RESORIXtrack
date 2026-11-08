@@ -11,6 +11,7 @@ import Database from "better-sqlite3"
 import { setDatabase } from "../db"
 import { retireLegacyBreaks } from "../db/legacy-breaks"
 import { mergeLegacyWorklogs } from "../db/legacy-worklogs"
+import { fillSignoffCalendars } from "../db/signoff-calendars"
 import { env } from "../env"
 import { checkUserChain, sealKey } from "../services/seals"
 import { DEFAULTS, RETIRED_SETTINGS } from "../services/settings"
@@ -352,6 +353,8 @@ function run(v1: Database.Database, target: Database.Database, opts: ImportOptio
     for (const spec of TABLES)
       report.tables.push({ table: spec.table, v1: count(v1, spec.from), v2: count(target, spec.table) })
     keepV1Surcharge(target)
+    // signed months keep the holiday calendar they were counted with
+    fillSignoffCalendars(target)
     // v1 before its revision 0003 still has break entries; a break is a clock-out now
     report.breaksRetired = retireLegacyBreaks(target)
     // projects live on the time entries now: open days' work log items move there

@@ -119,7 +119,7 @@ Leads, deputies during their period, and HR (for everyone) see the **Team** sect
 
 <p><img src="screenshots/lead-dark-team.png" alt="Team overview" width="760"></p>
 
-Who is in now, worked against target, findings, sign-off status, the team calendar and month balances. Name a **deputy** for a period or open-ended; they get your rights while current. Click a person to open their page.
+Who is in now, worked against target, findings, sign-off status, the team calendar and month balances. Your administrator names **deputies** for a period or open-ended; they get your rights while current. A deputy with a start date sees the team's data from that day on only. Click a person to open their page.
 
 ### Approvals
 

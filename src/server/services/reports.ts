@@ -13,7 +13,7 @@ import { absenceTypesById } from "./absence-types"
 import { absencesInRange, clippedDays, minDay, userNames } from "./absences"
 import { computeDays, summarize, timeBalance, vacationAccount } from "./accounts"
 import { editedEntryIds, entriesBetween } from "./entries"
-import { type Actor, isManager, requireView } from "./permissions"
+import { type Actor, clampFrom, isManager, requireView, seesDate } from "./permissions"
 import { type ProjectItem, projectItems, projectMode } from "./project-time"
 import { getAllSettings, getSetting } from "./settings"
 import { scopeUsers } from "./signoffs"
@@ -72,9 +72,11 @@ export function timesheet(actor: Actor, raw: z.input<typeof timesheetInput>) {
   const input = timesheetInput.parse(raw)
   const user = input.userId != null && input.userId !== actor.id ? requireView(actor, input.userId) : actor.user
   const { year, month } = input
-  const [start, end] = monthBounds(year, month)
+  const [monthStart, end] = monthBounds(year, month)
+  // a lead covering from a later day sees the month from that day on
+  const start = clampFrom(actor, user, monthStart)
   const tz = user.timezone
-  const days = computeDays(user, start, end)
+  const days = start <= end ? computeDays(user, start, end) : []
   const today = localToday(tz)
   const balanceBefore = timeBalance(user, addDays(start, -1)).balanceMin
   // complete days only, like the summary: today is still in progress
@@ -120,7 +122,7 @@ export function timesheet(actor: Actor, raw: z.input<typeof timesheetInput>) {
     .from(monthSignoffs)
     .where(and(eq(monthSignoffs.userId, user.id), eq(monthSignoffs.month, `${year}-${String(month).padStart(2, "0")}`)))
     .all()
-    .find((r) => r.reopenedAt == null)
+    .find((r) => r.reopenedAt == null && seesDate(actor, user, r.periodStartDate))
   const team =
     user.teamId != null ? db.select({ name: teams.name }).from(teams).where(eq(teams.id, user.teamId)).get() : null
   return {
@@ -166,7 +168,8 @@ export function balances(actor: Actor, raw: z.input<typeof balancesInput>) {
   const people = scopeUsers(actor, { teamId: input.teamId, periodStart: start })
   const teamNames = teamNameMap(people)
   const rows = people.map((u) => {
-    const s = summarize(computeDays(u, start, end))
+    const from = clampFrom(actor, u, start)
+    const s = summarize(from <= end ? computeDays(u, from, end) : [])
     const vac = vacationAccount(u, year)
     return {
       userId: u.id,
@@ -218,12 +221,14 @@ export function absencesReport(actor: Actor, raw: z.input<typeof rangeInput>) {
   const people = scopeUsers(actor, { teamId: input.teamId, userId: input.userId, periodStart: input.from })
   const byId = new Map(people.map((u) => [u.id, u]))
   const types = absenceTypesById()
-  const items = absencesInRange([...byId.keys()], input.from, input.to, ["approved", "pending"])
+  const items = absencesInRange([...byId.keys()], input.from, input.to, ["approved", "pending"]).filter((a) =>
+    seesDate(actor, byId.get(a.userId)!, a.endDate),
+  )
   const byUser = new Map<number, Record<string, number>>(people.map((u) => [u.id, {}]))
   const rows = items.map((a) => {
     const u = byId.get(a.userId)!
     const t = types.get(a.typeId)!
-    const days = clippedDays(u, a, input.from, input.to)
+    const days = clippedDays(u, a, clampFrom(actor, u, input.from), input.to)
     if (a.status === "approved") {
       const bucket = byUser.get(u.id)!
       bucket[t.key] = round((bucket[t.key] ?? 0) + days)
@@ -281,7 +286,10 @@ export function projectHours(actor: Actor, raw: z.input<typeof rangeInput>) {
   const input = rangeInput.parse(raw)
   checkRange(input.from, input.to)
   const people = scopeUsers(actor, { teamId: input.teamId, userId: input.userId, periodStart: input.from })
-  const logs = projectItems(people, input.from, input.to)
+  const byUserId = new Map(people.map((u) => [u.id, u]))
+  const logs = projectItems(people, input.from, input.to).filter((w) =>
+    seesDate(actor, byUserId.get(w.userId)!, w.date),
+  )
   const projectsById = projectMap(logs)
   const byProject = new Map<string, { row: ProjectRow; perPerson: Map<number, number> }>()
   const byPerson = new Map(
@@ -358,7 +366,7 @@ export function rawEntries(actor: Actor, raw: z.input<typeof rangeInput>) {
   const people = scopeUsers(actor, { teamId: input.teamId, userId: input.userId, periodStart: input.from })
   return people.flatMap((u) => {
     const tz = u.timezone
-    const [startUtc] = dayBoundsUtc(input.from, tz)
+    const [startUtc] = dayBoundsUtc(clampFrom(actor, u, input.from), tz)
     const [, endUtc] = dayBoundsUtc(input.to, tz)
     const entries = entriesBetween(u.id, startUtc, endUtc, true)
     const edited = editedEntryIds(entries.map((e) => e.id))

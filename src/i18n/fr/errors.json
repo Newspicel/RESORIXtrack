@@ -95,5 +95,10 @@
   "backup_password_missing": "Définis BACKUP_PASSWORD (12 caractères min.) sur le serveur.",
   "type_in_use": "Ce type est utilisé. Désactive-le plutôt.",
   "projects_missing": "Une partie du travail n'a pas de projet.",
-  "projects_off": "Les projets sont désactivés pour cette entreprise."
+  "projects_off": "Les projets sont désactivés pour cette entreprise.",
+  "not_for_yourself": "Quelqu'un d'autre doit le faire pour toi : un autre administrateur, les RH ou ton responsable.",
+  "type_in_use_counting": "Ce type est utilisé. Sa catégorie et son décompte ne peuvent plus changer ; crée plutôt un nouveau type.",
+  "oidc_only": "Connecte-toi avec l'authentification unique.",
+  "mfa_enrolment_required": "Configure d'abord l'authentification à deux facteurs.",
+  "before_cover": "Tu vois et modifies les données de cette personne à partir du jour où ton rôle de responsable a commencé."
 }

@@ -118,7 +118,9 @@ Overtime terms (shown in the UI with these names):
 - **Erasure**: anonymisation of former employees after the retention period (see above): name, email and personal
   fields are replaced, also in the person's own change-log snapshots (the only permitted change to the log); sessions,
   credentials, passkeys, API keys, notifications, sign-in log and documents are deleted. Time records stay, without
-  identity, as long as the employer must keep them (ArGV 1 Art. 73).
+  identity, as long as the employer must keep them (ArGV 1 Art. 73). Free-text notes on entries and absences stay
+  with them, and sealed sign-off snapshots keep the name they were sealed with (never shown); review notes before
+  anonymising if they may name the person.
 - **Information** (Art. 19): a privacy notice page (`/privacy`, editable text in Settings) linked from the
   sign-in page and the profile.
 - **Security** (Art. 8): Argon2id, 2FA (optional or enforced), encrypted backups, server-side sessions, CSP,

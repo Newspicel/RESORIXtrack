@@ -19,7 +19,7 @@ import { ensureDefaultAbsenceTypes } from "./absence-types"
 import { createCalendarFromPreset } from "./holiday-calendars"
 import { recordLoginAttempt } from "./login-log"
 import { actorFromUser } from "./permissions"
-import { createSchedule, defaultScheduleMinutes } from "./schedules"
+import { createFirstSchedule, defaultScheduleMinutes } from "./schedules"
 import { getSetting, updateSettings } from "./settings"
 import { checkNewPassword, setPasswordHash } from "./user-auth"
 
@@ -157,7 +157,7 @@ export async function completeSetup(
       .returning()
       .get()
     setPasswordHash(user.id, hash)
-    createSchedule(actorFromUser(user), user.id, {
+    createFirstSchedule(actorFromUser(user), user, {
       validFrom: start,
       pensumPercent: 100,
       minutes: defaultScheduleMinutes(input.fulltimeWeeklyMinutes),

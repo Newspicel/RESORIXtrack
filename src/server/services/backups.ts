@@ -93,7 +93,7 @@ export function appVersion(): string {
 
 export function backupPassword(): string {
   const pw = env.backupPassword
-  if (!pw || pw.length < MIN_BACKUP_PASSWORD_LENGTH)
+  if (!pw || pw.length < MIN_BACKUP_PASSWORD_LENGTH || pw.startsWith("change-me"))
     throw new Validation("BACKUP_PASSWORD is not configured on the server (at least 12 characters)", {
       code: "backup_password_missing",
     })
@@ -398,6 +398,11 @@ export function restoreBackup(
 
   const attDir = path.join(dataDir, "attachments")
   const brandDir = path.join(dataDir, "branding")
+  // documents newer than the backup (or purged since) must not stay around without a row: set them aside,
+  // unless the backup was made without documents
+  const hasDocuments = Object.keys(opened.files).some((n) => n.startsWith("attachments/"))
+  if (hasDocuments && existsSync(attDir) && readdirSync(attDir).length)
+    renameSync(attDir, `${attDir}.before-restore-${stamp(new Date())}`)
   mkdirSync(attDir, { recursive: true })
   let count = 0
   for (const [name, data] of Object.entries(opened.files)) {

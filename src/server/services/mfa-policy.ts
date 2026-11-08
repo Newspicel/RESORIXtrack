@@ -27,7 +27,17 @@ export function mfaRequiredFor(user: Pick<User, "id" | "role">): boolean {
   return mfaPolicyApplies(user) && !strongAlternative(user.id)
 }
 
-/** Show the enrolment banner: policy or v1 re-enrolment applies and nothing satisfies it yet. */
+/**
+ * A password alone is not enough: the policy applies and TOTP is off. People with a passkey or a single
+ * sign-on link use those; people with nothing may only enrol (`mfaEnrolmentDue`).
+ */
+export function passwordAloneRefused(
+  user: Pick<User, "id" | "role" | "twoFactorEnabled" | "mfaReenrolRequired">,
+): boolean {
+  return (mfaPolicyApplies(user) || user.mfaReenrolRequired) && !user.twoFactorEnabled
+}
+
+/** Enrolment required before anything else: policy or v1 re-enrolment applies and nothing satisfies it yet. */
 export function mfaEnrolmentDue(user: Pick<User, "id" | "role" | "twoFactorEnabled" | "mfaReenrolRequired">): boolean {
   return (mfaPolicyApplies(user) || user.mfaReenrolRequired) && !mfaSatisfied(user)
 }

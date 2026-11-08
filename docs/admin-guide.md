@@ -27,8 +27,8 @@ The dashboard shows a **Getting started** checklist (company name, public holida
    4. *Import* adds a preset's holidays for one year; importing again adds only missing dates.
    5. *Add* → company days with one click (24 and 31 December afternoon, Berchtoldstag where the canton does not list it, Sechseläuten afternoon in Zurich) or a custom day. Half days cover the afternoon.
    6. Every holiday change is in the audit log (*Public holiday*).
-   7. Order of use: person → team → company default. Everyone sees the calendar that applies to them under *Public holidays*.
-5. **Teams**: Administration → Teams. Name, colour, holiday calendar, leads and deputies (open-ended or for a period). A team can have several leads; a lead need not be a member. Without a lead, HR decides requests (administrators if nobody has HR).
+   7. Order of use: person → team → company default. Everyone sees the calendar that applies to them under *Public holidays*. A signed-off month keeps the calendar it was counted with: assigning another one (to the person, their team or the company) changes open months only.
+5. **Teams**: Administration → Teams. Name, colour, holiday calendar, leads and deputies (open-ended or for a period). A lead or deputy with a start date sees and changes the members' data from that day on only (entries, absences, documents, reports, history); without a start date they see all of it. A team can have several leads; a lead need not be a member. Without a lead, HR decides requests (administrators if nobody has HR).
 6. **People**: Administration → Employees → *Add employee*. Name, email, role, team, language, timezone, employment start, pensum, vacation days, legal weekly maximum (45 or 50 h), time recording (full, simplified, waived; see [compliance.md](compliance.md)), *senior executive* (Art. 3 lit. d ArG: no checks), *regular night work* (Art. 17b: 10 % of night work credited as time), optional birth date (minimum vacation). *Send invitation now* emails a link valid 7 days. Then set the work schedule (Schedule tab).
 7. **HR and Projects**: grant the capabilities on the person's Profile tab to whoever signs off months, runs company reports or answers data requests.
 8. **Projects** (if projects are on): Team → Projects. Company-wide projects are created by people with the Projects capability, team projects by leads.
@@ -41,7 +41,7 @@ The dashboard shows a **Getting started** checklist (company name, public holida
 1. Early in the month, leads open **Team → Month sign-off** for the previous month.
 2. Each person shows target, worked, difference and blockers: month not over, clock running, open requests, work without a required project.
 3. *Sign off* locks the month for everyone: entries with their projects, absences, adjustments. The person is notified; the timesheet PDF shows the seal.
-4. HR signs off leads and people without a lead, and can sign off all teams at once. Nobody signs off their own month.
+4. HR signs off people without a lead and can sign off all teams at once; a lead is signed off by a co-lead or deputy of the team, or HR. Nobody signs off, reopens or credits their own month, HR included.
 5. To correct a signed month, HR *Reopens* it with a reason (logged, notified), corrects, and signs off again.
 
 *Integrity check* on the same page (HR, administrators) verifies seals, chain, data and database guards. The worker also runs it weekly.

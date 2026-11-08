@@ -95,5 +95,10 @@
   "backup_password_missing": "Imposta BACKUP_PASSWORD (almeno 12 caratteri) sul server.",
   "type_in_use": "Questo tipo è in uso. Disattivalo invece di eliminarlo.",
   "projects_missing": "Parte del lavoro non ha un progetto.",
-  "projects_off": "I progetti sono disattivati per questa azienda."
+  "projects_off": "I progetti sono disattivati per questa azienda.",
+  "not_for_yourself": "Deve farlo qualcun altro per te: un altro amministratore, HR o il tuo responsabile del team.",
+  "type_in_use_counting": "Questo tipo è in uso. Categoria e conteggio non possono più cambiare; crea invece un nuovo tipo.",
+  "oidc_only": "Accedi con il single sign-on.",
+  "mfa_enrolment_required": "Configura prima l'autenticazione a due fattori.",
+  "before_cover": "Vedi e modifichi i dati di questa persona dal giorno in cui è iniziato il tuo ruolo di responsabile."
 }

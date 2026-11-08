@@ -95,5 +95,10 @@
   "backup_password_missing": "Set BACKUP_PASSWORD (12+ characters) on the server.",
   "type_in_use": "This type is in use. Deactivate it instead.",
   "projects_missing": "Some work has no project.",
-  "projects_off": "Projects are switched off for this company."
+  "projects_off": "Projects are switched off for this company.",
+  "not_for_yourself": "Someone else has to do this for you: another administrator, HR or your team lead.",
+  "type_in_use_counting": "This type is in use. Its category and how it counts can no longer change; create a new type instead.",
+  "oidc_only": "Use single sign-on to sign in.",
+  "mfa_enrolment_required": "Set up two-factor authentication first.",
+  "before_cover": "You can see and change this person's data from the day your lead role started."
 }

@@ -339,6 +339,8 @@ export const monthSignoffs = sqliteTable(
     reopenedAt: instant(),
     reopenedById: integer().references(() => users.id, { onDelete: "set null" }),
     reopenReason: text().notNull().default(""),
+    /** Holiday calendar the month was counted with; its days keep using it whatever is assigned later. */
+    calendarId: integer(),
   },
   (t) => [
     index("ix_month_signoffs_user_month").on(t.userId, t.month),

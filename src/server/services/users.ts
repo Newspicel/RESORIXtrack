@@ -34,7 +34,7 @@ import {
   workSchedules,
 } from "../db/schema"
 import { env } from "../env"
-import { Conflict, NotFound, Validation } from "../errors"
+import { Conflict, Forbidden, NotFound, Validation } from "../errors"
 import { iso, isValidTz, localToday, utcnow } from "../time"
 import { ensureScheduleChangeAllowed } from "./locks"
 import { notify } from "./notifications"
@@ -45,6 +45,7 @@ import {
   canAdjustBalance,
   canEditSchedule,
   getUserOr404,
+  otherAdminExists,
   requireAdmin,
 } from "./permissions"
 import { record, snapshot } from "./revisions"
@@ -203,7 +204,7 @@ export function getUserDetail(actor: Actor, userId: number) {
     birthDate: u.birthDate,
     isActive: u.isActive,
     isSelf: u.id === actor.id,
-    invitePending: !hasCredential(u.id) && u.anonymizedAt == null,
+    invitePending: !hasCredential(u.id) && u.lastLoginAt == null && u.anonymizedAt == null,
     mfaEnabled: Boolean(u.twoFactorEnabled),
     passkeys: db.select({ n: count() }).from(passkey).where(eq(passkey.userId, u.id)).get()?.n ?? 0,
     lastLoginAt: iso(u.lastLoginAt),
@@ -372,12 +373,36 @@ export function createUser(
   return u
 }
 
+const SELF_LOCKED = [
+  "vacationDaysPerYear",
+  "employmentStart",
+  "employmentEnd",
+  "legalWeeklyMaxHours",
+  "recordingMode",
+  "argExempt",
+  "regularNightWork",
+] as const
+
+const norm = (v: unknown) => (v === "" || v === undefined ? null : v)
+
+/**
+ * Administrators cannot widen their own access or change what their own time and vacation count against, as
+ * long as another administrator can do it for them.
+ */
+function ensureNoSelfGrant(u: User, patch: Partial<UserInput>): void {
+  const gainsCapability = (patch.capabilities ?? []).some((c) => !(u.capabilities ?? []).includes(c))
+  const changesContract = SELF_LOCKED.some((k) => patch[k] !== undefined && norm(patch[k]) !== norm(u[k]))
+  if (gainsCapability || changesContract)
+    throw new Forbidden("Another administrator has to change this for you", { code: "not_for_yourself" })
+}
+
 /** Emails are deferred (outbox) and go out only after the transaction committed. */
 export function updateUser(actor: Actor, userId: number, patch: Partial<UserInput>): User {
   requireAdmin(actor)
   const u = getUserOr404(userId)
   if (u.anonymizedAt) throw new Conflict("This account is anonymised", { code: "already_anonymised" })
   validate(patch)
+  if (u.id === actor.id && otherAdminExists(actor)) ensureNoSelfGrant(u, patch)
   const next: Partial<typeof users.$inferInsert> = {}
   let oldEmail: string | null = null
   if (patch.email !== undefined) {
@@ -650,11 +675,19 @@ export function removePasskeys(actor: Actor, userId: number): number {
   return removed
 }
 
-/** The person can still accept an invitation (no password yet, active). */
+/**
+ * The person can still accept an invitation: active and never signed in. Someone who signs in with single
+ * sign-on or a passkey has no password, but an invitation link (which the administrator sees) would let the
+ * administrator choose one and sign in as them.
+ */
 export function ensureInvitable(actor: Actor, userId: number): User {
   requireAdmin(actor)
   const u = getUserOr404(userId)
-  if (!u.isActive || u.anonymizedAt || hasCredential(u.id))
+  const signedInBefore =
+    u.lastLoginAt != null ||
+    db.select({ id: account.id }).from(account).where(eq(account.userId, u.id)).get() != null ||
+    db.select({ id: passkey.id }).from(passkey).where(eq(passkey.userId, u.id)).get() != null
+  if (!u.isActive || u.anonymizedAt || hasCredential(u.id) || signedInBefore)
     throw new Conflict("This person has already signed in", { code: "invalid_state" })
   return u
 }
@@ -664,6 +697,8 @@ export function ensureInvitable(actor: Actor, userId: number): User {
 export function setEntitlement(actor: Actor, userId: number, year: number, days: number | null, note = ""): void {
   const u = getUserOr404(userId)
   if (!actor.isAdmin && !canAdjustBalance(actor, u)) throw new NotFound("User not found")
+  if (u.id === actor.id && otherAdminExists(actor))
+    throw new Forbidden("Someone else has to set your entitlement", { code: "not_for_yourself" })
   if (!Number.isInteger(year) || year < 1990 || year > 2100)
     throw new Validation("Invalid year", { fields: { year: "invalid" } })
   const row = db
@@ -850,7 +885,7 @@ function anonymize(actor: Actor | null, userId: number, source: string): { docum
 }
 
 /**
- * revDSG erasure: replace name and email in the person's own user-entity revisions. The append-only trigger
+ * revDSG erasure: replace name and email (and drop the birth date) in the person's own user-entity revisions. The append-only trigger
  * allows exactly this while app_state.revision_scrub holds the person's id (drizzle/0003_guards_v2.sql).
  */
 function scrubUserRevisions(userId: number, name: string, email: string): void {
@@ -864,7 +899,14 @@ function scrubUserRevisions(userId: number, name: string, email: string): void {
     .where(and(eq(revisions.entity, "user"), eq(revisions.entityId, userId)))
     .all()
   const scrub = (snap: JsonObject | null): JsonObject | null =>
-    snap ? { ...snap, ...("name" in snap ? { name } : {}), ...("email" in snap ? { email } : {}) } : snap
+    snap
+      ? {
+          ...snap,
+          ...("name" in snap ? { name } : {}),
+          ...("email" in snap ? { email } : {}),
+          ...("birth_date" in snap ? { birth_date: null } : {}),
+        }
+      : snap
   for (const r of rows)
     db.update(revisions)
       .set({ before: scrub(r.before), after: scrub(r.after) })

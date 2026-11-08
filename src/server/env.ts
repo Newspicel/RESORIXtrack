@@ -86,11 +86,17 @@ export const env = {
 
 const PLACEHOLDER = "change-me-to-a-long-random-string-of-at-least-32-characters"
 
-/** Refuse to start production with missing or weak secrets. Called by the server entry and the worker. */
+/** Refuse to start production with missing or weak secrets. Called by the auth module, the CLI and the worker. */
 export function assertProductionConfig(): void {
   if (!isProd) return
   const problems: string[] = []
-  if (!env.secretKey || env.secretKey === PLACEHOLDER || env.secretKey.length < 32 || new Set(env.secretKey).size < 10)
+  if (
+    !env.secretKey ||
+    env.secretKey === PLACEHOLDER ||
+    env.secretKey.startsWith("change-me") ||
+    env.secretKey.length < 32 ||
+    new Set(env.secretKey).size < 10
+  )
     problems.push("SECRET_KEY must be set to a random string of at least 32 characters")
   if (!env.backupPassword || env.backupPassword.length < 12 || env.backupPassword.startsWith("change-me"))
     problems.push("BACKUP_PASSWORD must be set (at least 12 characters)")

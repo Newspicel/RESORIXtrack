@@ -26,9 +26,22 @@ import { AppError, Conflict, Forbidden, NotFound, Validation } from "../errors"
 import { addDays, dayBoundsUtc, iso, localToday, monthBounds, utcnow } from "../time"
 import { userNames } from "./absences"
 import { computeDays, type Summary, summarize, timeBalance } from "./accounts"
+import { resolveCalendarId } from "./holidays"
 import { notify } from "./notifications"
 import { deferMail } from "./outbox"
-import { type Actor, canViewUser, getUserOr404, isManager, leadsUser, requireView, visibleUserIds } from "./permissions"
+import {
+  type Actor,
+  beforeCover,
+  canViewUser,
+  getUserOr404,
+  hrSelfFallback,
+  isManager,
+  leadsUser,
+  requireDate,
+  requireView,
+  seesDate,
+  visibleUserIds,
+} from "./permissions"
 import { daysMissingProjects } from "./project-time"
 import {
   checkUserChain,
@@ -203,8 +216,7 @@ export function snapshotFigures(row: Pick<MonthSignoff, "snapshot">) {
     workdays: num("workdays"),
     balanceEndMin: num("balance_end_min"),
     timezone: typeof s.timezone === "string" ? s.timezone : null,
-    userName: typeof s.user_name === "string" ? s.user_name : null,
-    signedByName: typeof s.signed_by_name === "string" ? s.signed_by_name : null,
+    // names stay in the sealed snapshot but are never shown from it: anonymisation replaces them elsewhere
   }
 }
 
@@ -234,6 +246,8 @@ export function signOff(actor: Actor, user: User, month: string, note = ""): Mon
         : "You can only sign off members of teams you lead",
     )
   }
+  // a lead covering from a later day signs off whole months of their cover only
+  if (!seesDate(actor, user, monthPeriod(user, month).start)) throw beforeCover(actor, user)
   const problems = blockers(user, month)
   if (problems.length) {
     throw new Conflict(problems.map((p) => BLOCKER_MESSAGES[p]).join("; "), {
@@ -267,7 +281,8 @@ export function signOff(actor: Actor, user: User, month: string, note = ""): Mon
   }
   const row = db
     .insert(monthSignoffs)
-    .values({ ...base, seal: computeSeal(base) })
+    // the calendar is kept with the month: later assignments never change its holidays
+    .values({ ...base, seal: computeSeal(base), calendarId: resolveCalendarId(user) })
     .returning()
     .get()
   logSignoff(actor, row, "signoff", note)
@@ -323,6 +338,8 @@ export function reopen(actor: Actor, id: number, reason: string): MonthSignoff {
   const owner = getUserOr404(row.userId)
   if (!canViewUser(actor, owner) && !actor.isAdmin) throw new NotFound("Sign-off not found")
   if (!actor.isHr) throw new Forbidden("Only HR can reopen a signed-off month")
+  if (owner.id === actor.id && !hrSelfFallback(actor, owner))
+    throw new Forbidden("Someone else has to reopen your month", { code: "not_for_yourself" })
   if (row.reopenedAt != null) throw new Conflict("This sign-off was already reopened", { code: "invalid_state" })
   const why = reason.trim().slice(0, 500)
   if (!why) throw new Validation("A reason is required", { fields: { reason: "required" } })
@@ -498,12 +515,22 @@ export function listSignoffs(actor: Actor, raw: z.input<typeof listSignoffsInput
     .orderBy(desc(monthSignoffs.month), desc(monthSignoffs.id))
     .limit(500)
     .all()
-  return serializeSignoffs(rows)
+  const owners = new Map(
+    rows.length
+      ? db
+          .select()
+          .from(users)
+          .where(inArray(users.id, [...new Set(rows.map((r) => r.userId))]))
+          .all()
+          .map((u) => [u.id, u])
+      : [],
+  )
+  return serializeSignoffs(rows.filter((r) => seesDate(actor, owners.get(r.userId)!, r.periodStartDate)))
 }
 
 export function signoffDetail(actor: Actor, id: number) {
   const row = getSignoff(id)
-  requireView(actor, row.userId)
+  requireDate(actor, requireView(actor, row.userId), row.periodStartDate, "Sign-off")
   const status = actor.isHr ? (verifyUser(row.userId).get(row.id) ?? null) : null
   return serializeSignoffs([row], () => status)[0]
 }
@@ -550,8 +577,9 @@ export function signoffOverview(actor: Actor, raw: z.input<typeof overviewInput>
   const month = input.month ?? previousMonth(actor.user.timezone)
   const [y, m] = parseMonth(month)
   const [start, end] = monthBounds(y, m)
+  // people whose month began before the actor's cover are not theirs to sign
   const people = scopeUsers(actor, { teamId: input.teamId, periodStart: start }).filter(
-    (u) => !u.employmentStart || u.employmentStart <= end,
+    (u) => (!u.employmentStart || u.employmentStart <= end) && seesDate(actor, u, start),
   )
   const signed = monthStatus(
     people.map((u) => u.id),

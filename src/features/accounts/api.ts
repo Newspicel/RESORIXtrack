@@ -6,12 +6,13 @@ import {
   createAdjustment,
   deleteAdjustment,
   setEntitlement,
+  statementFrom,
   timeBalance,
   timeStatement,
   vacationAccount,
 } from "@/server/services/accounts"
 import { overtimeYear } from "@/server/services/compliance"
-import { type Actor, canAdjustBalance, requireView } from "@/server/services/permissions"
+import { type Actor, canAdjustBalance, dataFrom, requireView } from "@/server/services/permissions"
 import { localToday } from "@/server/time"
 
 const id = z.number().int().positive()
@@ -32,7 +33,7 @@ export const fetchAccount = createServerFn({ method: "GET" })
       user: { id: user.id, name: user.name, timezone: user.timezone },
       year: y,
       balance: timeBalance(user),
-      statement: timeStatement(user, y),
+      statement: statementFrom(timeStatement(user, y), dataFrom(actor, user)),
       vacation: vacationAccount(user, y),
       overtime: overtimeYear(user, y),
       canAdjust: canAdjustBalance(actor, user),

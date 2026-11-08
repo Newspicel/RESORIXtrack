@@ -20,6 +20,19 @@ Complete rewrite. Migrating from 1.x: [docs/migration-from-v1.md](docs/migration
 - Sign-in: passkeys, single sign-on via OpenID Connect (e.g. Pocket ID, optional OIDC-only mode with break-glass), sessions listed and revocable per device.
 - API: Better Auth API keys with scopes `time`, `absences`, `reports`; OpenAPI 3.1 at `/api/v1/openapi.json`, reference at `/api/v1/docs`; per-key rate limit. Apps obtain a key by signing in with email, password and the two-factor code (`POST /api/v1/auth/token`), as in 1.x.
 - Security: CSP with per-request nonces, CSRF origin check, sign-off seals in RFC 8785 JSON chained onto v1 seals, weekly integrity check by the worker.
+- Security audit (November 2026):
+  - Two-factor "required" is enforced on the server: until it is set up only the profile works; a password alone gets no app key; people with a passkey or single sign-on but no TOTP sign in with those.
+  - Better Auth's HTTP routes for API keys, password change and profile updates are closed, so keys and passwords only change through the app's checks; keys without expiry are refused.
+  - Adding a passkey needs the password and is mailed to the person; passkeys must verify their owner; "trust this device" is never granted.
+  - Nobody credits, schedules, approves, reopens or grants rights to themselves, HR and administrators included, unless nobody else could (the only HR person without a lead, the only administrator); user changes log capabilities and labour-law settings.
+  - Signed-off months keep their holiday calendar (migration 0010): assigning another calendar changes open months only.
+  - A lead or deputy with a start date sees and changes members' data from that day on only; leads without one see everything.
+  - Note fields say to leave out health and other personal details: they stay with the time records after anonymisation.
+  - Documents of absences in signed-off months are locked (migration 0009); counting fields of absence types in use are fixed.
+  - Client address from the TCP peer, never `X-Real-IP`; password confirmations in a session are throttled; unknown emails are always masked in the sign-in log.
+  - `OIDC_ONLY` also blocks password resets and invitation passwords; administrators cannot re-invite people who signed in before.
+  - Reset tokens are stored hashed; web server and `rt` refuse weak secrets; restore sets current documents aside; backup headers with absurd key-derivation costs are refused; logos and documents keep their strict CSP.
+  - Sign-out clears the pages kept for offline use; project search shows only bookable projects; CSV headers are guarded against formulas.
 - Backups: same encrypted RTBK1 format, now including logos and per-file checksums; `rt restore` detects v1 archives.
 - Migration: `rt import-v1` imports a v1 database with ids, passwords, documents and seals; verifies every seal chain; reports who must re-enrol two-factor, create new API keys or get a new invitation. v1 files are never modified.
 - Not carried over from 1.x: API tokens (replaced by API keys), sessions, TOTP secrets (re-enrolment).

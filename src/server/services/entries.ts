@@ -14,9 +14,19 @@ import { fmtInstant, iso, localDateOf, localToday, nowInstant, rangeBoundsUtc, u
 import { ensureOpenInstants } from "./locks"
 import { notify } from "./notifications"
 import { deferMail } from "./outbox"
-import { type Actor, canManageUser, canViewUser, getUserOr404, requireView } from "./permissions"
+import {
+  type Actor,
+  beforeCover,
+  canManageUser,
+  canViewUser,
+  clampFrom,
+  getUserOr404,
+  requireDate,
+  requireView,
+  seesDate,
+} from "./permissions"
 import { type EntryProject, entryProjects, type ProjectFields, resolveProjectFields } from "./project-time"
-import { record, serializeRevision, snapshot } from "./revisions"
+import { record, revisionVisible, serializeRevision, snapshot } from "./revisions"
 import { getSetting } from "./settings"
 
 export const MAX_ENTRY_MS = 24 * 3600_000
@@ -166,7 +176,7 @@ export function listEntries(
   includeDeleted = false,
 ): EntryView[] {
   const owner = requireView(actor, userId)
-  const [s, e] = rangeBoundsUtc(from, to, owner.timezone)
+  const [s, e] = rangeBoundsUtc(clampFrom(actor, owner, from), to, owner.timezone)
   return serializeEntries(entriesBetween(owner.id, s, e, includeDeleted), owner.id)
 }
 
@@ -181,6 +191,7 @@ export function visibleEntry(actor: Actor, id: number): { entry: TimeEntry; owne
   const entry = loadEntry(id)
   const owner = getUserOr404(entry.userId)
   if (!canViewUser(actor, owner)) throw new NotFound("Entry not found")
+  requireDate(actor, owner, localDateOf(entry.startAt, owner.timezone), "Entry")
   return { entry, owner }
 }
 
@@ -190,7 +201,7 @@ export function getEntry(actor: Actor, id: number): EntryView {
 }
 
 export function entryHistory(actor: Actor, id: number) {
-  const { entry } = visibleEntry(actor, id)
+  const { entry, owner } = visibleEntry(actor, id)
   const rows = db
     .select({ rev: revisions, name: users.name })
     .from(revisions)
@@ -198,7 +209,7 @@ export function entryHistory(actor: Actor, id: number) {
     .where(and(eq(revisions.entity, "time_entry"), eq(revisions.entityId, entry.id)))
     .orderBy(asc(revisions.at), asc(revisions.id))
     .all()
-  return rows.map((r) => serializeRevision(r.rev, r.name))
+  return rows.filter((r) => revisionVisible(actor, owner, r.rev)).map((r) => serializeRevision(r.rev, r.name))
 }
 
 /** Recent changes affecting a person (entries, absences, adjustments, schedules, work log). */
@@ -212,7 +223,7 @@ export function userHistory(actor: Actor, userId: number, limit = 200) {
     .orderBy(desc(revisions.at), desc(revisions.id))
     .limit(Math.min(Math.max(limit, 1), 1000))
     .all()
-  return rows.map((r) => serializeRevision(r.rev, r.name))
+  return rows.filter((r) => revisionVisible(actor, owner, r.rev)).map((r) => serializeRevision(r.rev, r.name))
 }
 
 // ------------------------------------------------------------------ guards
@@ -221,6 +232,12 @@ function authorize(actor: Actor, owner: User): void {
   if (actor.id !== owner.id && !canManageUser(actor, owner)) {
     throw new Forbidden("You can only change your own entries or those of teams you lead")
   }
+}
+
+/** A lead covering from a given day changes nothing before it. */
+function ensureInCover(actor: Actor, owner: User, ...instants: (string | null)[]): void {
+  for (const at of instants)
+    if (at && !seesDate(actor, owner, localDateOf(at, owner.timezone))) throw beforeCover(actor, owner)
 }
 
 export function checkOverlap(userId: number, start: string, end: string | null, excludeId?: number): void {
@@ -335,6 +352,7 @@ export function createEntry(actor: Actor, input: EntryInput): EntryView {
   if (!input.endAt) throw new Validation("End time is required", { fields: { endAt: "required" } })
   const end = parseInstantInput(input.endAt, owner.timezone, "endAt")
   validateInterval(start, end)
+  ensureInCover(actor, owner, start)
   const reason = input.reason ?? ""
   requireReason(actor, owner, reason, start)
   ensureOpenInstants(owner, start, end)
@@ -397,6 +415,7 @@ export function updateEntry(
   if (entry.endAt != null && end == null) {
     throw new Validation("A finished entry cannot be reopened", { fields: { endAt: "required" } })
   }
+  ensureInCover(actor, owner, start)
   const timesChanged =
     ms(start) !== ms(entry.startAt) || (end ? ms(end) : null) !== (entry.endAt ? ms(entry.endAt) : null)
   if (timesChanged) validateInterval(start, end)

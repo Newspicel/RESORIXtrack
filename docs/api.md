@@ -23,7 +23,7 @@ A key acts as its owner, narrowed to its scopes; it never sees more than the own
 | `time:write` | Clock actions, offline sync, create, change and delete entries |
 | `absences:read` | Vacation account, absence types, absences |
 | `absences:write` | Request and cancel absences |
-| `reports:read` | Reports; people list for leads and HR |
+| `reports:read` | Reports, people list, and reading other people's entries, absences and accounts (leads and HR, within their scope) |
 
 Send `X-Client: desktop/<version>` to mark entries as "Desktop app" in the change history.
 
