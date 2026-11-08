@@ -5,7 +5,7 @@
  * and translated in the UI through the `holidays` i18n namespace. Every holiday change is a revision.
  * Holidays inside signed-off months are frozen (locks.ensureHolidayChangeAllowed + database triggers).
  */
-import { and, asc, count, eq, gte, inArray, lte, max, min, sql } from "drizzle-orm"
+import { and, asc, count, eq, gte, inArray, lt, lte, max, min, sql } from "drizzle-orm"
 import { db } from "../db"
 import {
   type Holiday,
@@ -16,6 +16,7 @@ import {
   teams,
   type User,
   users,
+  userTermsHistory,
 } from "../db/schema"
 import { Conflict, NotFound, Validation } from "../errors"
 import { localToday } from "../time"
@@ -35,6 +36,7 @@ import { notify } from "./notifications"
 import { type Actor, requireAdmin } from "./permissions"
 import { record, snapshot } from "./revisions"
 import { getSetting } from "./settings"
+import { archiveFromToday, inheritingCalendar } from "./terms"
 
 export type HolidayKind = "federal" | "cantonal" | "company"
 
@@ -127,6 +129,9 @@ function insertMissing(calendarId: number, items: PresetDay[], by: ChangeSource)
 }
 
 function makeDefault(calendarId: number): HolidayCalendar {
+  const current = db.select().from(holidayCalendars).where(eq(holidayCalendars.isDefault, true)).get()
+  // people on the company default switch from today; earlier days keep the old one
+  if (current?.id !== calendarId) archiveFromToday(inheritingCalendar(null))
   db.update(holidayCalendars).set({ isDefault: false }).where(eq(holidayCalendars.isDefault, true)).run()
   return db
     .update(holidayCalendars)
@@ -346,8 +351,10 @@ export function saveCalendar(actor: Actor, input: CalendarInput, id?: number): H
     .where(eq(holidayCalendars.isDefault, true))
     .get()
   if (input.isDefault || !anyDefault) cal = makeDefault(cal.id)
-  else if (cal.isDefault && !input.isDefault)
+  else if (cal.isDefault && !input.isDefault) {
+    archiveFromToday(inheritingCalendar(null))
     cal = db.update(holidayCalendars).set({ isDefault: false }).where(eq(holidayCalendars.id, cal.id)).returning().get()
+  }
   return cal
 }
 
@@ -392,10 +399,17 @@ export function setDefaultCalendar(actor: Actor, id: number): HolidayCalendar {
   return makeDefault(getCalendar(id).id)
 }
 
-/** Deleting removes its holidays; teams and people fall back to the next calendar (ON DELETE SET NULL). */
+/**
+ * Deleting removes its holidays; teams and people fall back to the next calendar (ON DELETE SET NULL). A calendar
+ * that counted for days already passed stays: removing it would rewrite those days.
+ */
 export function deleteCalendar(actor: Actor, id: number): void {
   requireAdmin(actor)
   const cal = getCalendar(id)
+  if (calendarCountedBefore(cal.id, localToday(getSetting("default_timezone"))))
+    throw new Conflict("This calendar counted for days already passed and can no longer be deleted", {
+      code: "calendar_in_use",
+    })
   const latest = latestSignedDate()
   if (latest != null) {
     const frozen = db
@@ -405,8 +419,37 @@ export function deleteCalendar(actor: Actor, id: number): void {
       .get()
     if (frozen) ensureHolidayChangeAllowed(frozen.d)
   }
+  // its people fall back to another calendar from today
+  archiveFromToday(
+    db
+      .select()
+      .from(users)
+      .all()
+      .filter((u) => applicableCalendar(u)?.calendar.id === cal.id),
+  )
   for (const h of db.select().from(holidays).where(eq(holidays.calendarId, cal.id)).all()) removeHoliday({ actor }, h)
   db.delete(holidayCalendars).where(eq(holidayCalendars.id, cal.id)).run()
+}
+
+/** Did the calendar have holidays before `today` while someone counted with it (now or in earlier terms)? */
+function calendarCountedBefore(calendarId: number, today: string): boolean {
+  const past = db
+    .select({ d: holidays.date })
+    .from(holidays)
+    .where(and(eq(holidays.calendarId, calendarId), lt(holidays.date, today)))
+    .get()
+  if (!past) return false
+  const earlier = db
+    .select({ id: userTermsHistory.id })
+    .from(userTermsHistory)
+    .where(eq(userTermsHistory.holidayCalendarId, calendarId))
+    .get()
+  if (earlier) return true
+  return db
+    .select({ holidayCalendarId: users.holidayCalendarId, teamId: users.teamId })
+    .from(users)
+    .all()
+    .some((u) => applicableCalendar(u)?.calendar.id === calendarId)
 }
 
 // ------------------------------------------------------------------ holidays

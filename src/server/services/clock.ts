@@ -405,15 +405,22 @@ function switchProject(actor: Actor, current: TimeEntry, t: number, source: Revi
     return
   }
   const end = close(actor, current, t, source, "clock (project switched)")
-  startNew(actor, end, source, { project: next, continues: current })
+  // a forgotten clock-out was capped at 24 h: the new entry starts at the switch, not back then
+  startNew(actor, Math.max(end, t), source, { project: next, continues: current })
 }
 
-/** Close a running entry now (used when an account is deactivated). */
+/**
+ * Close a running entry now (reporting sick, deactivation): at a scheduled clock-out already due, never after
+ * the 24 h limit, so a forgotten clock-out is not credited for days.
+ */
 export function stopRunning(user: User, actor: Actor | null, reason = ""): TimeEntry | null {
   const e = openEntry(user.id)
   if (!e) return null
   const before = snapshot("time_entry", e)
-  const end = Math.max(Math.floor(nowInstant().epochMilliseconds / 1000) * 1000, ms(e.startAt) + 1000)
+  const start = ms(e.startAt)
+  let end = Math.floor(nowInstant().epochMilliseconds / 1000) * 1000
+  if (e.scheduledEndAt && ms(e.scheduledEndAt) < end) end = ms(e.scheduledEndAt)
+  end = Math.min(Math.max(end, start + 1000), start + MAX_ENTRY_MS)
   const updated = db
     .update(timeEntries)
     .set({ endAt: instantOfMs(end), scheduledEndAt: null, updatedAt: utcnow() })

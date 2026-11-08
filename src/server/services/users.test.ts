@@ -157,15 +157,18 @@ describe("users administration", () => {
     const admin = loadActor(makeAdmin().id)
     const u = makeUser({ employmentStart: "2025-01-01" })
     signOff(u.id, "2026-01", "2026-01-01", "2026-01-31")
-    expect(() => updateUser(admin, u.id, { employmentStart: "2025-06-01" })).toThrow(/signed-off/)
+    expect(() => updateUser(admin, u.id, { employmentStart: "2026-01-10" })).toThrow(/signed-off/)
     expect(() => updateUser(admin, u.id, { employmentEnd: "2026-01-15" })).toThrow(/signed-off/)
+    // only the days that change count: moving the start within 2025 leaves January 2026 alone
+    expect(updateUser(admin, u.id, { employmentStart: "2025-06-01" }).employmentStart).toBe("2025-06-01")
+    expect(updateUser(admin, u.id, { employmentStart: "2025-01-01" }).employmentStart).toBe("2025-01-01")
     // an end after the signed month leaves it untouched (service and database guard agree)
     expect(updateUser(admin, u.id, { employmentEnd: "2026-06-30" }).employmentEnd).toBe("2026-06-30")
     expect(() => rawSqlite().prepare("UPDATE users SET employment_end = '2026-01-10' WHERE id = ?").run(u.id)).toThrow(
       /period signed off/,
     )
     expect(() =>
-      rawSqlite().prepare("UPDATE users SET employment_start = '2025-02-01' WHERE id = ?").run(u.id),
+      rawSqlite().prepare("UPDATE users SET employment_start = '2026-01-20' WHERE id = ?").run(u.id),
     ).toThrow(/period signed off/)
   })
 

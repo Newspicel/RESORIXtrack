@@ -17,7 +17,7 @@ import { deleteSessionCookie } from "better-auth/cookies"
 import { genericOAuth, haveIBeenPwned, twoFactor } from "better-auth/plugins"
 import { tanstackStartCookies } from "better-auth/tanstack-start"
 import type { BetterAuthPlugin } from "better-auth/types"
-import { and, eq } from "drizzle-orm"
+import { eq } from "drizzle-orm"
 import { isRecord } from "@/lib/guards"
 import { CLIENT_IP_HEADER, withClientIp } from "./client-ip"
 import { db } from "./db"
@@ -32,7 +32,7 @@ import { mfaEnrolmentDue, mfaRequiredFor, passwordAloneRefused } from "./service
 import { OIDC_PROVIDER, oidcDecision, oidcEnabled } from "./services/oidc"
 import { consumePasskeyRegistration, passkeyRegistrationAllowed } from "./services/passkey-step-up"
 import { hasPassword, passwordProblem } from "./services/user-auth"
-import { applySessionPolicy } from "./session-policy"
+import { applySessionPolicy, isShortSession } from "./session-policy"
 import { utcnow } from "./time"
 
 // the web server has no start hook of its own: refuse to serve with a weak SECRET_KEY or BACKUP_PASSWORD
@@ -110,6 +110,11 @@ const DISABLED_PATHS = [
   "/update-user",
   "/change-email",
   "/delete-user",
+  // unlinking the password would end the password step-up for API keys and passkeys
+  "/list-accounts",
+  "/unlink-account",
+  "/link-social",
+  "/oauth2/link",
 ]
 
 /**
@@ -251,6 +256,7 @@ const betterAuthInstance = betterAuth({
     expiresIn: env.sessionRememberDays * 86400,
     updateAge: 86400,
     cookieCache: { enabled: false },
+    additionalFields: { short: { type: "boolean", required: false, defaultValue: false, input: false } },
   },
   emailAndPassword: {
     enabled: true,
@@ -307,7 +313,9 @@ const betterAuthInstance = betterAuth({
         before: async (session) => {
           const u = userById(Number(session.userId))
           if (!u?.isActive) throw new APIError("FORBIDDEN", { message: "Account inactive", code: "INACTIVE" })
-          return { data: session }
+          // "don't remember me" is decided here, from the lifetime Better Auth gives the session, not later
+          // from a cookie the client could leave out
+          return { data: { ...session, short: isShortSession(session) } }
         },
         after: async (session) => {
           db.update(schema.users)
@@ -317,28 +325,13 @@ const betterAuthInstance = betterAuth({
         },
       },
     },
-    user: {
-      update: {
-        after: async (user) => {
-          // enrolling two-factor satisfies the re-enrolment request from import-v1
-          if (user.twoFactorEnabled)
-            db.update(schema.users)
-              .set({ mfaReenrolRequired: false })
-              .where(and(eq(schema.users.id, Number(user.id)), eq(schema.users.mfaReenrolRequired, true)))
-              .run()
-        },
-      },
-    },
   },
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
       const headers = ctx.request?.headers ?? ctx.headers
       // every lookup of the current session (also auth.api.getSession) passes here first
       const token = await ctx.getSignedCookie(ctx.context.authCookies.sessionToken.name, ctx.context.secret)
-      if (token) {
-        const short = await ctx.getSignedCookie(ctx.context.authCookies.dontRememberToken.name, ctx.context.secret)
-        applySessionPolicy(token, Boolean(short))
-      }
+      if (token) applySessionPolicy(token)
       switch (ctx.path) {
         case "/sign-in/email": {
           const email = emailOf(ctx)
@@ -403,6 +396,8 @@ const betterAuthInstance = betterAuth({
           )
           if (!challenge) return
           if (newSession) {
+            // a break-glass sign-in is one sign-in, also when it ends with the second factor
+            consumeBreakGlass(newSession.user.email)
             recordLoginAttempt({
               email: newSession.user.email,
               userId: Number(newSession.user.id),

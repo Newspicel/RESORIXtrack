@@ -19,7 +19,6 @@ export const DEFAULTS = {
   holiday_mode: "scheduled" as "scheduled" | "prorata",
   fulltime_weekly_minutes: 2520, // 42 h
   default_vacation_days: 25,
-  vacation_prorate_workdays: false,
   // Sunday and public holiday work (ArG Art. 19 para. 3): 50 % wage supplement; "payroll" only reports the
   // hours, "time_credit" credits the supplement as time (collective agreements)
   holiday_work_surcharge_percent: 50,
@@ -53,6 +52,21 @@ export const DEFAULTS = {
 export type Settings = typeof DEFAULTS
 export type SettingKey = keyof Settings
 
+/**
+ * Settings that change figures (targets, credits, vacation, findings). They apply from a date (`setting_versions`),
+ * so a change never reaches earlier days; the database guards in drizzle/0011_dated_terms.sql list the same keys.
+ */
+export const VERSIONED_SETTINGS = [
+  "holiday_mode",
+  "fulltime_weekly_minutes",
+  "holiday_work_surcharge_percent",
+  "holiday_work_surcharge_mode",
+  "compliance_enabled",
+  "night_work_permitted",
+  "sunday_work_permitted",
+] as const satisfies readonly SettingKey[]
+export type VersionedSetting = (typeof VERSIONED_SETTINGS)[number]
+
 /** Keys of earlier versions that no longer apply; ignored when stored, saved or imported. */
 export const RETIRED_SETTINGS: readonly string[] = [
   "session_remember_days", // SESSION_REMEMBER_DAYS in the environment
@@ -60,6 +74,7 @@ export const RETIRED_SETTINGS: readonly string[] = [
   // projects live on the time entries: "required" means every work entry has one
   "worklog_required_percent",
   "worklog_project_required",
+  "vacation_prorate_workdays", // vacation always follows the scheduled working days
 ]
 
 const int = (min: number, max: number) => z.number().int().min(min).max(max)
@@ -70,7 +85,6 @@ export const settingsSchema = z.object({
   holiday_mode: z.enum(["scheduled", "prorata"]),
   fulltime_weekly_minutes: int(60, 6000),
   default_vacation_days: z.number().min(0).max(366),
-  vacation_prorate_workdays: z.boolean(),
   holiday_work_surcharge_percent: z.number().min(0).max(200),
   holiday_work_surcharge_mode: z.enum(["payroll", "time_credit"]),
   lead_can_edit_schedules: z.boolean(),

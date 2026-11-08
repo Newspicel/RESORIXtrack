@@ -19,7 +19,7 @@ import { holidayPresets } from "@/server/services/holiday-presets"
 import { requireAdmin } from "@/server/services/permissions"
 
 const id = z.number().int().positive()
-const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
+const day = z.iso.date()
 const year = z.number().int().min(1990).max(2100)
 
 export const fetchCalendars = createServerFn({ method: "GET" })

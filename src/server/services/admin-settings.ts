@@ -35,7 +35,6 @@ export const SETTING_GROUPS = {
     "fulltime_weekly_minutes",
     "holiday_mode",
     "default_vacation_days",
-    "vacation_prorate_workdays",
     "lead_can_edit_schedules",
     "lead_can_adjust_balances",
     "reason_required_for_past_edits",
@@ -66,12 +65,12 @@ export function getSettings(actor: Actor): Settings {
   return getAllSettings()
 }
 
-export function saveSettings(actor: Actor, changes: Partial<Settings>): Settings {
+export function saveSettings(actor: Actor, changes: Partial<Settings>, validFrom?: string): Settings {
   requireAdmin(actor)
   const unknown = Object.keys(changes).filter((k) => !EDITABLE.has(k) && !RETIRED_SETTINGS.includes(k))
   if (unknown.length)
     throw new Validation("Unknown setting", { fields: Object.fromEntries(unknown.map((k) => [k, "invalid"])) })
-  return updateSettings(changes)
+  return updateSettings(changes, { validFrom })
 }
 
 // ------------------------------------------------------------------ branding

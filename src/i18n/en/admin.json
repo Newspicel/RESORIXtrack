@@ -65,7 +65,19 @@
     "recording_simplified_short": "Simplified",
     "recording_waived_short": "Waived",
     "regular_night_work": "Regular night work",
-    "regular_night_work_help": "ArG Art. 17b: 10 % time credit"
+    "regular_night_work_help": "ArG Art. 17b: 10 % time credit",
+    "terms_from": "Changes apply from",
+    "terms_from_help": "Earlier days keep the previous values. Empty: today.",
+    "vacation_days_help": "Full-time, 5-day week; fewer working days reduce it",
+    "earlier": "Earlier",
+    "earlier_terms": "Terms until {date}",
+    "earlier_period": "Employed {start} to {end}",
+    "current_terms_from": "Current terms since {date}",
+    "rehire": "Rehire",
+    "rehire_title": "Rehire {name}",
+    "rehire_help": "A new employment starts. The earlier one stays as it was, its months unchanged.",
+    "rehire_start": "New employment start",
+    "rehired": "Rehired"
   },
   "schedule": {
     "title": "Work schedule",
@@ -95,7 +107,8 @@
     "new_title": "New schedule",
     "planned": "Planned",
     "reason_required": "Reason (required)",
-    "reason_placeholder": "e.g. new contract"
+    "reason_placeholder": "e.g. new contract",
+    "gap": "No schedule from {from} to {to}: those days have no target. Add a version starting on {from}."
   },
   "vacation": {
     "title": "Entitlement per year",
@@ -544,7 +557,6 @@
       "fulltime_weekly_minutes": "Full-time week",
       "holiday_mode": "Holidays reduce the target",
       "holiday_work_surcharge_percent": "Sunday/holiday surcharge",
-      "vacation_prorate_workdays": "Pro-rate vacation by workdays",
       "reason_required_for_past_edits": "Reason for past edits",
       "lead_can_edit_schedules": "Leads edit schedules",
       "lead_can_adjust_balances": "Leads adjust balances",
@@ -593,7 +605,9 @@
         "optional": "Optional",
         "required": "Required"
       }
-    }
+    },
+    "valid_from": "Changes apply from",
+    "valid_from_help": "Earlier days keep the previous rules; never before the last signed-off month. Empty: today."
   },
   "api_keys": {
     "revoked": "Revoked",

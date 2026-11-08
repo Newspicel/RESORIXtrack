@@ -20,6 +20,7 @@ import { useAction } from "../ui"
 import { AccessPanel } from "./access-panel"
 import { HistoryPanel } from "./history-panel"
 import { SchedulePanel } from "./schedule-panel"
+import { EarlierTerms, TermsFromField } from "./terms-history"
 import { ContractFields, PersonFields, RegionFields, useUserForm } from "./user-fields"
 import { toPayload, type UserFormValues, weeklyMaxValue } from "./user-form"
 import { AccountStatus, RoleBadges } from "./users-page"
@@ -127,11 +128,12 @@ function ProfileForm({ userId }: { userId: number }) {
     regularNightWork: u.regularNightWork,
     pensumPercent: 100,
     sendInvite: false,
+    termsFrom: "",
   }
   const form = useUserForm(defaults, async (v, formApi) => {
     try {
       await save.mutateAsync(v)
-      formApi.reset(v)
+      formApi.reset({ ...v, termsFrom: "" })
     } catch (err) {
       if (!applyServerErrors(formApi, err)) toast.error(tError(err))
     }
@@ -145,7 +147,11 @@ function ProfileForm({ userId }: { userId: number }) {
             <PersonFields form={form} refs={refs} rows />
             <RegionFields form={form} refs={refs} rows />
           </div>
-          <ContractFields form={form} rows />
+          <div className="flex flex-col gap-8">
+            <ContractFields form={form} rows />
+            <TermsFromField form={form} saved={defaults} />
+            <EarlierTerms user={u} />
+          </div>
         </fieldset>
         {locked ? null : (
           <form.Subscribe selector={(st) => !st.isDefaultValue}>

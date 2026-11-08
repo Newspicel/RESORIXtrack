@@ -65,7 +65,19 @@
     "recording_simplified_short": "Semplificata",
     "recording_waived_short": "Rinuncia",
     "regular_night_work": "Lavoro notturno regolare",
-    "regular_night_work_help": "LL art. 17b: 10 % di accredito di tempo"
+    "regular_night_work_help": "LL art. 17b: 10 % di accredito di tempo",
+    "terms_from": "Modifiche valide dal",
+    "terms_from_help": "I giorni precedenti mantengono i valori di prima. Vuoto: oggi.",
+    "vacation_days_help": "Tempo pieno, settimana di 5 giorni; meno giorni lavorativi la riducono",
+    "earlier": "Precedente",
+    "earlier_terms": "Condizioni fino al {date}",
+    "earlier_period": "Impiegato dal {start} al {end}",
+    "current_terms_from": "Condizioni attuali dal {date}",
+    "rehire": "Riassumere",
+    "rehire_title": "Riassumere {name}",
+    "rehire_help": "Inizia un nuovo impiego. Quello precedente resta com'era, i suoi mesi invariati.",
+    "rehire_start": "Inizio del nuovo impiego",
+    "rehired": "Riassunto"
   },
   "schedule": {
     "title": "Modello di orario",
@@ -95,7 +107,8 @@
     "new_title": "Nuovo modello di orario",
     "planned": "Pianificato",
     "reason_required": "Motivo (obbligatorio)",
-    "reason_placeholder": "p. es. nuovo contratto"
+    "reason_placeholder": "p. es. nuovo contratto",
+    "gap": "Nessun orario dal {from} al {to}: questi giorni non hanno obiettivo. Aggiungi una versione dal {from}."
   },
   "vacation": {
     "title": "Diritto per anno",
@@ -544,7 +557,6 @@
       "fulltime_weekly_minutes": "Settimana a tempo pieno",
       "holiday_mode": "I giorni festivi riducono il tempo previsto",
       "holiday_work_surcharge_percent": "Supplemento domenica/festivi",
-      "vacation_prorate_workdays": "Vacanze proporzionali ai giorni lavorativi",
       "reason_required_for_past_edits": "Motivo per modifiche retroattive",
       "lead_can_edit_schedules": "I responsabili modificano i modelli di orario",
       "lead_can_adjust_balances": "I responsabili rettificano i saldi",
@@ -593,7 +605,9 @@
         "optional": "Facoltativo",
         "required": "Obbligatorio"
       }
-    }
+    },
+    "valid_from": "Modifiche valide dal",
+    "valid_from_help": "I giorni precedenti mantengono le regole di prima; mai prima dell'ultimo mese chiuso. Vuoto: oggi."
   },
   "api_keys": {
     "revoked": "Revocato",

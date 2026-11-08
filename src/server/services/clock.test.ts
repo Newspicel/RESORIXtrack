@@ -141,6 +141,12 @@ describe("clock", () => {
     expect(stopRunning(A.user, null)).toBeNull()
   })
 
+  it("stopRunning never credits more than 24 h for a forgotten clock-out", () => {
+    const A = anna()
+    makeEntry(A.id, stored(-3 * 24 * 60), null, { source: "clock" })
+    expect(stopRunning(A.user, null, "sick")?.endAt).toBe(stored(-2 * 24 * 60))
+  })
+
   it("counts today's breaks as the gaps between work entries", () => {
     const A = anna()
     makeEntry(A.id, stored(-300), stored(-180))
@@ -345,6 +351,22 @@ describe("legal minimums at clock-in", () => {
     makeEntry(c.id, "2026-11-05T06:00:00.000000Z", "2026-11-05T08:00:00.000000Z")
     freeze("2026-11-05T13:00:00Z")
     expect(clockAction(c, "start").state).toBe("working")
+  })
+
+  it("groups a night shift across midnight into one working day", () => {
+    // Mon 22:00 to Tue 02:00 and 02:30 to 06:00 local: the rest runs from 06:00, not from the Tuesday entry
+    const a = person()
+    makeEntry(a.id, "2026-11-02T21:00:00.000000Z", "2026-11-03T01:00:00.000000Z")
+    makeEntry(a.id, "2026-11-03T01:30:00.000000Z", "2026-11-03T05:00:00.000000Z")
+    freeze("2026-11-03T09:00:00Z")
+    expect(() => clockAction(a, "start")).toThrow(
+      refused("rest_required", { requiredMin: 660, earliest: "2026-11-03T16:00:00.000Z" }),
+    )
+    // 18:00 to 24:00 local, back at 00:05: six hours on the same working day need a break
+    const b = person()
+    makeEntry(b.id, "2026-11-04T17:00:00.000000Z", "2026-11-04T23:00:00.000000Z")
+    freeze("2026-11-04T23:05:00Z")
+    expect(() => clockAction(b, "start")).toThrow(expect.objectContaining({ code: "break_required" }))
   })
 })
 

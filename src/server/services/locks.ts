@@ -3,11 +3,11 @@
  * (and not reopened), every write path refuses changes to that person's time data in it. The database
  * triggers (drizzle/0001_guards.sql) enforce the same rule again.
  */
-import { and, asc, eq, gte, inArray, isNull, lte, max } from "drizzle-orm"
+import { and, asc, eq, gt, gte, inArray, isNull, lte, max } from "drizzle-orm"
 import { db } from "../db"
 import { type MonthSignoff, monthSignoffs, type User, users } from "../db/schema"
 import { Conflict } from "../errors"
-import { iso, localDateOf } from "../time"
+import { iso } from "../time"
 
 const active = (userId: number) => and(eq(monthSignoffs.userId, userId), isNull(monthSignoffs.reopenedAt))
 
@@ -48,16 +48,31 @@ export function ensureOpenDates(user: Pick<User, "id">, start: string, end?: str
   if (rows.length) raise(rows)
 }
 
-/** Refuse changes touching the local days of the given instants (null instants are ignored). */
-export function ensureOpenInstants(
-  user: Pick<User, "id" | "timezone">,
-  ...instants: (string | null | undefined)[]
-): void {
-  const days = instants
+/**
+ * Refuse changes touching a signed-off month between the earliest and the latest of the given instants (null
+ * ones are ignored). Uses the sign-offs' stored UTC bounds, like the database guards, so it holds whatever the
+ * person's timezone is today.
+ */
+export function ensureOpenInstants(user: Pick<User, "id">, ...instants: (string | null | undefined)[]): void {
+  const sorted = instants
     .filter((x): x is string => !!x)
-    .map((x) => localDateOf(x, user.timezone))
+    .map((x) => Temporal.Instant.from(x).toString({ smallestUnit: "microsecond" }))
     .sort()
-  if (days.length) ensureOpenDates(user, days[0], days.at(-1))
+  if (!sorted.length) return
+  const rows = db
+    .select()
+    .from(monthSignoffs)
+    .where(
+      and(
+        active(user.id),
+        // a range ending exactly when a signed-off month starts still touches it
+        lte(monthSignoffs.periodStartUtc, sorted.at(-1)!),
+        gt(monthSignoffs.periodEndUtc, sorted[0]),
+      ),
+    )
+    .orderBy(asc(monthSignoffs.month))
+    .all()
+  if (rows.length) raise(rows)
 }
 
 export function ensureScheduleChangeAllowed(user: Pick<User, "id">, validFrom: string): void {

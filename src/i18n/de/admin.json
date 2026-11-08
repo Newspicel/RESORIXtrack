@@ -65,7 +65,19 @@
     "recording_simplified_short": "Vereinfacht",
     "recording_waived_short": "Verzicht",
     "regular_night_work": "Regelmässige Nachtarbeit",
-    "regular_night_work_help": "ArG Art. 17b: 10 % Zeitgutschrift"
+    "regular_night_work_help": "ArG Art. 17b: 10 % Zeitgutschrift",
+    "terms_from": "Änderungen gelten ab",
+    "terms_from_help": "Frühere Tage behalten die bisherigen Werte. Leer: heute.",
+    "vacation_days_help": "Vollzeit, 5-Tage-Woche; weniger Arbeitstage kürzen ihn",
+    "earlier": "Früher",
+    "earlier_terms": "Bedingungen bis {date}",
+    "earlier_period": "Angestellt {start} bis {end}",
+    "current_terms_from": "Aktuelle Bedingungen seit {date}",
+    "rehire": "Wieder anstellen",
+    "rehire_title": "{name} wieder anstellen",
+    "rehire_help": "Eine neue Anstellung beginnt. Die frühere bleibt, wie sie war, ihre Monate unverändert.",
+    "rehire_start": "Neuer Anstellungsbeginn",
+    "rehired": "Wieder angestellt"
   },
   "schedule": {
     "title": "Arbeitszeitmodell",
@@ -95,7 +107,8 @@
     "new_title": "Neues Arbeitszeitmodell",
     "planned": "Geplant",
     "reason_required": "Begründung (erforderlich)",
-    "reason_placeholder": "z. B. neuer Vertrag"
+    "reason_placeholder": "z. B. neuer Vertrag",
+    "gap": "Kein Arbeitsplan vom {from} bis {to}: Diese Tage haben kein Soll. Eine Version ab {from} erfassen."
   },
   "vacation": {
     "title": "Anspruch pro Jahr",
@@ -544,7 +557,6 @@
       "fulltime_weekly_minutes": "Vollzeitwoche",
       "holiday_mode": "Feiertage reduzieren das Soll",
       "holiday_work_surcharge_percent": "Zuschlag Sonn-/Feiertagsarbeit",
-      "vacation_prorate_workdays": "Ferien nach Arbeitstagen anteilig",
       "reason_required_for_past_edits": "Begründung für rückwirkende Änderungen",
       "lead_can_edit_schedules": "Leitung ändert Arbeitszeitmodelle",
       "lead_can_adjust_balances": "Leitung korrigiert Salden",
@@ -593,7 +605,9 @@
         "optional": "Freiwillig",
         "required": "Pflicht"
       }
-    }
+    },
+    "valid_from": "Änderungen gelten ab",
+    "valid_from_help": "Frühere Tage behalten die bisherigen Regeln; nie vor dem letzten abgeschlossenen Monat. Leer: heute."
   },
   "api_keys": {
     "revoked": "Widerrufen",

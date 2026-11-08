@@ -32,7 +32,6 @@ export interface Me {
   canProjects: boolean
   twoFactorEnabled: boolean
   mfaRequired: boolean
-  mfaReenrolRequired: boolean
   /** Two-factor setup is required before anything but the profile works. */
   mfaDue: boolean
 }
@@ -85,7 +84,6 @@ export const getBootstrap = createServerFn({ method: "GET" })
         canProjects: isManager(actor) || actor.caps.has("projects"),
         twoFactorEnabled: Boolean(u.twoFactorEnabled),
         mfaRequired: s.mfa_required_for_all || (actor.isAdmin && s.mfa_required_for_admins),
-        mfaReenrolRequired: u.mfaReenrolRequired,
         mfaDue: mfaEnrolmentDue(u),
       }
     }

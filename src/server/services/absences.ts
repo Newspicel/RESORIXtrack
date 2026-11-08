@@ -326,11 +326,18 @@ export function updateAbsence(actor: Actor, id: number, raw: AbsencePatch, sourc
   const startHalf = patch.startHalf ?? a.startHalf
   const endHalf = start === end ? "full" : (patch.endHalf ?? a.endHalf)
   validateHalves(start, end, startHalf, endHalf)
-  if (isSelf && !manager && t.category === "sick" && a.status === "approved") {
+  const ownSickEdit = isSelf && !manager && t.category === "sick" && a.status === "approved"
+  if (ownSickEdit) {
     const maxDays = getSetting("sick_self_report_max_days")
     if (start !== a.startDate) throw new Forbidden("The start of a sick report can only be changed by your team lead")
     if (daysBetween(start, end) + 1 > maxDays)
       throw new Validation(`A sick report can cover at most ${maxDays} days`, { fields: { endDate: "too_long" } })
+    // added days follow the same backdating limit as a new report
+    const backdate = getSetting("sick_self_report_backdate_days")
+    if (end > a.endDate && addDays(a.endDate, 1) < addDays(localToday(owner.timezone), -backdate))
+      throw new Validation(`Sick reports can be backdated by at most ${backdate} days; ask your team lead`, {
+        fields: { endDate: "too_old" },
+      })
   }
   ensureOpenDates(owner, minDay(start, a.startDate), maxDay(end, a.endDate))
   const span = { startDate: start, endDate: end, startHalf, endHalf }
@@ -348,7 +355,16 @@ export function updateAbsence(actor: Actor, id: number, raw: AbsencePatch, sourc
     .returning()
     .get()
   record({ entity: "absence", row: updated, action: "update", actor, subjectUserId: owner.id, before, reason, source })
-  if (!isSelf) {
+  if (ownSickEdit) {
+    for (const approver of approversFor(owner)) {
+      notify(approver.id, "absence_reported", payload(updated, t, { user_id: owner.id, user_name: owner.name, days }))
+      deferMail(
+        recipient(approver),
+        "absence_reported",
+        mailVars(updated, t, { recipient_name: approver.name, requester_name: owner.name, days }),
+      )
+    }
+  } else if (!isSelf) {
     notify(owner.id, "absence_changed", payload(updated, t, { actor_name: actor.user.name, reason }))
     deferMail(
       recipient(owner),
@@ -362,8 +378,8 @@ export function updateAbsence(actor: Actor, id: number, raw: AbsencePatch, sourc
 // ------------------------------------------------------------------ workflow
 
 export function decideAbsence(actor: Actor, id: number, approve: boolean, note = "", source = "web"): Absence {
+  // a request reaching into a deputy's cover is theirs to decide (visibleAbsence checks the end date)
   const { absence: a, owner } = visibleAbsence(actor, id)
-  ensureInCover(actor, owner, a.startDate)
   if (a.status !== "pending") throw new Conflict("This request has already been decided", { code: "invalid_state" })
   if (!canDecide(actor, owner)) {
     throw new Forbidden(
@@ -550,23 +566,30 @@ export function absencePreview(actor: Actor, raw: z.input<typeof previewInput>) 
   const endHalf = end === input.startDate ? "full" : input.endHalf
   const days = countAbsenceDays(owner, input.startDate, end, input.startHalf, endHalf)
   const t = getAbsenceType(input.type)
-  const vac = vacationAccount(owner, Number(input.startDate.slice(0, 4)), input.excludeId ?? undefined)
+  const year = input.startDate.slice(0, 4)
+  const vac = vacationAccount(owner, Number(year), input.excludeId ?? undefined)
+  // days after New Year come from the next year's entitlement
+  const span = { startDate: input.startDate, endDate: end, startHalf: input.startHalf, endHalf }
+  const thisYear = end.startsWith(year) ? days : clippedDays(owner, span, input.startDate, `${year}-12-31`)
   return {
     days,
     deductsVacation: t.deductsVacation,
     vacationRemaining: vac.remainingAfterPending,
-    vacationAfter: vac.remainingAfterPending - (t.deductsVacation ? days : 0),
+    vacationAfter: vac.remainingAfterPending - (t.deductsVacation ? thisYear : 0),
   }
 }
 
-/** Requests waiting for the actor: HR all (except own), leads their teams, administrators those only they can decide. */
+/**
+ * Requests waiting for the actor: HR all (except own), leads their teams, administrators those only they can
+ * decide. People who left stay in: their pending requests block the sign-off of their last months.
+ */
 export function pendingForApprover(actor: Actor): Absence[] {
   if (!actor.isHr && !actor.isAdmin && actor.ledTeamIds.size === 0) return []
   const rows = db
     .select({ a: absences })
     .from(absences)
     .innerJoin(users, eq(users.id, absences.userId))
-    .where(and(eq(absences.status, "pending"), eq(users.isActive, true), ne(users.id, actor.id)))
+    .where(and(eq(absences.status, "pending"), ne(users.id, actor.id)))
     .orderBy(asc(absences.startDate), asc(absences.id))
     .all()
     .map((r) => r.a)

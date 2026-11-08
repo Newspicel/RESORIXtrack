@@ -11,6 +11,7 @@ import { ensureScheduleChangeAllowed } from "./locks"
 import { type Actor, beforeCover, canEditSchedule, requireProfile, seesDate } from "./permissions"
 import { record, snapshot } from "./revisions"
 import { getSetting } from "./settings"
+import { personTimeline } from "./timeline"
 
 export interface ScheduleInput {
   validFrom: string
@@ -212,6 +213,23 @@ export function createSchedule(actor: Actor, userId: number, input: ScheduleInpu
   return created
 }
 
+/**
+ * A change must not open days without a schedule (no target) after the employment start: the first version
+ * may not move later than the start, nor later than it was.
+ */
+function ensureStartCovered(target: User, firstValidFrom: string | undefined, before: string): void {
+  const start = personTimeline(target).periods[0].start
+  if (!start || (firstValidFrom != null && (firstValidFrom <= start || firstValidFrom <= before))) return
+  throw new Conflict(`A schedule has to apply from the employment start ${start}`, {
+    code: "schedule_gap",
+    fields: { validFrom: "after_start" },
+  })
+}
+
+function otherVersions(userId: number, exceptId: number): WorkSchedule[] {
+  return schedulesOf(userId).filter((s) => s.id !== exceptId)
+}
+
 export function updateSchedule(actor: Actor, scheduleId: number, input: ScheduleInput, reason = ""): WorkSchedule {
   const existing = getSchedule(scheduleId)
   const target = requireEditor(actor, existing.userId, existing.validFrom, input.validFrom)
@@ -224,6 +242,8 @@ export function updateSchedule(actor: Actor, scheduleId: number, input: Schedule
   if (clash && clash.id !== existing.id) {
     throw new Conflict("Another version starts on this date", { fields: { validFrom: "taken" } })
   }
+  const others = otherVersions(target.id, existing.id).map((v) => v.validFrom)
+  ensureStartCovered(target, [input.validFrom, ...others].sort()[0], [existing.validFrom, ...others].sort()[0])
   return overwrite(actor, target, existing, input, reason)
 }
 
@@ -233,6 +253,7 @@ export function deleteSchedule(actor: Actor, scheduleId: number, reason = ""): v
   const n = db.select({ n: count() }).from(workSchedules).where(eq(workSchedules.userId, target.id)).get()?.n ?? 0
   if (n <= 1) throw new Conflict("A person needs at least one work schedule", { code: "last_schedule" })
   ensureScheduleChangeAllowed(target, s.validFrom)
+  ensureStartCovered(target, otherVersions(target.id, s.id)[0]?.validFrom, schedulesOf(target.id)[0].validFrom)
   requireReasonForPast(target, s.validFrom, reason)
   const before = snapshot("schedule", s)
   record({ entity: "schedule", row: s, action: "delete", actor, subjectUserId: target.id, before, reason })

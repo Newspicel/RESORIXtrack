@@ -184,6 +184,7 @@ export function ContractFields({ form, create, rows }: { form: UserForm; create?
             controlClassName="md:w-28"
             className="text-right tabular"
             label={t("admin.users.vacation_days")}
+            description={t("admin.users.vacation_days_help")}
             type="number"
             min={0}
             max={366}

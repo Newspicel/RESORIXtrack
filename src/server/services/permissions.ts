@@ -193,6 +193,12 @@ export function otherAdminExists(actor: Actor): boolean {
   )
 }
 
+/** An administrator who leads `teamId` adds nobody to it (that would open their time data), unless HR or alone. */
+export function ensureNotJoiningOwnTeam(actor: Actor, teamId: number | null): void {
+  if (teamId == null || actor.isHr || !actor.ledTeamIds.has(teamId) || !otherAdminExists(actor)) return
+  throw new Forbidden("Another administrator has to add people to a team you lead", { code: "not_for_yourself" })
+}
+
 /** Schedules and balances of `target` (one's own only as HR when nobody else could). */
 export function canEditSchedule(actor: Actor, target: User): boolean {
   if (actor.id === target.id) return hrSelfFallback(actor, target)

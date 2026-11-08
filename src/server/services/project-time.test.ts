@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest"
-import { db, rawSqlite } from "@/server/db"
-import * as s from "@/server/db/schema"
+import { rawSqlite } from "@/server/db"
 import { freeze } from "@/server/time"
 import {
   loadActor,
@@ -208,8 +207,7 @@ describe("coverage, sign-off and reports", () => {
     const { anna, internal } = org()
     withSettings({ project_mode: "required" })
     makeEntry(anna.id, "2026-10-01T06:00:00.000000Z", "2026-10-01T10:00:00.000000Z", { projectId: internal.id })
-    db.insert(s.workLogs).values({ userId: anna.id, date: "2026-10-02", minutes: 240, customerRef: "C-9" }).run()
-    makeEntry(anna.id, "2026-10-02T06:00:00.000000Z", "2026-10-02T10:00:00.000000Z")
+    makeEntry(anna.id, "2026-10-02T06:00:00.000000Z", "2026-10-02T10:00:00.000000Z", { projectId: internal.id })
     const open = makeEntry(anna.id, "2026-10-05T06:00:00.000000Z", "2026-10-05T10:00:00.000000Z")
     expect(daysMissingProjects(anna, "2026-10-01", "2026-10-31")).toEqual(["2026-10-05"])
     expect(blockers(anna, "2026-10")).toContain("projects_missing")
@@ -233,35 +231,23 @@ describe("coverage, sign-off and reports", () => {
     expect(firstDayMissingProject(anna)).toBe("2026-11-03")
   })
 
-  it("project hours: entries split at midnight plus legacy work log rows (customer reference in the note)", () => {
+  it("project hours: entries split at midnight", () => {
     const { anna, lead, internal } = org()
     // a night shift over midnight, Zurich time 22:00-02:00
     makeEntry(anna.id, "2026-11-02T21:00:00.000000Z", "2026-11-03T01:00:00.000000Z", { projectId: internal.id })
     makeEntry(anna.id, "2026-11-04T07:00:00.000000Z", "2026-11-04T08:30:00.000000Z", { projectId: internal.id })
     makeEntry(anna.id, "2026-11-04T09:00:00.000000Z", "2026-11-04T10:00:00.000000Z")
-    db.insert(s.workLogs).values({ userId: anna.id, date: "2026-10-20", minutes: 45, projectId: internal.id }).run()
-    db.insert(s.workLogs)
-      .values({ userId: anna.id, date: "2026-10-21", minutes: 30, customerRef: "C-9", note: "Call" })
-      .run()
     const items = projectItems([anna], "2026-10-01", "2026-11-30")
     expect(items.map((i) => [i.date, i.minutes, i.start, i.end])).toEqual([
-      ["2026-10-20", 45, null, null],
-      ["2026-10-21", 30, null, null],
       ["2026-11-02", 120, "22:00", "24:00"],
       ["2026-11-03", 120, "00:00", "02:00"],
       ["2026-11-04", 90, "08:00", "09:30"],
     ])
     const report = projectHours(loadActor(lead.id), { from: "2026-10-01", to: "2026-11-30" })
-    expect(report.totalMin).toBe(405)
-    expect(report.projects.map((r) => [r.kind, r.name, r.minutes])).toEqual([
-      ["project", "Internal", 375],
-      ["none", null, 30],
-    ])
+    expect(report.totalMin).toBe(330)
+    expect(report.projects.map((r) => [r.kind, r.name, r.minutes])).toEqual([["project", "Internal", 330]])
     expect(timesheet(loadActor(anna.id), { year: 2026, month: 11 }).projectTime["2026-11-04"]).toEqual([
       { project: "Internal", note: "", minutes: 90, start: "08:00", end: "09:30" },
-    ])
-    expect(timesheet(loadActor(anna.id), { year: 2026, month: 10 }).projectTime["2026-10-21"]).toEqual([
-      { project: null, note: "C-9 · Call", minutes: 30, start: null, end: null },
     ])
   })
 })

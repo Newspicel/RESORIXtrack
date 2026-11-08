@@ -30,6 +30,7 @@ import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { createServerEntry } from "@tanstack/react-start/server"
+import { eq } from "drizzle-orm"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 import { describeError } from "@/lib/guards"
 import { resetTestDb } from "@/test/db"
@@ -150,7 +151,6 @@ interface Seeded {
   oldSick?: number
   oldAttachment?: number
   adjustment: number
-  worklog: number
   notification: number
   schedule: number
   signoff: number
@@ -262,18 +262,6 @@ async function seed() {
         .returning()
         .get().id,
     ]
-    p.worklog = db
-      .insert(s.workLogs)
-      .values({
-        id: b + 401,
-        userId: uid,
-        date: "2026-11-02",
-        minutes: 60,
-        note: `${m}-worklog`,
-        customerRef: `${m}-customer`,
-      })
-      .returning()
-      .get().id
     p.vacation = db
       .insert(s.absences)
       .values({
@@ -431,7 +419,7 @@ function hiddenFor(persona: Key): Hidden {
     if (!seesTime) {
       timeUsers.push(p.user.id)
       markers.push(timeMarker(k))
-      for (const id of [...p.entries, p.sick, p.attachment, p.adjustment, p.worklog, p.notification]) ids.add(id)
+      for (const id of [...p.entries, p.sick, p.attachment, p.adjustment, p.notification]) ids.add(id)
       if (p.oldSick) ids.add(p.oldSick).add(p.oldAttachment!)
       // a colleague's (non-sensitive) vacation shows in the own team calendar
       if (!seesPerson) ids.add(p.vacation)
@@ -498,7 +486,6 @@ const TIME_TABLES = [
   "SELECT * FROM time_entries WHERE user_id IN (%) ORDER BY id",
   "SELECT * FROM absences WHERE user_id IN (%) ORDER BY id",
   "SELECT * FROM attachments WHERE absence_id IN (SELECT id FROM absences WHERE user_id IN (%)) ORDER BY id",
-  "SELECT * FROM work_logs WHERE user_id IN (%) ORDER BY id",
   "SELECT * FROM balance_adjustments WHERE user_id IN (%) ORDER BY id",
   "SELECT * FROM month_signoffs WHERE user_id IN (%) ORDER BY id",
   "SELECT * FROM vacation_entitlements WHERE user_id IN (%) ORDER BY id",
@@ -874,6 +861,10 @@ const SPECS: Record<string, Spec> = {
   "features/admin/api/users#createUserFn": {},
   "features/admin/api/users#updateUserFn": {},
   "features/admin/api/users#setActiveFn": {},
+  "features/admin/api/users#rehireFn": {
+    data: (_t, rec) => ({ id: rec, start: "2027-01-01" }),
+    noSuccess: "no seeded person has an employment end",
+  },
   "features/admin/api/users#resendInviteFn": { noSuccess: "every seeded person already has a password" },
   "features/admin/api/users#setPasswordFn": { noSuccess: "the admin password probe is wrong on purpose" },
   "features/admin/api/users#resetMfaFn": { noSuccess: "the admin password probe is wrong on purpose" },
@@ -1013,6 +1004,8 @@ async function callFn(fn: ServerFn, data: unknown, cookie: string): Promise<Outc
   return { ok: true, value }
 }
 
+const codeOf = (r: Outcome) => (r.ok ? "ok" : r.error instanceof AppError ? r.error.code : "unexpected")
+
 function errorView(e: unknown) {
   return e instanceof AppError
     ? { code: e.code, status: e.status, message: e.message, fields: e.fields }
@@ -1109,6 +1102,43 @@ describe("isolation", () => {
     expect(never, "never called successfully: fix the probe in SPECS").toEqual([])
     expect(calls).toBeGreaterThan(1000)
   }, 600_000)
+
+  it("administrator step-ups ask for the own password only when the administrator has one", async () => {
+    await seed()
+    const fns = await serverFns()
+    const call = (name: string, data: unknown, k: Key) =>
+      callFn(fns.get(`features/admin/api/users#${name}`), data, P[k].cookie)
+    const anna = P.anna.user.id
+
+    // with a password: empty or wrong is rejected, the right one passes
+    expect(await call("fetchUserRefs", undefined, "hugo")).toMatchObject({ ok: true, value: { stepUpPassword: true } })
+    for (const adminPassword of ["", "wrong probe password"])
+      expect(codeOf(await inSavepoint(() => call("removePasskeysFn", { id: anna, adminPassword }, "hugo")))).toBe(
+        "invalid_admin_password",
+      )
+    expect(await inSavepoint(() => call("removePasskeysFn", { id: anna, adminPassword: PW }, "hugo"))).toMatchObject({
+      ok: true,
+      value: { removed: 1 },
+    })
+
+    // single sign-on only (no credential row, session still valid): no password to confirm
+    await inSavepoint(async () => {
+      db.delete(s.account).where(eq(s.account.userId, P.ada.user.id)).run()
+      expect(await call("fetchUserRefs", undefined, "ada")).toMatchObject({
+        ok: true,
+        value: { stepUpPassword: false },
+      })
+      expect(await call("removePasskeysFn", { id: anna, adminPassword: "" }, "ada")).toMatchObject({
+        ok: true,
+        value: { removed: 1 },
+      })
+      // past the step-up: the service answers that Anna has no second factor
+      expect(codeOf(await call("resetMfaFn", { id: anna, adminPassword: "" }, "ada"))).toBe("mfa_disabled")
+      // employees never get past the role check, password or not
+      db.delete(s.account).where(eq(s.account.userId, P.carl.user.id)).run()
+      expect(codeOf(await call("removePasskeysFn", { id: anna, adminPassword: "" }, "carl"))).toBe("forbidden")
+    })
+  }, 120_000)
 
   it("REST: full-scope keys see nothing outside their owner's scope", async () => {
     await seed()

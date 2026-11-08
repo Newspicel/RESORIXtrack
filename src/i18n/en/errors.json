@@ -47,7 +47,11 @@
     "derived": "Follows from the start and end time",
     "too_many": "Too many files",
     "not_employed": "Outside the employment",
-    "inactive": "No longer active"
+    "inactive": "No longer active",
+    "before_current": "Before the current terms began",
+    "overlaps_earlier": "Overlaps the earlier employment",
+    "before_end": "Must be after the employment end",
+    "after_start": "After the employment start"
   },
   "period_signed_off": "This month has been signed off and can no longer be changed.",
   "signoff_immutable": "Sign-off records cannot be changed.",
@@ -100,5 +104,8 @@
   "type_in_use_counting": "This type is in use. Its category and how it counts can no longer change; create a new type instead.",
   "oidc_only": "Use single sign-on to sign in.",
   "mfa_enrolment_required": "Set up two-factor authentication first.",
-  "before_cover": "You can see and change this person's data from the day your lead role started."
+  "before_cover": "You can see and change this person's data from the day your lead role started.",
+  "terms_order": "The current terms began later; pick that day or later.",
+  "schedule_gap": "A schedule has to apply from the employment start.",
+  "calendar_in_use": "This calendar counted for days already passed and can no longer be deleted."
 }

@@ -10,7 +10,7 @@ import { Forbidden } from "../errors"
 import { addDays, iso, localToday, monthBounds, weekStart } from "../time"
 import { absenceTypesById, serializeAbsenceType } from "./absence-types"
 import { absencesInRange, clippedDays, minDay, serializeAbsences } from "./absences"
-import { computeDays, summarize, timeBalance, vacationAccount } from "./accounts"
+import { computeDays, personAccounts, summarize, timeBalance, vacationAccount } from "./accounts"
 import { countFindings, periodFindings, teamComplianceSummary } from "./compliance"
 import {
   type Actor,
@@ -101,7 +101,8 @@ export function teamOverview(actor: Actor, raw: z.input<typeof overviewInput> = 
         daysThisWeek: clippedDays(u, a, wStart, wEnd),
       }
     }
-    const vac = vacationAccount(u, y)
+    const acc = personAccounts(u, mStart, mEnd, y)
+    const vac = acc.vacation
     return {
       user: {
         id: u.id,
@@ -113,8 +114,8 @@ export function teamOverview(actor: Actor, raw: z.input<typeof overviewInput> = 
       presence: running.get(u.id) ?? { state: "off" as PresenceState, since: null },
       absentToday: mine.filter((a) => a.startDate <= today && a.endDate >= today).map(brief),
       absencesThisWeek: mine.map(brief),
-      month: summarize(computeDays(u, mStart, mEnd)),
-      balanceMin: timeBalance(u).balanceMin,
+      month: summarize(acc.days),
+      balanceMin: acc.balance.balanceMin,
       vacation: { remaining: vac.remaining, pending: vac.pending, planned: vac.planned, taken: vac.taken },
       signedOff: signed.has(u.id),
       findings: findings.get(u.id) ?? null,

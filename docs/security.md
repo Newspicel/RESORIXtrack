@@ -18,7 +18,7 @@ RESORIXtrack holds personal data (working hours, absences, sick notes) of a whol
 
 ## Isolation
 
-- Nobody acts on their own time data or rights: no approving, signing off or reopening one's own month, crediting one's own balance or changing one's own schedule, also not as HR. Own requests go to a lead, other HR or an administrator. An administrator cannot grant themselves a capability or a lead role, or change their own contract figures (vacation days, employment dates, labour-law settings); another administrator does. Only when nobody else could (the only HR person without a lead, the only administrator) do they act for themselves, and a request nobody could decide is recorded directly; the change log shows it like any change.
+- Nobody acts on their own time data or rights: no approving, signing off or reopening one's own month, crediting one's own balance or changing one's own schedule, also not as HR. Own requests go to a lead, other HR or an administrator. An administrator cannot grant themselves a capability or a lead role, or change their own contract figures (vacation days, employment dates, labour-law settings, team, holiday calendar), and an administrator without HR who leads a team does not add people to it; another administrator does. Only when nobody else could (the only HR person without a lead, the only administrator) do they act for themselves, and a request nobody could decide is recorded directly; the change log shows it like any change.
 
 - Every server function and REST endpoint checks permissions in the service layer (`src/server/services/permissions.ts`).
 - Records outside the caller's scope answer **404**, so ids cannot be probed.
@@ -28,24 +28,24 @@ RESORIXtrack holds personal data (working hours, absences, sick notes) of a whol
 
 ## Passwords
 
-- **Argon2id** (64 MiB, 3 iterations, 4 lanes; v1 hashes work unchanged). Plaintext is never stored or logged.
+- **Argon2id** (64 MiB, 3 iterations, 4 lanes). Plaintext is never stored or logged.
 - Policy: 10 to 256 characters, not a common password, not containing the email name.
 - **Have I Been Pwned** check for new passwords: only the first 5 characters of the SHA-1 hash leave the server; fails open; `PWNED_PASSWORDS_CHECK=false` disables it.
 - Throttling by failed attempts: `LOGIN_MAX_FAILURES` (8) per email and IP within `LOGIN_WINDOW_MINUTES` (15), plus ceilings per email (×5) and per IP (×4). Reset emails: 3 per address and 20 per IP per hour. Better Auth rate limits stop floods on top, keyed by the same client address (computed by the server per request from `TRUSTED_PROXIES`; a client cannot choose its bucket). Confirming the password inside a session (API keys, passkeys, administrator steps) counts towards the same throttle.
 - Invitation links: 7 days; reset links: 2 hours. Single use, stored hashed, token in the URL fragment (never in access logs). People who signed in before (also through single sign-on or a passkey) get no new invitation.
-- Changing or resetting a password ends all sessions and revokes all API keys.
+- Changing or resetting a password ends all sessions and revokes all API keys. An email change or deactivation also ends pending password reset links. Passwords set by an administrator follow the full policy (length, email name, Have I Been Pwned).
 
 ## Two-factor, passkeys, single sign-on
 
-- **TOTP** with 10 single-use backup codes; the secret is encrypted with a key derived from `SECRET_KEY`. Can be required for administrators or everyone (Settings → Security); a passkey or a single sign-on link satisfies the requirement. Administrators can reset it (logged). People imported from v1 enrol again. While required, a person without any of them can only set one up (every other server function, download and API key answers 403), a password alone never gets an app key, and someone with a passkey or single sign-on but no TOTP signs in with those, not the password. "Trust this device" is never granted.
+- **TOTP** with 10 single-use backup codes; the secret is encrypted with a key derived from `SECRET_KEY`. Can be required for administrators or everyone (Settings → Security); a passkey or a single sign-on link satisfies the requirement. Administrators can reset it (logged). While required, a person without any of them can only set one up (every other server function, download and API key answers 403), a password alone never gets an app key, and someone with a passkey or single sign-on but no TOTP signs in with those, not the password. "Trust this device" is never granted.
 - **Passkeys** (WebAuthn), bound to the host of `BASE_URL`. Phishing-resistant, so a passkey sign-in skips TOTP. Adding one needs the password first (people with single sign-on only have none) and is confirmed by email; the authenticator must verify its owner (PIN, biometrics).
-- **OpenID Connect** (PKCE): no self-registration; an identity signs in only as an existing active person with the same verified email, or the person already linked to it. Name and email are never taken from the provider. `OIDC_ONLY=true` disables passwords, password resets and invitation passwords; `rt reset-password` grants one break-glass password sign-in.
+- **OpenID Connect** (PKCE): no self-registration; an identity signs in only as an existing active person with the same verified email, or the person already linked to it. Name and email are never taken from the provider. `OIDC_ONLY=true` disables passwords, password resets and invitation passwords; `rt reset-password` grants one break-glass password sign-in (used up by the sign-in, also when it ends with a second factor). A single sign-on link counts as a second factor only while single sign-on is configured. Linking and unlinking accounts is not reachable over HTTP. Administrators who sign in only through single sign-on confirm administrator steps without a password.
 
 ## Sessions and CSRF
 
 - **Better Auth** database sessions: the browser holds a random token; sessions can be listed and revoked (Profile → Signed-in devices).
 - Cookies: `HttpOnly`, `SameSite=Lax`, `Secure` with the `__Secure-` prefix when `SESSION_COOKIE_SECURE=true`.
-- Lifetime: `SESSION_REMEMBER_DAYS` with "Keep me signed in" (extended while in use); without it the session ends after `SESSION_SHORT_IDLE_HOURS` of inactivity. Every session ends `SESSION_ABSOLUTE_DAYS` after sign-in, however active. Checked on every request (`src/server/session-policy.ts`); an expired session is deleted.
+- Lifetime: `SESSION_REMEMBER_DAYS` with "Keep me signed in" (extended while in use); without it the session ends after `SESSION_SHORT_IDLE_HOURS` of inactivity (stored on the session when it is created, never taken from a cookie). Every session ends `SESSION_ABSOLUTE_DAYS` after sign-in, however active. Checked on every request (`src/server/session-policy.ts`); an expired session is deleted.
 - Deactivating an account ends its sessions, API keys and passkeys.
 - **CSRF**: every state-changing request (server functions, `/api/auth`) must come from the app's own origin (TanStack Start CSRF middleware, Better Auth trusted origin = `BASE_URL`). `/api/v1` accepts only API keys, never cookies.
 
@@ -72,17 +72,11 @@ RESORIXtrack holds personal data (working hours, absences, sick notes) of a whol
 A signed-off month is read-only on four levels:
 
 1. UI and services refuse changes.
-2. **SQLite triggers** refuse inserts, updates and deletes of entries (projects included), absences and their documents, adjustments, legacy work log rows, schedules, employment dates and holidays in signed periods, and any change to sign-offs.
+2. **SQLite triggers** refuse inserts, updates and deletes of entries (projects included), absences and their documents, adjustments, schedules, employment dates, dated settings and terms, and holidays in signed periods, and any change to sign-offs.
 3. **Seal**: each sign-off stores a SHA-256 fingerprint of the period's data and an HMAC-SHA256 seal keyed with `sha256("resorixtrack-signoff:" + SIGNOFF_KEY)`.
 4. **Chain**: each seal covers the person's previous seal, so deleting or reordering sign-offs is detected.
 
-Each sign-off also keeps the holiday calendar the month was counted with (set once, then immutable), so assigning another calendar later does not change the month's target.
-
-| Seal version | Canonical form |
-|---|---|
-| 1 (imported from v1) | Python `json.dumps(sort_keys=True, separators=(",", ":"))`, byte-exact port |
-| 2 (v2) | RFC 8785 JSON |
-| 3 (v2, current) | RFC 8785 JSON; each entry also carries its project |
+Fingerprint and seal use RFC 8785 canonical JSON; each entry also carries its project, and the seal covers its version. A change of holiday calendar, team or other terms applies from a day on and never reaches earlier days; each sign-off also records the calendar its month was counted with.
 
 Checks: Team → Month sign-off → Integrity check, `rt verify-signoffs`, and the weekly worker job. Keep `SIGNOFF_KEY` away from backups: whoever has both the database and the key could forge seals.
 

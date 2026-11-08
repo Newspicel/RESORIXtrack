@@ -183,7 +183,7 @@ export const fetchCalendarDays = createServerFn({ method: "GET" })
   )
   .handler(({ data, context: { actor } }) => {
     const user = data.userId == null || data.userId === actor.id ? actor.user : requireView(actor, data.userId)
-    const ctx = loadContext(user, data.from, data.to, { includePending: true, entries: false, projects: false })
+    const ctx = loadContext(user, data.from, data.to, { includePending: true, entries: false })
     return computeDaysFrom(ctx).map((d) => ({
       date: d.date,
       workday: d.isWorkday,

@@ -22,7 +22,6 @@ export function PersonalSection() {
     defaultValues: {
       name: p.name,
       locale: isSupportedLocale(p.locale) ? p.locale : DEFAULT_LOCALE,
-      timezone: p.timezone,
       timeFormat: p.timeFormat,
       notifyEmailOnCorrection: p.notifyEmailOnCorrection,
     },
@@ -30,14 +29,7 @@ export function PersonalSection() {
       const timeFormat = value.timeFormat === "12h" ? "12h" : "24h"
       const failed = await failure(saveProfile({ data: { ...value, timeFormat } }))
       if (failed) {
-        const message = tError(failed.error)
-        if (errorFields(failed.error)?.timezone)
-          formApi.setFieldMeta("timezone", (m) => ({
-            ...m,
-            isBlurred: true,
-            errorMap: { ...m.errorMap, onServer: message },
-          }))
-        else toast.error(message)
+        toast.error(tError(failed.error))
         return
       }
       toast.success(t("common.saved"))
@@ -63,15 +55,6 @@ export function PersonalSection() {
                 row
                 label={t("profile.language")}
                 options={LOCALES.map((l) => ({ value: l.code, label: l.label }))}
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="timezone">
-            {(f) => (
-              <f.ComboboxField
-                row
-                label={t("profile.timezone")}
-                options={data.timezones.map((tz) => ({ value: tz, label: tz.replace(/_/g, " ") }))}
               />
             )}
           </form.AppField>

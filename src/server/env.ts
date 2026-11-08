@@ -26,9 +26,12 @@ function oneOf<const T extends string>(name: string, values: readonly T[], def: 
   if (match === undefined) throw new Error(`${name} must be one of ${values.join(", ")} (got "${v}")`)
   return match
 }
-function int(name: string, def: number): number {
+function int(name: string, def: number, min = 0): number {
   const v = process.env[name]
-  return v == null || v === "" ? def : Number.parseInt(v, 10)
+  if (v == null || v === "") return def
+  const n = Number(v)
+  if (!Number.isInteger(n) || n < min) throw new Error(`${name} must be a whole number of at least ${min} (got "${v}")`)
+  return n
 }
 
 const dataDir = path.resolve(process.env.RESORIXTRACK_DATA_DIR ?? (isProd ? "/data" : "./var"))
@@ -81,7 +84,7 @@ export const env = {
   },
 
   attachmentMaxMb: int("ATTACHMENT_MAX_MB", 10),
-  backupKeep: int("BACKUP_KEEP", 14),
+  backupKeep: int("BACKUP_KEEP", 14, 1),
 }
 
 const PLACEHOLDER = "change-me-to-a-long-random-string-of-at-least-32-characters"

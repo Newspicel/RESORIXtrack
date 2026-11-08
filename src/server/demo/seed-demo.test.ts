@@ -19,7 +19,6 @@ const TABLES = [
   "work_schedules",
   "projects",
   "time_entries",
-  "work_logs",
   "absences",
   "balance_adjustments",
   "month_signoffs",
@@ -63,7 +62,6 @@ describe("seed-demo", () => {
       month_signoffs: 4,
     })
     expect(c.time_entries).toBeGreaterThan(1200) // a morning and an afternoon: the gap is the break
-    expect(c.work_logs).toBe(0) // projects live on the entries
     const withProject = rawSqlite()
       .prepare<[], { n: number }>("SELECT count(*) AS n FROM time_entries WHERE project_id IS NOT NULL")
       .get()!.n

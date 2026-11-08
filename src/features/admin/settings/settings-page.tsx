@@ -33,10 +33,7 @@ const TAB_GROUPS: Partial<Record<SettingsTab, Group[]>> = {
     },
     {
       title: "vacation",
-      fields: [
-        { key: "default_vacation_days", kind: "number", min: 0, max: 366, step: 0.5, unit: "days" },
-        { key: "vacation_prorate_workdays", kind: "switch" },
-      ],
+      fields: [{ key: "default_vacation_days", kind: "number", min: 0, max: 366, step: 0.5, unit: "days" }],
     },
     {
       title: "corrections",

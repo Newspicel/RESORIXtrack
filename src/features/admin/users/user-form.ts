@@ -30,6 +30,8 @@ export interface UserFormValues {
   regularNightWork: boolean
   pensumPercent: number
   sendInvite: boolean
+  /** first day changed terms apply on ("" = today) */
+  termsFrom: string
 }
 
 const req = "errors.fields.required"
@@ -61,6 +63,7 @@ export const userFormSchema = z
     regularNightWork: z.boolean(),
     pensumPercent: z.number({ error: req }).min(1, inv).max(100, inv),
     sendInvite: z.boolean(),
+    termsFrom: optDay,
   })
   .refine((v) => !v.employmentStart || !v.employmentEnd || v.employmentEnd >= v.employmentStart, {
     path: ["employmentEnd"],
@@ -85,5 +88,6 @@ export function toPayload(v: UserFormValues) {
     recordingMode: v.recordingMode,
     argExempt: v.argExempt,
     regularNightWork: v.regularNightWork,
+    termsFrom: v.termsFrom || null,
   }
 }

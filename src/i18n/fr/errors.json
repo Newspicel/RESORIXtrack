@@ -47,7 +47,11 @@
     "derived": "Découle des heures de début et de fin",
     "too_many": "Trop de fichiers",
     "not_employed": "En dehors de l'emploi",
-    "inactive": "N'est plus actif"
+    "inactive": "N'est plus actif",
+    "before_current": "Avant le début des conditions actuelles",
+    "overlaps_earlier": "Chevauche l'emploi antérieur",
+    "before_end": "Doit suivre la fin de l'emploi",
+    "after_start": "Après le début de l'emploi"
   },
   "period_signed_off": "Ce mois a été validé et ne peut plus être modifié.",
   "signoff_immutable": "Les validations ne peuvent pas être modifiées.",
@@ -100,5 +104,8 @@
   "type_in_use_counting": "Ce type est utilisé. Sa catégorie et son décompte ne peuvent plus changer ; crée plutôt un nouveau type.",
   "oidc_only": "Connecte-toi avec l'authentification unique.",
   "mfa_enrolment_required": "Configure d'abord l'authentification à deux facteurs.",
-  "before_cover": "Tu vois et modifies les données de cette personne à partir du jour où ton rôle de responsable a commencé."
+  "before_cover": "Tu vois et modifies les données de cette personne à partir du jour où ton rôle de responsable a commencé.",
+  "terms_order": "Les conditions actuelles commencent plus tard ; choisissez ce jour ou plus tard.",
+  "schedule_gap": "Un horaire doit s'appliquer dès le début de l'emploi.",
+  "calendar_in_use": "Ce calendrier a compté pour des jours passés et ne peut plus être supprimé."
 }

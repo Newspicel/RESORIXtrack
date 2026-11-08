@@ -116,8 +116,8 @@ describe("password change", () => {
 })
 
 describe("two-factor", () => {
-  it("enrols, clears the re-enrolment flag and logs both sign-in steps", async () => {
-    const u = await person({ mfaReenrolRequired: true })
+  it("enrols and logs both sign-in steps", async () => {
+    const u = await person()
     const s = await signIn(u.email)
     const headers = new Headers({ cookie: s.cookie, ...UA })
     const enabled = await auth.api.enableTwoFactor({ body: { password: PW }, headers })
@@ -126,7 +126,6 @@ describe("two-factor", () => {
     await auth.api.verifyTOTP({ body: { code: totp(secret) }, headers })
     expect(db.select().from(users).where(eq(users.id, u.id)).get()).toMatchObject({
       twoFactorEnabled: true,
-      mfaReenrolRequired: false,
     })
 
     const login = await signIn(u.email)

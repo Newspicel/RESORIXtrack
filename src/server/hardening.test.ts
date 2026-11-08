@@ -35,8 +35,8 @@ import { history } from "./services/revisions"
 import { createSchedule } from "./services/schedules"
 import { globalSearch } from "./services/search"
 import { reopen, signOff } from "./services/signoffs"
-import { addLead } from "./services/teams"
-import { ensureInvitable, setEntitlement, updateUser } from "./services/users"
+import { addLead, setMembers } from "./services/teams"
+import { ensureInvitable, retentionInfo, setEntitlement, updateUser } from "./services/users"
 
 const PDF = new TextEncoder().encode("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF")
 const dir = mkdtempSync(path.join(tmpdir(), "rt-hardening-"))
@@ -104,6 +104,31 @@ describe("nobody acts on their own time data or rights", () => {
     ).toBe("Ada A.")
   })
 
+  it("an administrator leading a team does not add people to it or move themselves", async () => {
+    makeLead(org.teamB.id, org.admin.id)
+    expect((await err(() => setMembers(admin(), org.teamB.id, [org.carl.id, org.anna.id]))).code).toBe(
+      "not_for_yourself",
+    )
+    expect((await err(() => updateUser(admin(), org.anna.id, { teamId: org.teamB.id }))).code).toBe("not_for_yourself")
+    expect((await err(() => updateUser(admin(), org.admin.id, { teamId: org.teamA.id }))).code).toBe("not_for_yourself")
+    const cal = makeCalendar({ name: "Other" })
+    expect((await err(() => updateUser(admin(), org.admin.id, { holidayCalendarId: cal.id }))).code).toBe(
+      "not_for_yourself",
+    )
+    // removing people and other teams stay possible
+    setMembers(admin(), org.teamB.id, [])
+    expect(updateUser(admin(), org.anna.id, { teamId: org.teamA.id }).teamId).toBe(org.teamA.id)
+  })
+
+  it("employment dates stay in order and retention runs from the last record", async () => {
+    expect((await err(() => updateUser(admin(), org.carl.id, { employmentEnd: "2001-01-01" }))).fields).toEqual({
+      employmentEnd: "before_start",
+    })
+    makeEntry(org.carl.id, "2026-10-01T07:00:00.000000Z", "2026-10-01T15:00:00.000000Z")
+    const carl = updateUser(admin(), org.carl.id, { employmentEnd: "2026-06-30" })
+    expect(retentionInfo(carl).allowedFrom).toBe("2031-10-01")
+  })
+
   it("logs capability changes made for someone else", () => {
     updateUser(admin(), org.anna.id, { capabilities: ["hr"] })
     const last = history("user", org.anna.id).at(-1)!
@@ -123,8 +148,10 @@ describe("when nobody else could do it", () => {
     expect(createAdjustment(hr(), org.hr!.id, adjust).amount).toBe(60)
     const own = lockMonth(org.hr!.id, "2026-09")
     expect(reopen(hr(), own.id, "fix").reopenedAt).not.toBeNull()
-    // with a lead of their own, the lead does it
-    db.update(users).set({ teamId: org.teamA.id }).where(eq(users.id, org.hr!.id)).run()
+    const me = db.select().from(users).where(eq(users.id, org.hr!.id)).get()!
+    expect(signOff(hr(), me, "2026-09").month).toBe("2026-09")
+    // with a lead of their own, the lead does it (another administrator moves them, from today)
+    updateUser(admin(), org.hr!.id, { teamId: org.teamA.id })
     expect(() => createAdjustment(hr(), org.hr!.id, adjust)).toThrow()
   })
 
@@ -148,8 +175,15 @@ describe("holiday calendars of signed-off months", () => {
     const anna = () => db.select().from(users).where(eq(users.id, org.anna.id)).get()!
     signOff(loadActor(org.lead.id), anna(), "2026-09")
     expect([...holidaysFor(anna(), "2026-09-01", "2026-12-31").keys()]).toEqual(["2026-09-14"])
-    // moved to the default calendar: September keeps Zurich's day, December follows the new calendar
-    db.update(users).set({ holidayCalendarId: null }).where(eq(users.id, org.anna.id)).run()
+    // moved to the default calendar from today: September keeps Zurich's day, December follows the new calendar
+    updateUser(admin(), org.anna.id, { holidayCalendarId: null })
+    expect(() =>
+      rawSqlite().prepare("UPDATE users SET holiday_calendar_id = ? WHERE id = ?").run(zurich.id, org.anna.id),
+    ).not.toThrow()
+    expect(() => rawSqlite().prepare("DELETE FROM user_terms_history WHERE user_id = ?").run(org.anna.id)).toThrow(
+      /signed off/,
+    )
+    updateUser(admin(), org.anna.id, { holidayCalendarId: null })
     expect([...holidaysFor(anna(), "2026-09-01", "2026-12-31").keys()].sort()).toEqual([
       "2026-09-14",
       "2026-12-08",

@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useI18n } from "@/lib/i18n"
 import { LOCALES } from "@/lib/i18n-core"
 import type { SettingKey, Settings } from "@/server/services/settings"
+import { VERSIONED_SETTINGS } from "@/server/services/settings.schemas"
 import { saveSettingsFn } from "../api/settings"
 import { hhmmToMinutes, minutesToHhmm } from "../lib"
 
@@ -57,7 +58,11 @@ export function SettingsForm({
   const { t, tError, has } = useI18n()
   const qc = useQueryClient()
   const specs = groups.flatMap((g) => g.fields)
-  const defaults: Values = Object.fromEntries(specs.map((s) => [s.key, toForm(s, settings[s.key])]))
+  const defaults: Values = {
+    ...Object.fromEntries(specs.map((s) => [s.key, toForm(s, settings[s.key])])),
+    validFrom: "",
+  }
+  const dated = specs.filter((s) => (VERSIONED_SETTINGS as readonly string[]).includes(s.key))
   const form = useAppForm({
     defaultValues: defaults,
     onSubmit: async ({ value, formApi }) => {
@@ -75,13 +80,14 @@ export function SettingsForm({
       }
       if (!Object.keys(changes).length) return
       try {
-        await saveSettingsFn({ data: { changes } })
+        const validFrom = typeof value.validFrom === "string" && value.validFrom ? value.validFrom : undefined
+        await saveSettingsFn({ data: { changes, validFrom } })
         await Promise.all([
           qc.invalidateQueries({ queryKey: ["admin"] }),
           qc.invalidateQueries({ queryKey: ["bootstrap"] }),
         ])
         toast.success(t("common.saved"))
-        formApi.reset(value)
+        formApi.reset({ ...value, validFrom: "" })
       } catch (err) {
         if (!applyServerErrors(formApi, err)) toast.error(tError(err))
       }
@@ -260,6 +266,26 @@ export function SettingsForm({
             )}
           </SettingsGroup>
         ))}
+        {dated.length ? (
+          <form.Subscribe selector={(st) => dated.some((s) => st.values[s.key] !== defaults[s.key])}>
+            {(changed) =>
+              changed ? (
+                <SettingsGroup title={t("admin.settings.valid_from")}>
+                  <form.AppField name="validFrom">
+                    {(f) => (
+                      <f.DateField
+                        row
+                        far
+                        label={t("admin.settings.valid_from")}
+                        description={t("admin.settings.valid_from_help")}
+                      />
+                    )}
+                  </form.AppField>
+                </SettingsGroup>
+              ) : null
+            }
+          </form.Subscribe>
+        ) : null}
         <form.Subscribe selector={(st) => !st.isDefaultValue}>
           {(dirty) => (
             <SaveBar dirty={dirty} label={t("admin.settings.unsaved")}>

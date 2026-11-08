@@ -516,7 +516,7 @@ function signOffs(users: Map<string, s.User>, team: s.Team, hr: Actor, lead: Act
       signedAt: `${utcnow().slice(0, 19)}.000000Z`,
       note: "",
       snapshot: snap,
-      digest: computeDigest(SEAL_VERSION, periodData(u.id, startDate, endDate, startUtc, endUtc, SEAL_VERSION)),
+      digest: computeDigest(periodData(u.id, startDate, endDate, startUtc, endUtc)),
       prevSeal: lastSeal(u.id),
       sealVersion: SEAL_VERSION,
     }

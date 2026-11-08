@@ -47,7 +47,11 @@
     "derived": "Ergibt sich aus Von- und Bis-Zeit",
     "too_many": "Zu viele Dateien",
     "not_employed": "Ausserhalb der Anstellung",
-    "inactive": "Nicht mehr aktiv"
+    "inactive": "Nicht mehr aktiv",
+    "before_current": "Vor Beginn der aktuellen Bedingungen",
+    "overlaps_earlier": "Überschneidet die frühere Anstellung",
+    "before_end": "Muss nach dem Anstellungsende liegen",
+    "after_start": "Nach dem Anstellungsbeginn"
   },
   "period_signed_off": "Dieser Monat ist abgezeichnet und kann nicht mehr geändert werden.",
   "signoff_immutable": "Abzeichnungen können nicht geändert werden.",
@@ -100,5 +104,8 @@
   "type_in_use_counting": "Diese Art wird verwendet. Kategorie und Anrechnung lassen sich nicht mehr ändern; lege stattdessen eine neue Art an.",
   "oidc_only": "Melde dich mit Single Sign-on an.",
   "mfa_enrolment_required": "Richte zuerst die Zwei-Faktor-Anmeldung ein.",
-  "before_cover": "Du siehst und änderst die Daten dieser Person ab dem Tag, an dem deine Leitungsrolle begann."
+  "before_cover": "Du siehst und änderst die Daten dieser Person ab dem Tag, an dem deine Leitungsrolle begann.",
+  "terms_order": "Die aktuellen Bedingungen beginnen später; diesen Tag oder später wählen.",
+  "schedule_gap": "Ab Anstellungsbeginn muss ein Arbeitsplan gelten.",
+  "calendar_in_use": "Dieser Kalender galt für vergangene Tage und kann nicht mehr gelöscht werden."
 }

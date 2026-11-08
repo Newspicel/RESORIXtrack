@@ -7,8 +7,9 @@ import { db } from "../db"
 import { holidayCalendars, type Team, type TeamLead, teamLeads, teams, users } from "../db/schema"
 import { Conflict, Forbidden, NotFound, Validation } from "../errors"
 import { notify } from "./notifications"
-import { type Actor, activeLeadRows, otherAdminExists, requireAdmin } from "./permissions"
+import { type Actor, activeLeadRows, ensureNotJoiningOwnTeam, otherAdminExists, requireAdmin } from "./permissions"
 import { record, snapshot } from "./revisions"
+import { archiveFromToday, inheritingCalendar } from "./terms"
 import { logLeadChange } from "./users"
 
 const COLOR_RE = /^#[0-9a-f]{6}$/
@@ -117,7 +118,11 @@ export function updateTeam(actor: Actor, teamId: number, input: Partial<TeamInpu
   const next: Partial<Team> = {}
   if (input.name !== undefined) next.name = input.name.trim()
   if (input.color !== undefined) next.color = input.color
-  if (input.holidayCalendarId !== undefined) next.holidayCalendarId = input.holidayCalendarId
+  if (input.holidayCalendarId !== undefined && input.holidayCalendarId !== t.holidayCalendarId) {
+    // members without their own calendar switch from today; earlier days keep the old one
+    archiveFromToday(inheritingCalendar(t.id))
+    next.holidayCalendarId = input.holidayCalendarId
+  }
   return Object.keys(next).length ? db.update(teams).set(next).where(eq(teams.id, t.id)).returning().get() : t
 }
 
@@ -125,7 +130,9 @@ export function updateTeam(actor: Actor, teamId: number, input: Partial<TeamInpu
 export function deleteTeam(actor: Actor, teamId: number): void {
   requireAdmin(actor)
   const t = getTeam(teamId)
-  for (const u of db.select().from(users).where(eq(users.teamId, t.id)).all()) {
+  const members = db.select().from(users).where(eq(users.teamId, t.id)).all()
+  archiveFromToday(members)
+  for (const u of members) {
     const before = snapshot("user", u)
     const row = db.update(users).set({ teamId: null }).where(eq(users.id, u.id)).returning().get()
     record({
@@ -160,9 +167,12 @@ export function setMembers(actor: Actor, teamId: number, userIds: number[]): voi
   const known = new Set(affected.map((u) => u.id))
   const unknown = userIds.filter((id) => !known.has(id))
   if (unknown.length) throw new Validation("Unknown person", { fields: { userIds: "invalid" } })
+  if (affected.some((u) => wanted.has(u.id) && u.teamId !== t.id)) ensureNotJoiningOwnTeam(actor, t.id)
   for (const u of affected) {
     const target = wanted.has(u.id) ? t.id : null
     if (u.teamId === target) continue
+    // the team (and its calendar) changes from today; earlier days keep the old one
+    archiveFromToday([u])
     const before = snapshot("user", u)
     const row = db.update(users).set({ teamId: target }).where(eq(users.id, u.id)).returning().get()
     record({ entity: "user", row, action: "update", actor, subjectUserId: u.id, before })

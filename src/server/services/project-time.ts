@@ -2,12 +2,10 @@
  * What time was spent on: a time entry carries a project. The company decides with
  * `project_mode` whether this is off, optional or required; "required" means every finished work entry of a
  * past day has one (checked per day in accounts.computeDays, shown as a warning and blocking the sign-off).
- * Legacy work log rows (signed-off months from 1.x and early 2.0) still count in reports and day coverage; their
- * customer references read as part of the note.
  */
 import { and, eq, gte, inArray, isNotNull, lt } from "drizzle-orm"
 import { db } from "../db"
-import { type Project, projects, timeEntries, type User, workLogs } from "../db/schema"
+import { type Project, projects, timeEntries, type User } from "../db/schema"
 import { Conflict, Validation } from "../errors"
 import { addDays, localDateOf, localToday, nowInstant, rangeBoundsUtc, zone } from "../time"
 import { computeDaysFrom, loadContext } from "./accounts"
@@ -112,7 +110,7 @@ export interface ProjectItem {
   projectId: number | null
   note: string
   minutes: number
-  /** Local HH:MM; null for a legacy item recorded as a plain duration. */
+  /** Local HH:MM. */
   start: string | null
   end: string | null
 }
@@ -124,7 +122,7 @@ const hhmm = (ms: number, tz: string) =>
   })
 
 /**
- * Project time of the people in [from, to] (local days), oldest first: work entries with a project, split at local midnight (running ones count until now), plus legacy work log rows. Two queries.
+ * Project time of the people in [from, to] (local days), oldest first: work entries with a project, split at local midnight (running ones count until now).
  */
 export function projectItems(people: Pick<User, "id" | "timezone">[], from: string, to: string): ProjectItem[] {
   if (!people.length) return []
@@ -180,31 +178,5 @@ export function projectItems(people: Pick<User, "id" | "timezone">[], from: stri
       a = b
     }
   }
-  const legacy = db
-    .select()
-    .from(workLogs)
-    .where(
-      and(
-        inArray(workLogs.userId, ids),
-        gte(workLogs.date, from),
-        lt(workLogs.date, addDays(to, 1)),
-        eq(workLogs.isDeleted, false),
-      ),
-    )
-    .all()
-  for (const w of legacy)
-    out.push({
-      userId: w.userId,
-      date: w.date,
-      projectId: w.projectId,
-      note: legacyNote(w),
-      minutes: w.minutes,
-      start: w.startTime,
-      end: w.endTime,
-    })
   return out.sort((x, y) => x.date.localeCompare(y.date) || (x.start ?? "").localeCompare(y.start ?? ""))
 }
-
-/** A legacy item's customer reference, which entries no longer carry, joins its note. */
-export const legacyNote = (w: { customerRef: string; note: string }): string =>
-  [w.customerRef, w.note].filter(Boolean).join(" · ")

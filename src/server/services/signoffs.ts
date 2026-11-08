@@ -6,12 +6,11 @@
  */
 import { readFileSync } from "node:fs"
 import path from "node:path"
-import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, lte, or } from "drizzle-orm"
+import { and, asc, desc, eq, exists, gte, inArray, isNotNull, isNull, lt, lte, or, sql } from "drizzle-orm"
 import type { z } from "zod"
 import { isRecord, toJsonObject } from "@/lib/guards"
 import type { JsonObject } from "@/lib/json"
 import { db, MIGRATIONS_DIR, rawSqlite } from "../db"
-import { mergeLegacyWorklogs } from "../db/legacy-worklogs"
 import {
   absences,
   type MonthSignoff,
@@ -23,10 +22,10 @@ import {
   users,
 } from "../db/schema"
 import { AppError, Conflict, Forbidden, NotFound, Validation } from "../errors"
-import { addDays, dayBoundsUtc, iso, localToday, monthBounds, utcnow } from "../time"
+import { addDays, iso, localToday, monthBounds, utcnow } from "../time"
 import { userNames } from "./absences"
 import { computeDays, type Summary, summarize, timeBalance } from "./accounts"
-import { resolveCalendarId } from "./holidays"
+import { monthCalendarId } from "./holidays"
 import { notify } from "./notifications"
 import { deferMail } from "./outbox"
 import {
@@ -53,6 +52,7 @@ import {
   SEAL_VERSION,
   type SealCheck,
 } from "./seals"
+import { dayStartsMs, type PersonTimeline, personTimeline } from "./timeline"
 
 export { listSignoffsInput, monthString, overviewInput, signInput } from "./signoffs.schemas"
 
@@ -84,10 +84,15 @@ export function parseMonth(month: string): [number, number] {
   return [Number(month.slice(0, 4)), Number(month.slice(5, 7))]
 }
 
-export function monthPeriod(user: Pick<User, "timezone">, month: string) {
+const utc = (x: number) => Temporal.Instant.fromEpochMilliseconds(x).toString({ smallestUnit: "microsecond" })
+
+/** The month's local days and their UTC bounds, by the timezone of each day (dated terms). */
+export function monthPeriod(user: User, month: string, timeline: PersonTimeline = personTimeline(user)) {
   const [y, m] = parseMonth(month)
   const [start, end] = monthBounds(y, m)
-  return { start, end, startUtc: dayBoundsUtc(start, user.timezone)[0], endUtc: dayBoundsUtc(end, user.timezone)[1] }
+  const [startMs] = dayStartsMs(start, 1, timeline.tzOn)
+  const [endMs] = dayStartsMs(addDays(end, 1), 1, timeline.tzOn)
+  return { start, end, startUtc: utc(startMs), endUtc: utc(endMs), timeline }
 }
 
 export function previousMonth(tz: string): string {
@@ -104,15 +109,15 @@ function activeSignoff(userId: number, month: string): MonthSignoff | undefined 
 
 // ------------------------------------------------------------------ rules
 
-/** Leads/deputies sign their members; HR signs anyone. Never one's own month. */
+/** Leads/deputies sign their members; HR signs anyone. One's own month only as HR when nobody else could. */
 export function canSign(actor: Actor, target: User): boolean {
-  if (actor.id === target.id) return false
+  if (actor.id === target.id) return hrSelfFallback(actor, target)
   return actor.isHr || leadsUser(actor, target)
 }
 
 /** Why the month cannot be signed off yet (compliance findings never block). */
 export function blockers(user: User, month: string): Blocker[] {
-  const { start, end, endUtc } = monthPeriod(user, month)
+  const { start, end, endUtc, timeline } = monthPeriod(user, month)
   const out: Blocker[] = []
   if (end >= localToday(user.timezone)) out.push("month_not_complete")
   const running = db
@@ -144,7 +149,7 @@ export function blockers(user: User, month: string): Blocker[] {
     .get()
   if (pending) out.push("pending_absence")
   if (activeSignoff(user.id, month)) out.push("already_signed")
-  if ((user.employmentStart && end < user.employmentStart) || (user.employmentEnd && start > user.employmentEnd))
+  if (!timeline.periods.some((p) => (!p.start || p.start <= end) && (!p.end || p.end >= start)))
     out.push("not_employed")
   if (!out.includes("month_not_complete") && daysMissingProjects(user, start, end).length) out.push("projects_missing")
   return out
@@ -275,14 +280,14 @@ export function signOff(actor: Actor, user: User, month: string, note = ""): Mon
     signedAt: utcnow(),
     note: note.trim().slice(0, 500),
     snapshot,
-    digest: computeDigest(SEAL_VERSION, periodData(user.id, start, end, startUtc, endUtc, SEAL_VERSION)),
+    digest: computeDigest(periodData(user.id, start, end, startUtc, endUtc)),
     prevSeal: lastSeal(user.id),
     sealVersion: SEAL_VERSION,
   }
   const row = db
     .insert(monthSignoffs)
     // the calendar is kept with the month: later assignments never change its holidays
-    .values({ ...base, seal: computeSeal(base), calendarId: resolveCalendarId(user) })
+    .values({ ...base, seal: computeSeal(base), calendarId: monthCalendarId(user, month) })
     .returning()
     .get()
   logSignoff(actor, row, "signoff", note)
@@ -350,8 +355,6 @@ export function reopen(actor: Actor, id: number, reason: string): MonthSignoff {
     .returning()
     .get()
   logSignoff(actor, updated, "reopen", why)
-  // the month's legacy work log rows can move onto its entries now
-  mergeLegacyWorklogs(rawSqlite(), row.userId)
   for (const targetId of new Set([row.userId, row.signedById])) {
     if (targetId != null && targetId !== actor.id) {
       notify(targetId, "month_reopened", {
@@ -389,12 +392,28 @@ export function verifyUser(userId: number): Map<number, Integrity> {
       .map((r) => [r.id, r]),
   )
   const user = db.select().from(users).where(eq(users.id, userId)).get()
+  // the live figures of every signed month from one load
+  const toCompare = [...checks]
+    .filter(([id, check]) => rows.get(id)!.reopenedAt == null && CHECK_TO_INTEGRITY[check] === "intact")
+    .map(([id]) => rows.get(id)!)
+  const days =
+    user && toCompare.length
+      ? computeDays(
+          user,
+          toCompare.map((r) => r.periodStartDate).sort()[0],
+          toCompare
+            .map((r) => r.periodEndDate)
+            .sort()
+            .at(-1)!,
+        )
+      : []
   for (const [id, check] of checks) {
     const r = rows.get(id)!
     let status = CHECK_TO_INTEGRITY[check]
     if (status === "intact" && r.reopenedAt == null && user) {
       const snap = parseSnapshot(r)
-      const live = snapshotOf(monthSummary(user, r.periodStartDate, r.periodEndDate), {})
+      const month = days.filter((d) => d.date >= r.periodStartDate && d.date <= r.periodEndDate)
+      const live = snapshotOf(summarize(month), {})
       const changed = CHECKED_FIGURES.some((k) => {
         const a = snap[k]
         const b = live[k]
@@ -408,13 +427,18 @@ export function verifyUser(userId: number): Map<number, Integrity> {
 }
 
 let guardNames: string[] | null = null
-/** Trigger names the guard migration installs. */
+/** Trigger names the guard migrations leave installed (created, minus those dropped later). */
 export function expectedGuards(): string[] {
-  guardNames ??= [
-    ...readFileSync(path.join(MIGRATIONS_DIR, "0001_guards.sql"), "utf8").matchAll(
-      /CREATE TRIGGER IF NOT EXISTS (\w+)/g,
-    ),
-  ].map((m) => m[1])
+  if (guardNames) return guardNames
+  const names = new Set<string>()
+  for (const f of ["0001_guards.sql", "0011_dated_terms.sql"]) {
+    const text = readFileSync(path.join(MIGRATIONS_DIR, f), "utf8")
+    for (const m of text.matchAll(/(CREATE|DROP) TRIGGER (?:IF (?:NOT )?EXISTS )?(\w+)/g)) {
+      if (m[1] === "CREATE") names.add(m[2])
+      else names.delete(m[2])
+    }
+  }
+  guardNames = [...names]
   return guardNames
 }
 
@@ -549,13 +573,31 @@ export function monthStatus(userIds: number[], month: string): Map<number, Month
 }
 
 /** People in scope for a period: active ones plus leavers whose employment reached into it. */
+/** The first instant of local day `d` in any timezone (UTC+14). */
+const earliestInstantOf = (d: string) =>
+  Temporal.PlainDate.from(d).toZonedDateTime("UTC").toInstant().subtract({ hours: 14 }).toString()
+
 export function scopeUsers(
   actor: Actor,
   opts: { teamId?: number | null; userId?: number | null; periodStart?: string | null } = {},
 ): User[] {
+  // people who left stay in the periods they were employed in, or recorded time in when no end date was set
+  const ps = opts.periodStart
   const conds = [
-    opts.periodStart
-      ? or(eq(users.isActive, true), and(isNotNull(users.employmentEnd), gte(users.employmentEnd, opts.periodStart)))!
+    ps
+      ? or(
+          eq(users.isActive, true),
+          and(isNotNull(users.employmentEnd), gte(users.employmentEnd, ps)),
+          and(
+            isNull(users.employmentEnd),
+            exists(
+              db
+                .select({ one: sql`1` })
+                .from(timeEntries)
+                .where(and(eq(timeEntries.userId, users.id), gte(timeEntries.startAt, earliestInstantOf(ps)))),
+            ),
+          ),
+        )!
       : eq(users.isActive, true),
   ]
   const visible = visibleUserIds(actor)

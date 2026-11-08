@@ -56,14 +56,13 @@ docker compose --profile tls up -d --build
 docker compose exec app rt setup-code
 ```
 
-Open `https://<your-domain>`, enter the setup code and follow the wizard. Coming from 1.x: [docs/migration-from-v1.md](docs/migration-from-v1.md).
+Open `https://<your-domain>`, enter the setup code and follow the wizard.
 
 ## Documentation
 
 | Guide | For |
 |---|---|
 | [Installation](docs/installation.md) | Docker, HTTPS, configuration, updates |
-| [Migration from 1.x](docs/migration-from-v1.md) | Moving a v1 installation to v2 |
 | [Administrator guide](docs/admin-guide.md) | Setting up the company, administration pages |
 | [User manual](docs/user-manual.md) | Employees and team leads |
 | [Security](docs/security.md) | Protection model, operator checklist |

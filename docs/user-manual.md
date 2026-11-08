@@ -48,7 +48,7 @@ Week timeline or month grid with worked, target and difference per day.
 - With **simplified recording** you enter a daily total instead of start and end. Several totals per day, one per project, are added one after the other.
 - Labour-law findings (short break, rest, Sunday work …) are hints, never blocks; only a clock-in can be refused when the company enforces the minimum break and daily rest. See [compliance.md](compliance.md).
 
-Times are shown in your timezone (Profile) and stored in UTC.
+Times are shown in the timezone your employer set for you (usually Europe/Zurich), also when you travel; clocking in and out records the exact moment wherever you are.
 
 ## Projects
 
@@ -95,7 +95,7 @@ Your **timesheet** as PDF (to sign), XLSX or CSV.
 
 | Section | What |
 |---|---|
-| Personal | Language, timezone, 24 or 12-hour time, email on corrections |
+| Personal | Language, 24 or 12-hour time, email on corrections |
 | Password | Change it; signs out other devices and revokes API keys |
 | Two-factor | TOTP app (Aegis, 1Password, Microsoft Authenticator …) plus 10 backup codes. May be required by your company. |
 | Passkeys | Sign in with Face ID, Touch ID, Windows Hello or a security key; no code needed |

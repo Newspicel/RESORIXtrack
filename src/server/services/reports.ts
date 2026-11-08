@@ -11,7 +11,7 @@ import { Forbidden, Validation } from "../errors"
 import { addDays, dayBoundsUtc, iso, localToday, monthBounds, rangeBoundsUtc } from "../time"
 import { absenceTypesById } from "./absence-types"
 import { absencesInRange, clippedDays, minDay, userNames } from "./absences"
-import { computeDays, summarize, timeBalance, vacationAccount } from "./accounts"
+import { computeDays, personAccounts, summarize, timeBalance, vacationAccount } from "./accounts"
 import { editedEntryIds, entriesBetween } from "./entries"
 import { type Actor, clampFrom, isManager, requireView, seesDate } from "./permissions"
 import { type ProjectItem, projectItems, projectMode } from "./project-time"
@@ -169,8 +169,9 @@ export function balances(actor: Actor, raw: z.input<typeof balancesInput>) {
   const teamNames = teamNameMap(people)
   const rows = people.map((u) => {
     const from = clampFrom(actor, u, start)
-    const s = summarize(from <= end ? computeDays(u, from, end) : [])
-    const vac = vacationAccount(u, year)
+    const acc = personAccounts(u, [from, end].sort()[0], end, year)
+    const s = summarize(from <= end ? acc.days : [])
+    const vac = acc.vacation
     return {
       userId: u.id,
       name: u.name,
@@ -182,7 +183,7 @@ export function balances(actor: Actor, raw: z.input<typeof balancesInput>) {
       holidayMin: s.holidayWorkMin,
       nightMin: s.nightWorkMin,
       creditMin: round(s.surchargeMin + s.nightCreditMin),
-      balanceMin: timeBalance(u).balanceMin,
+      balanceMin: acc.balance.balanceMin,
       vacationTaken: vac.taken,
       vacationPlanned: vac.planned,
       vacationRemaining: vac.remaining,

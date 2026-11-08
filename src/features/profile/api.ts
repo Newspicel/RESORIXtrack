@@ -30,7 +30,6 @@ import {
 } from "@/server/services/profile"
 import { getSetting } from "@/server/services/settings"
 import { hasPassword } from "@/server/services/user-auth"
-import { allTimezones } from "@/server/time"
 import { currentSessionId, fromAuthError, headers, passwordMatches, SCOPE_LIST } from "./server"
 
 // ------------------------------------------------------------------ profile
@@ -39,7 +38,6 @@ export const fetchProfile = createServerFn({ method: "GET" })
   .middleware([authedEnrolment])
   .handler(({ context: { actor } }) => ({
     profile: serializeProfile(actor.user),
-    timezones: allTimezones(),
     apiKeysEnabled: getSetting("api_tokens_enabled"),
     oidcOnly: env.oidc.only && Boolean(env.oidc.issuer && env.oidc.clientId),
   }))
@@ -52,7 +50,6 @@ export const saveProfile = createServerFn({ method: "POST" })
     z.object({
       name: z.string().trim().min(1).max(120),
       locale: localeSchema,
-      timezone: z.string().min(1).max(64),
       timeFormat: z.enum(["24h", "12h"]),
       notifyEmailOnCorrection: z.boolean(),
     }),

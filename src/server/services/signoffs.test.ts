@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { db, rawSqlite } from "@/server/db"
 import * as s from "@/server/db/schema"
@@ -56,7 +57,7 @@ describe("sign-off", () => {
     expect(so).toMatchObject({
       month: "2026-10",
       active: true,
-      sealVersion: 3,
+      sealVersion: 4,
       note: "checked",
       signedBy: { name: "Lea Lead" },
     })
@@ -124,6 +125,14 @@ describe("sign-off", () => {
     expect(signoffOverview(loadActor(org.lead.id)).month).toBe("2026-10")
     expect(err(() => signoffOverview(loadActor(org.anna.id))).code).toBe("forbidden")
     expect(signoffOverview(loadActor(org.hr!.id), { month: "2026-10" }).rows).toHaveLength(6)
+  })
+
+  it("keeps people who left without an end date in the months they recorded time", () => {
+    db.update(s.users).set({ isActive: false }).where(eq(s.users.id, org.anna.id)).run()
+    const ids = (month: string) => signoffOverview(loadActor(org.hr!.id), { month }).rows.map((r) => r.user.id)
+    expect(ids("2026-10")).toContain(org.anna.id)
+    db.update(s.users).set({ isActive: false }).where(eq(s.users.id, org.ben.id)).run()
+    expect(ids("2026-10")).not.toContain(org.ben.id)
   })
 
   it("makes the month read-only in services and in the database", () => {

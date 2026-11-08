@@ -1,8 +1,7 @@
 /**
  * Database schema (Drizzle, SQLite). Column names are snake_case (drizzle `casing: "snake_case"`).
  *
- * Domain tables keep the v1 table names and ids so `import-v1` is a straight copy and v1 sign-off
- * seals stay verifiable. Better Auth owns `session`, `account`, `verification`, `two_factor` and
+ * Better Auth owns `session`, `account`, `verification`, `two_factor` and
  * `apikey`; its user model is mapped onto `users`.
  *
  * Signed-off months are additionally protected by SQLite triggers (drizzle/0001_guards.sql).
@@ -53,8 +52,6 @@ export const users = sqliteTable(
     notifyEmailOnCorrection: integer({ mode: "boolean" }).notNull().default(true),
     capabilities: text({ mode: "json" }).$type<Capability[]>().notNull().default(sql`'[]'`),
     lastLoginAt: instant(),
-    // set by import-v1 for people who had two-factor in v1 and must enrol again
-    mfaReenrolRequired: integer({ mode: "boolean" }).notNull().default(false),
     // Swiss labour law (ArG Art. 9): legal weekly maximum 45 h (industry, office, technical staff, large retail)
     // or 50 h (all other employees). Drives the Überzeit (overtime beyond the legal maximum) checks.
     legalWeeklyMaxHours: integer().$type<45 | 50>().notNull().default(45),
@@ -70,6 +67,48 @@ export const users = sqliteTable(
     anonymizedAt: instant(),
   },
   (t) => [index("ix_users_team").on(t.teamId), index("ix_users_active_name").on(t.isActive, t.name)],
+)
+
+/**
+ * Earlier terms of a person: the values that applied up to and including `validUntil`. The columns on `users`
+ * hold the terms from the day after the latest `validUntil` on, so a change never rewrites earlier days.
+ */
+export const userTermsHistory = sqliteTable(
+  "user_terms_history",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    userId: integer()
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    validUntil: text().notNull(),
+    timezone: text().notNull(),
+    vacationDaysPerYear: real().notNull(),
+    legalWeeklyMaxHours: integer().$type<45 | 50>().notNull(),
+    recordingMode: text().$type<"full" | "simplified" | "waived">().notNull(),
+    argExempt: integer({ mode: "boolean" }).notNull(),
+    regularNightWork: integer({ mode: "boolean" }).notNull(),
+    // plain ids (no foreign keys): deleting a team or calendar must not rewrite earlier days
+    teamId: integer(),
+    /** The calendar that applied (own, team's or company default), resolved when the row was kept. */
+    holidayCalendarId: integer(),
+    createdAt: instant().notNull().default(nowInstant),
+  },
+  (t) => [uniqueIndex("uq_user_terms_history_until").on(t.userId, t.validUntil)],
+)
+
+/** Earlier employment periods (rehiring); `users.employment_start/end` is the current one. */
+export const employmentHistory = sqliteTable(
+  "employment_history",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    userId: integer()
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    startDate: text().notNull(),
+    endDate: text().notNull(),
+    createdAt: instant().notNull().default(nowInstant),
+  },
+  (t) => [uniqueIndex("uq_employment_history_start").on(t.userId, t.startDate)],
 )
 
 export const teams = sqliteTable("teams", {
@@ -312,8 +351,7 @@ export const balanceAdjustments = sqliteTable(
 /**
  * A month of one person's time data, signed off. While active (`reopenedAt IS NULL`) all time data of the
  * person in the period is immutable (services + triggers). `digest` fingerprints the data, `seal` is an
- * HMAC chained to the previous sign-off of that person. `sealVersion` 1 = imported from v1 (Python
- * canonical JSON), 2 = RFC 8785 canonical JSON.
+ * HMAC chained to the previous sign-off of that person, both over RFC 8785 canonical JSON (services/seals.ts).
  */
 export const monthSignoffs = sqliteTable(
   "month_signoffs",
@@ -330,7 +368,7 @@ export const monthSignoffs = sqliteTable(
     signedById: integer().references(() => users.id, { onDelete: "set null" }),
     signedAt: instant().notNull().default(nowInstant),
     note: text().notNull().default(""),
-    /** Raw JSON text exactly as sealed (kept as text so v1 seals can be re-serialised byte-exactly). */
+    /** JSON text exactly as sealed. */
     snapshot: text().notNull().default("{}"),
     digest: text().notNull(),
     prevSeal: text().notNull().default(""),
@@ -421,41 +459,24 @@ export const projects = sqliteTable(
   (t) => [index("ix_projects_team").on(t.teamId)],
 )
 
-/**
- * Legacy work log (1.x and early 2.0): what a person did on a day, separate from the time entries. Read-only:
- * projects now live on the time entries, and open days are merged into them (db/legacy-worklogs.ts). Rows of
- * signed-off months stay because their seals cover them.
- */
-export const workLogs = sqliteTable(
-  "work_logs",
-  {
-    id: integer().primaryKey({ autoIncrement: true }),
-    userId: integer()
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    date: text().notNull(),
-    projectId: integer().references(() => projects.id, { onDelete: "set null" }),
-    minutes: integer().notNull(),
-    startTime: text(), // HH:MM local wall clock; when set, minutes are derived
-    endTime: text(),
-    customerRef: text().notNull().default(""),
-    note: text().notNull().default(""),
-    createdById: integer().references(() => users.id, { onDelete: "set null" }),
-    isDeleted: integer({ mode: "boolean" }).notNull().default(false),
-    createdAt: instant().notNull().default(nowInstant),
-    updatedAt: instant().notNull().default(nowInstant),
-  },
-  (t) => [
-    index("ix_work_logs_user_date").on(t.userId, t.date),
-    index("ix_work_logs_project_date").on(t.projectId, t.date),
-  ],
-)
-
-/** Company-wide settings as key/value JSON with typed defaults (services/settings.ts). */
+/** Company settings: for the keys that change figures (settings.VERSIONED_SETTINGS) the value before any version. */
 export const settings = sqliteTable("settings", {
   key: text().primaryKey(),
   value: text({ mode: "json" }).$type<Json>(),
 })
+
+/** A figure-changing setting from `validFrom` on (until the next version of the same key). */
+export const settingVersions = sqliteTable(
+  "setting_versions",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    key: text().notNull(),
+    validFrom: text().notNull(),
+    value: text({ mode: "json" }).$type<Json>(),
+    createdAt: instant().notNull().default(nowInstant),
+  },
+  (t) => [uniqueIndex("uq_setting_versions_key_from").on(t.key, t.validFrom)],
+)
 
 /** Small key/value store for runtime state (worker heartbeat, setup code hash, last backup). */
 export const appState = sqliteTable("app_state", {
@@ -481,6 +502,8 @@ export const session = sqliteTable(
     userId: integer()
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    // "don't remember me": decided when the session is created, never by a cookie the client sends later
+    short: integer({ mode: "boolean" }).notNull().default(false),
   },
   (t) => [index("session_userId_idx").on(t.userId)],
 )
@@ -611,4 +634,3 @@ export type MonthSignoff = typeof monthSignoffs.$inferSelect
 export type Notification = typeof notifications.$inferSelect
 export type LoginAttempt = typeof loginAttempts.$inferSelect
 export type Project = typeof projects.$inferSelect
-export type WorkLog = typeof workLogs.$inferSelect
