@@ -1,8 +1,8 @@
 /**
  * "My time" (and a member's time for leads/HR via `userId`): week timeline or month calendar and the period's
  * entries, each with its project. State lives in the URL: `view`, `date`, `add=1` (opens the add
- * dialog; the command palette uses it), `deleted=1` (show deleted entries), `fix=project` (marks the work
- * without a project and scrolls to `date`; the dashboard's reminder links here).
+ * dialog; the command palette uses it), `deleted=1` (show deleted entries), `fix=project` (marks past work in
+ * open months without a project and scrolls to `date`; the dashboard's reminder links here).
  */
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query"
 import { FolderOpen, Lock, Plus } from "lucide-react"
@@ -53,9 +53,21 @@ export function TimeView({
   const correctedIds = view?.entries.filter((e) => e.corrected).map((e) => e.id) ?? []
   const corrections = useQuery(correctionsQuery({ userId: view?.user.id, ids: correctedIds })).data ?? {}
   const fixing = search.fix === "project"
-  const unassigned = fixing
-    ? (view?.entries.filter((e) => e.kind === "work" && e.projectId == null && !e.deleted && !e.running) ?? [])
-    : []
+  // as sign-off counts them: past days of months still open
+  const unassigned =
+    fixing && view
+      ? view.entries.filter((e) => {
+          const date = wallClock(e.startAt, view.user.timezone).date
+          return (
+            e.kind === "work" &&
+            e.projectId == null &&
+            !e.deleted &&
+            !e.running &&
+            date < view.today &&
+            !view.lockedMonths[date.slice(0, 7)]
+          )
+        })
+      : []
   const needsProject = new Set(unassigned.map((e) => e.id))
   const loaded = view != null
   useEffect(() => {
