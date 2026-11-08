@@ -31,7 +31,7 @@ import { addDaysStr, fmtDay, fmtMinutes } from "@/lib/format"
 import { errorFields } from "@/lib/guards"
 import { useI18n } from "@/lib/i18n"
 import { type Correction, createEntryFn, deleteEntryFn, type PeriodView, restoreEntryFn, updateEntryFn } from "./api"
-import { invalidateTimeData } from "./invalidate"
+import { dropEntry, invalidateTimeData } from "./invalidate"
 import { hhmmToMin, minToHhmm, newEntryTimes, parseDuration, wallClock } from "./lib"
 import { Notice } from "./notice"
 import { TimeField } from "./time-input"
@@ -312,11 +312,10 @@ export function EntryDialog({
     onError: (err) => toast.error(tError(err)),
   })
   const deletion = useMutation({
-    mutationFn: async (vars: { id: number; reason: string }) => {
-      await deleteEntryFn({ data: vars })
-      await invalidateTimeData(qc)
-    },
+    mutationFn: (vars: { id: number; reason: string }) => deleteEntryFn({ data: vars }),
     onSuccess: (_, vars) => {
+      dropEntry(qc, vars.id)
+      void invalidateTimeData(qc)
       onOpenChange(false)
       undoToast(t("time.deleted"), t("common.undo"), () => restoreDeleted.mutate(vars))
     },

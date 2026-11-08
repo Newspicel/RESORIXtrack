@@ -1,6 +1,7 @@
 /**
  * The project the next clock-in books on, remembered per person in this browser (a convenience; the server
- * keeps nothing).
+ * keeps nothing). With projects required, a clock-in without one is refused in the browser and flags the
+ * picker (`useProjectPrompt`) until a project is chosen.
  */
 import { useSyncExternalStore } from "react"
 
@@ -8,6 +9,7 @@ const key = (userId: number) => `rt.clock.project.${userId}`
 const subs = new Set<() => void>()
 // used when storage is blocked: the choice then lasts until the page reloads
 const memory = new Map<number, number | null>()
+let prompted = false
 
 export function readNextProject(userId: number): number | null {
   if (memory.has(userId)) return memory.get(userId) ?? null
@@ -27,7 +29,20 @@ export function writeNextProject(userId: number, projectId: number | null): void
   } catch {
     memory.set(userId, projectId)
   }
+  if (projectId != null) prompted = false
   for (const s of subs) s()
+}
+
+/** A clock-in was tried without the required project: flag the picker until one is chosen. */
+export function promptProject(): void {
+  prompted = true
+  for (const s of subs) s()
+}
+
+export const isProjectPrompted = (): boolean => prompted
+
+export function useProjectPrompt(): boolean {
+  return useSyncExternalStore(subscribe, isProjectPrompted, () => false)
 }
 
 function subscribe(cb: () => void) {

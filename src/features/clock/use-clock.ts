@@ -1,26 +1,27 @@
 /**
  * Clock state shared by the top bar, the mobile bar and the dashboard card.
  *
- * - Actions are optimistic: the state flips at once, the server answer replaces it.
+ * - Actions are optimistic once the server takes longer than a moment, so a quick refusal never flickers.
  * - Offline (or a network error): a clock in/out is stored in IndexedDB with its click time and a client id,
  *   shown as pending, and replayed with `syncOfflineFn` when the connection returns. While anything is
  *   pending, later actions queue behind it so their order is kept. Scheduling a clock-out ("clock out later")
  *   and cancelling it need the server and are refused offline.
  * - A rejected action (not a network problem) rolls back and shows the reason.
  * - A clock-in books on the project chosen for the next clock-in (next-project.ts); `switch` changes the
- *   project while working.
+ *   project while working. With projects required, a clock-in without one is refused before anything else.
  */
 import { type QueryClient, queryOptions, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useNavigate } from "@tanstack/react-router"
 import { useEffect, useEffectEvent, useState, useSyncExternalStore } from "react"
 import { toast } from "sonner"
 import { clockActionFn, fetchClock, syncOfflineFn } from "@/features/time/api"
 import { errorCode, errorFields } from "@/lib/guards"
 import { useI18n } from "@/lib/i18n"
 import type { I18n } from "@/lib/i18n-core"
-import { useMe } from "@/lib/session"
+import { useBootstrap, useMe } from "@/lib/session"
 import type { ClockAction, ClockStateName, OfflineClockAction } from "@/server/services/clock"
 import { fmtClockTime, wallClock } from "../time/lib"
-import { readNextProject } from "./next-project"
+import { promptProject, readNextProject } from "./next-project"
 import { enqueue, isNetworkError, onQueueChange, type QueuedAction, queued, remove } from "./offline-queue"
 
 export type LiveClock = Awaited<ReturnType<typeof fetchClock>> & { receivedAt: number }
@@ -34,6 +35,7 @@ export const liveClockQuery = () =>
   })
 
 const SCHEDULE_AHEAD_MS = 2 * 60_000
+const OPTIMISTIC_DELAY_MS = 300
 
 /** A clock-out with a time this far ahead is scheduled ("clock out later") instead of closing the entry. */
 export const schedulesLater = (at: string | null | undefined, now: number): boolean =>
@@ -171,6 +173,9 @@ interface ClockDeps {
   me: Person
   qc: QueryClient
   i18n: I18n
+  projectRequired: boolean
+  /** Opens the dashboard, the page with the clock's project picker. */
+  toDashboard: () => void
 }
 
 function refreshTimeData(qc: QueryClient) {
@@ -221,6 +226,12 @@ async function runAction(deps: ClockDeps, action: ClockAction, opts: ActOptions,
   const { t, tError } = i18n
   const current = qc.getQueryData<LiveClock>(liveClockQuery().queryKey)
   if (busy || !current) return
+  if (action === "start" && deps.projectRequired && readNextProject(userId) == null) {
+    promptProject()
+    const choose = { label: t("time.choose_project"), onClick: deps.toDashboard }
+    toast.error(t("time.project_required"), window.location.pathname === "/" ? undefined : { action: choose })
+    return
+  }
   busy = true
   setActing(true)
   const clickAt = opts.at ?? new Date().toISOString()
@@ -243,14 +254,19 @@ async function runAction(deps: ClockDeps, action: ClockAction, opts: ActOptions,
       await queue()
       return
     }
-    qc.setQueryData<LiveClock>(liveClockQuery().queryKey, advance(current, action, clickAt, Date.now()))
+    const optimistic = setTimeout(
+      () => qc.setQueryData<LiveClock>(liveClockQuery().queryKey, advance(current, action, clickAt, Date.now())),
+      OPTIMISTIC_DELAY_MS,
+    )
     try {
-      setServer(
-        qc,
-        await clockActionFn({ data: { action, at: opts.at ?? null, custom: Boolean(opts.custom), projectId } }),
-      )
+      const next = await clockActionFn({
+        data: { action, at: opts.at ?? null, custom: Boolean(opts.custom), projectId },
+      })
+      clearTimeout(optimistic)
+      setServer(qc, next)
       refreshTimeData(qc)
     } catch (err) {
+      clearTimeout(optimistic)
       qc.setQueryData(liveClockQuery().queryKey, current)
       if (isNetworkError(err) && queueable) {
         await queue()
@@ -275,7 +291,10 @@ export function useClock() {
   const [acting, setActing] = useState(false)
 
   const data = query.data ? withPending(query.data, pending) : undefined
-  const deps: ClockDeps = { userId: me.id, me, qc, i18n }
+  const projectRequired = useBootstrap().company.projectMode === "required"
+  const navigate = useNavigate()
+  const toDashboard = () => void navigate({ to: "/" })
+  const deps: ClockDeps = { userId: me.id, me, qc, i18n, projectRequired, toDashboard }
 
   // replay on start and whenever the connection comes back
   const replay = useEffectEvent(() => void sync(deps))

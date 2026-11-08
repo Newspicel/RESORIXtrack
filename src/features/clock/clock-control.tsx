@@ -19,7 +19,7 @@ import { useMe } from "@/lib/session"
 import { cn } from "@/lib/utils"
 import type { ClockStateName } from "@/server/services/clock"
 import { CustomTimeButton } from "./custom-time"
-import { useNextProject } from "./next-project"
+import { useNextProject, useProjectPrompt } from "./next-project"
 import { registerServiceWorker } from "./register-sw"
 import { type LiveClock, liveWorkedMin, primaryAction, scheduledTimeText, useClock } from "./use-clock"
 import { useNow } from "./use-now"
@@ -65,13 +65,18 @@ export function ClockProject({ clock, id, className }: { clock: Clock; id?: stri
   const me = useMe()
   const mode = useProjectMode()
   const [next, setNext] = useNextProject(me.id)
+  const prompted = useProjectPrompt()
   const c = clock.data
+  useEffect(() => {
+    if (prompted && id) document.getElementById(id)?.focus()
+  }, [prompted, id])
   if (mode === "off" || !c) return null
   const working = c.state === "working"
   // the entry is null right after an optimistic switch: show the choice until the server answers
   const value = working && c.entry ? c.entry.projectId : next
-  // required: flag a running entry without one, and an idle clock with nothing chosen for the next clock-in
-  const missing = mode === "required" && (working ? c.entry != null && c.entry.projectId == null : next == null)
+  // required: flag a running entry without one, and an idle clock only after a clock-in was tried without one
+  const missing =
+    mode === "required" && (working ? c.entry != null && c.entry.projectId == null : prompted && next == null)
   return (
     <ProjectPicker
       id={id}

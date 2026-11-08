@@ -168,3 +168,14 @@ test("projects: an entry books its project; the clock switches project while wor
   await hero.getByRole("button", { name: "Clock out", exact: true }).click()
   await expect(hero).toHaveAccessibleName("You're not clocked in")
 })
+
+test("dashboard: Add time opens the entry dialog in place", async ({ as }, info) => {
+  const page = await as(pick(info, "sofia", "marc"))
+  await goto(page, "/")
+  await page.getByRole("button", { name: "Add time", exact: true }).click()
+  const dialog = page.getByRole("dialog", { name: "Add entry" })
+  await expect(dialog).toBeVisible()
+  await expect(page).toHaveURL(/\/$/)
+  await page.keyboard.press("Escape")
+  await expect(dialog).toBeHidden()
+})

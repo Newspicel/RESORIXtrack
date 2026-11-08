@@ -1,11 +1,11 @@
 /**
  * The dashboard's clock card: a ring that fills towards today's target, the live time, the state, a scheduled
  * clock-out ("clock out later"), the project (switch while working) and the actions (clock in/out, custom time,
- * add time manually, report sick).
+ * add time manually in place, report sick).
  */
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import { AlertTriangle, History, Plus, Thermometer } from "lucide-react"
+import { AlertTriangle, History, Thermometer } from "lucide-react"
 import { useId, useState } from "react"
 import { toast } from "sonner"
 import { ConfirmDialog } from "@/components/app/confirm"
@@ -17,6 +17,7 @@ import { CustomTimeButton } from "@/features/clock/custom-time"
 import { type LiveClock, liveWorkedMin, primaryAction } from "@/features/clock/use-clock"
 import { useNow } from "@/features/clock/use-now"
 import { useProjectMode } from "@/features/projects/project-picker"
+import { AddEntryButton } from "@/features/time/add-entry-button"
 import { invalidateTimeData } from "@/features/time/invalidate"
 import { fmtClockTime, wallClock } from "@/features/time/lib"
 import { Notice } from "@/features/time/notice"
@@ -158,10 +159,7 @@ export function HeroClock({
                 </Button>
               }
             />
-            <ButtonLink variant="ghost" size="lg" render={<Link to="/time" search={{ add: true }} />}>
-              <Plus data-icon="inline-start" />
-              {t("dashboard.forgot_clock")}
-            </ButtonLink>
+            <AddEntryButton size="lg" label={t("dashboard.forgot_clock")} />
             {sick.data?.allowed ? (
               <Button variant="ghost" size="lg" onClick={() => setConfirmSick(true)}>
                 <Thermometer data-icon="inline-start" />

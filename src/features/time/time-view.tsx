@@ -64,7 +64,7 @@ export function TimeView({
   if (!view) return <TimeViewSkeleton />
 
   const self = view.user.id === me.id
-  // ?add=1 (command palette, dashboard) opens the add dialog; closing it clears the parameter
+  // ?add=1 (command palette) opens the add dialog; closing it clears the parameter
   const adding = Boolean(search.add) && !editOpen
   const closeOrOpen = (open: boolean) => {
     if (!open && search.add) onSearch({ ...search, add: undefined })
