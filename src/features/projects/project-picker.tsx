@@ -7,24 +7,20 @@ import { ColorDot } from "@/components/app/status-badge"
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox"
 import { useT } from "@/lib/i18n"
 import { useBootstrap } from "@/lib/session"
+import type { EntryProject } from "@/server/services/project-time"
+import type { Settings } from "@/server/services/settings.schemas"
 import { projectsQuery } from "./api"
 
 export const NO_PROJECT = "none"
 
-export type ProjectMode = "off" | "optional" | "required"
+export type ProjectMode = Settings["project_mode"]
 
 export function useProjectMode(): ProjectMode {
   return useBootstrap().company.projectMode
 }
 
 /** Shown on an entry: the project (also an inactive one) or nothing. */
-export interface ShownProject {
-  id: number
-  name: string
-  code: string
-  color: string
-  isActive: boolean
-}
+export type ShownProject = EntryProject
 
 /** Options for the picker; `current` stays selectable even when it is inactive or not in the list. */
 export function useProjectOptions(current?: ShownProject | null): ComboboxOption[] {

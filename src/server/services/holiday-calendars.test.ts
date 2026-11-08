@@ -22,7 +22,7 @@ import {
   sechselaeuten,
   topUpHolidays,
 } from "./holiday-calendars"
-import { holidayPresets, presetHolidays } from "./holiday-presets"
+import { defaultPresetDays, holidayPresets, presetHolidays } from "./holiday-presets"
 import { loadActor } from "./permissions"
 import { history } from "./revisions"
 import { updateSettings } from "./settings"
@@ -76,6 +76,15 @@ describe("holiday calendars", () => {
     expect(() =>
       saveCalendar(admin, { name: "X", regionCode: "DE", presetDays: [], description: "", isDefault: false }),
     ).toThrow(/Unknown preset/)
+  })
+
+  it("ticks a preset's commune days by default, in the picker and on the server alike", () => {
+    const fr = holidayPresets("en", 2026).find((p) => p.key === "CH-FR")!
+    const communeDays = fr.selectable.filter((d) => d.kind === "commune").map((d) => d.name)
+    expect(communeDays.length).toBeGreaterThan(0)
+    expect(fr.defaultDays).toEqual(communeDays)
+    expect(defaultPresetDays("CH-FR", 2026)).toEqual(communeDays)
+    expect(defaultPresetDays("XX", 2026)).toEqual([])
   })
 
   it("offers the 26 cantons, split into statutory and selectable days", () => {
@@ -206,6 +215,53 @@ describe("holiday calendars", () => {
     expect(history("holiday", first.id)).toMatchObject([{ action: "create", actorId: null, source: "cli" }])
     deleteCalendar(admin, be.id)
     expect(history("holiday", first.id).map((r) => r.action)).toEqual(["create", "delete"])
+  })
+
+  it("deleting a calendar keeps the earlier terms of exactly the people it applied to", () => {
+    freeze("2026-06-15T10:00:00Z")
+    const admin = loadActor(makeAdmin({ holidayCalendarId: null }).id)
+    const cal = makeCalendar({ name: "Gone" }, [{ date: "2026-12-24", name: "Christmas Eve" }])
+    const other = makeCalendar({ name: "Other", isDefault: false })
+    const team = makeTeam({ holidayCalendarId: cal.id })
+    const otherTeam = makeTeam({ holidayCalendarId: other.id })
+    const noCalendarTeam = makeTeam({ holidayCalendarId: null })
+    const people = {
+      own: makeUser({ holidayCalendarId: cal.id, teamId: otherTeam.id }),
+      team: makeUser({ teamId: team.id }),
+      teamWithoutCalendar: makeUser({ teamId: noCalendarTeam.id }),
+      ownOther: makeUser({ holidayCalendarId: other.id, teamId: team.id }),
+      otherTeam: makeUser({ teamId: otherTeam.id }),
+    }
+    deleteCalendar(admin, cal.id)
+    const kept = new Map(
+      db
+        .select()
+        .from(s.userTermsHistory)
+        .all()
+        .map((r) => [r.userId, r.holidayCalendarId]),
+    )
+    expect(Object.fromEntries(Object.entries(people).map(([k, u]) => [k, kept.get(u.id) ?? null]))).toEqual({
+      own: cal.id,
+      team: cal.id,
+      teamWithoutCalendar: cal.id,
+      ownOther: null,
+      otherTeam: null,
+    })
+  })
+
+  it("keeps a calendar that counted for passed days of someone on it now", () => {
+    freeze("2026-06-15T10:00:00Z")
+    const admin = loadActor(makeAdmin().id)
+    makeCalendar({ name: "Default" })
+    const cal = makeCalendar({ name: "Team", isDefault: false }, [{ date: "2026-01-01", name: "New Year's Day" }])
+    const team = makeTeam({ holidayCalendarId: cal.id })
+    const member = makeUser({ teamId: team.id })
+    expect(() => deleteCalendar(admin, cal.id)).toThrow(/counted for days already passed/)
+    db.update(s.users)
+      .set({ holidayCalendarId: makeCalendar({ isDefault: false }).id })
+      .where(eq(s.users.id, member.id))
+      .run()
+    deleteCalendar(admin, cal.id)
   })
 
   it("refuses holiday changes inside signed-off months", () => {

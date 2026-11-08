@@ -7,7 +7,7 @@ import { and, asc, eq, gt, gte, inArray, isNull, lte, max } from "drizzle-orm"
 import { db } from "../db"
 import { type MonthSignoff, monthSignoffs, type User, users } from "../db/schema"
 import { Conflict } from "../errors"
-import { iso } from "../time"
+import { addDays, iso } from "../time"
 
 const active = (userId: number) => and(eq(monthSignoffs.userId, userId), isNull(monthSignoffs.reopenedAt))
 
@@ -93,15 +93,25 @@ export function ensureScheduleChangeAllowed(user: Pick<User, "id">, validFrom: s
   }
 }
 
-/** Last day covered by any active sign-off (holidays up to it are frozen for everyone). */
-export function latestSignedDate(): string | null {
+/** Last day covered by an active sign-off of `userId`, or of anyone (holidays up to it are frozen for everyone). */
+export function latestSignedDate(userId?: number): string | null {
   return (
     db
       .select({ d: max(monthSignoffs.periodEndDate) })
       .from(monthSignoffs)
-      .where(isNull(monthSignoffs.reopenedAt))
+      .where(userId != null ? active(userId) : isNull(monthSignoffs.reopenedAt))
       .get()?.d ?? null
   )
+}
+
+/** Refuse a dated change (settings, terms) applying from `from` on or before the last signed-off day. */
+export function ensureAfterLastSignOff(from: string, field: string, userId?: number): void {
+  const latest = latestSignedDate(userId)
+  if (latest != null && from <= latest)
+    throw new Conflict(`Changes can apply from ${addDays(latest, 1)} on, after the last signed-off month`, {
+      code: "period_signed_off",
+      fields: { [field]: "signed_off" },
+    })
 }
 
 export function ensureHolidayChangeAllowed(date: string): void {

@@ -3,34 +3,21 @@
  * (read-only), and rehiring a former employee.
  */
 import { useQueryClient } from "@tanstack/react-query"
-import { useId, useState } from "react"
+import { useState } from "react"
 import { toast } from "sonner"
-import { ResponsiveDialog } from "@/components/app/responsive-dialog"
+import { DateDialog } from "@/components/app/date-dialog"
 import { SettingRow, SettingsGroup } from "@/components/app/settings"
-import { PendingButton } from "@/components/form/pending-button"
 import { Button } from "@/components/ui/button"
-import { DatePicker } from "@/components/ui/date-picker"
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
-import { fmtDay } from "@/lib/format"
+import { addDaysStr, fmtDay } from "@/lib/format"
 import { useI18n } from "@/lib/i18n"
+import { TERM_KEYS } from "@/server/services/timeline.schemas"
 import type { UserDetail } from "@/server/services/users"
 import { rehireFn } from "../api/users"
 import type { UserFormValues } from "./user-form"
 
-const TERM_FIELDS = [
-  "teamId",
-  "holidayCalendarId",
-  "timezone",
-  "vacationDaysPerYear",
-  "legalWeeklyMaxHours",
-  "recordingMode",
-  "argExempt",
-  "regularNightWork",
-] as const satisfies readonly (keyof UserFormValues)[]
-
 /** A dated term differs from the saved value, so the save asks from which day it applies. */
 export function termsChanged(v: UserFormValues, saved: UserFormValues): boolean {
-  return TERM_FIELDS.some((k) => v[k] !== saved[k])
+  return TERM_KEYS.some((k) => v[k] !== saved[k])
 }
 
 /** Earlier terms and employment periods, and rehiring once the employment has an end. */
@@ -86,46 +73,23 @@ export function EarlierTerms({ user }: { user: UserDetail }) {
 }
 
 function RehireDialog({ user, onClose }: { user: UserDetail; onClose: () => void }) {
-  const { t, tError } = useI18n()
+  const { t } = useI18n()
   const qc = useQueryClient()
-  const id = useId()
-  const [start, setStart] = useState("")
-  const submit = async () => {
-    if (!start) {
-      document.getElementById(id)?.focus()
-      return
-    }
-    try {
-      await rehireFn({ data: { id: user.id, start } })
-      toast.success(t("admin.users.rehired"))
-      await qc.invalidateQueries({ queryKey: ["admin"] })
-      onClose()
-    } catch (err) {
-      toast.error(tError(err))
-    }
-  }
   return (
-    <ResponsiveDialog
-      open
-      variant="dialog"
-      onOpenChange={(o) => !o && onClose()}
+    <DateDialog
       title={t("admin.users.rehire_title", { name: user.name })}
       description={t("admin.users.rehire_help")}
-      action={submit}
-      footer={
-        <>
-          <Button type="button" variant="ghost" onClick={onClose}>
-            {t("common.cancel")}
-          </Button>
-          <PendingButton>{t("admin.users.rehire")}</PendingButton>
-        </>
-      }
-    >
-      <Field>
-        <FieldLabel htmlFor={id}>{t("admin.users.rehire_start")}</FieldLabel>
-        <DatePicker id={id} value={start} onChange={setStart} min={user.employmentEnd ?? undefined} far />
-        <FieldDescription>{t("errors.fields.before_end")}</FieldDescription>
-      </Field>
-    </ResponsiveDialog>
+      label={t("admin.users.rehire_start")}
+      hint={t("errors.fields.before_end")}
+      submitLabel={t("admin.users.rehire")}
+      min={user.employmentEnd ? addDaysStr(user.employmentEnd, 1) : undefined}
+      required
+      onSubmit={async (start) => {
+        await rehireFn({ data: { id: user.id, start } })
+        toast.success(t("admin.users.rehired"))
+        await qc.invalidateQueries({ queryKey: ["admin"] })
+      }}
+      onClose={onClose}
+    />
   )
 }

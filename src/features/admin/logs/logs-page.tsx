@@ -221,7 +221,7 @@ function BackupsTab() {
         title={t("admin.backups.delete_title")}
         description={deleting ?? ""}
         confirmLabel={t("common.delete")}
-        onConfirm={() => remove.mutateAsync(deleting!)}
+        onConfirm={() => (deleting == null ? undefined : remove.mutateAsync(deleting))}
       />
     </Section>
   )

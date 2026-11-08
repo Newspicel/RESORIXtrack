@@ -11,17 +11,8 @@ import { asc, eq } from "drizzle-orm"
 import { db } from "../db"
 import { employmentHistory, type User, userTermsHistory } from "../db/schema"
 import { zone } from "../time"
+import type { TERM_KEYS } from "./timeline.schemas"
 
-export const TERM_KEYS = [
-  "timezone",
-  "vacationDaysPerYear",
-  "legalWeeklyMaxHours",
-  "recordingMode",
-  "argExempt",
-  "regularNightWork",
-  "teamId",
-  "holidayCalendarId",
-] as const
 export type Terms = Pick<User, (typeof TERM_KEYS)[number]>
 export type TermKey = (typeof TERM_KEYS)[number]
 
@@ -76,17 +67,7 @@ export function buildTimeline(
       .map((p) => ({ start: p.startDate, end: p.endDate })),
     { start: user.employmentStart, end: user.employmentEnd },
   ]
-  const termsOn = (date: string): Terms => {
-    if (!sorted.length || date > sorted[sorted.length - 1].validUntil) return current
-    let lo = 0
-    let hi = sorted.length - 1
-    while (lo < hi) {
-      const mid = (lo + hi) >> 1
-      if (sorted[mid].validUntil >= date) hi = mid
-      else lo = mid + 1
-    }
-    return sorted[lo]
-  }
+  const termsOn = (date: string): Terms => sorted.find((t) => t.validUntil >= date) ?? current
   const last = sorted.at(-1)
   return {
     termsOn,

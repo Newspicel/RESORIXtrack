@@ -135,8 +135,9 @@ function validateEntry(
 /** Where a new daily total starts: after the day's last entry, 08:00 on an empty day. */
 function totalStart(date: string, ctx: EntryContext): string {
   const ends = ctx.entries
-    .filter((e) => !e.deleted && e.endAt && wallClock(e.endAt, ctx.owner.timezone).date === date)
-    .map((e) => wallClock(e.endAt!, ctx.owner.timezone).time)
+    .flatMap((e) => (!e.deleted && e.endAt ? [wallClock(e.endAt, ctx.owner.timezone)] : []))
+    .filter((end) => end.date === date)
+    .map((end) => end.time)
     .sort()
   const last = ends.at(-1)
   return last && last > "08:00" ? last : "08:00"

@@ -59,7 +59,8 @@ function keyTarget(e: KeyboardEvent, date: string): string | null {
     case "PageUp":
     case "PageDown": {
       const m = addMonthsStr(date.slice(0, 7), e.key === "PageUp" ? -1 : 1)
-      const last = monthDays(m).at(-1)!
+      const days = monthDays(m)
+      const last = days[days.length - 1]
       const d = `${m}-${date.slice(8)}`
       return d > last ? last : d
     }

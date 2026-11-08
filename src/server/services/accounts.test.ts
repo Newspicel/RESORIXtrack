@@ -166,6 +166,7 @@ function ctx(
     entries: o.entries ?? [],
     settings,
     settingsAt: () => settings,
+    settingChanges: [],
     timeline: buildTimeline(user),
     nowMs: now.epochMilliseconds,
     today: now.toZonedDateTimeISO(TZ).toPlainDate().toString(),
@@ -487,6 +488,9 @@ describe("entries", () => {
       projectMin: 240,
       projectOk: true,
     })
+    // exact: even a minute without a project leaves the day open
+    const minute = entry(MON, "12:00", "12:01")
+    expect(one(ctx(MON, MON, { entries: [tagged, other, minute], settings: required })).projectOk).toBe(false)
     // today is never flagged
     const today = ctx(MON, MON, { entries: [untagged], settings: required, now: `${MON}T15:00:00Z` })
     expect(one(today).projectOk).toBe(true)

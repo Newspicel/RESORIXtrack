@@ -11,7 +11,7 @@ Self-hosted time tracking for small and mid-sized companies: clocking, time and 
 ## Features
 
 **Employees**
-- Clock in and out from every page, at a custom time or scheduled for later; a break button that continues on the same project; keyboard shortcuts; works offline and syncs later.
+- Clock in and out from every page, at a custom time or scheduled for later; a break is simply a clock-out; keyboard shortcut; works offline and syncs later.
 - Time account (target from the work schedule, worked, balance) and vacation account (entitlement, carry-over, half days).
 - Absence requests with a calendar of holidays and existing absences; sick report in one click with optional doctor's note.
 - Public holidays page: the calendar that applies to you (personal, team or company default), read-only.

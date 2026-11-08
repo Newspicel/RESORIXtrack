@@ -121,7 +121,8 @@ export function SignoffPage({
   const { data: scope } = useSuspenseQuery(teamScopeQuery)
   const params = { month: search.month ?? null, teamId: search.team ?? null }
   const q = useQuery({ ...signoffOverviewQuery(params), placeholderData: keepPreviousData })
-  const ov = q.data!
+  const ov = q.data
+  if (!ov) throw new Error("sign-off overview not loaded")
   const month = ov.month
   const monthLabel = fmtMonth(month, intl)
   const history = useQuery({ ...signoffsQuery({ month }), placeholderData: keepPreviousData })

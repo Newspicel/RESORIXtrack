@@ -22,7 +22,7 @@ The theme follows your device. Pick System, Light or Dark with the sun/moon butt
 
 ### Clocking
 
-- **Clock in**, **Clock out**, **Start break** (key B). During a break the clock counts it; **End break** clocks you in again on the same project (pick another one first to change it), **Clock out** ends the day. A break is the gap between two entries. The clock is on every page.
+- **Clock in**, **Clock out** (key S). A break is simply a clock-out; clock in again when it ends. The clock is on every page.
 - Keys: **S** clock in or out (when no field is focused). **⌘K** / **Ctrl K** search.
 - Offline: punches are stored and synced with their original time.
 - **Other time**: clock in up to 48 h back, or clock out at a chosen time. A past time closes the entry there. A future time (up to 24 h after the clock-in) clocks you out automatically then: the card shows *Clocks out automatically at 17:30* with *Cancel*; *Clock out now* ends the entry earlier. Such entries are marked manual.

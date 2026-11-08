@@ -57,7 +57,6 @@ export const SNAPSHOT_KEYS = {
     "regular_night_work",
     "birth_date",
   ],
-  work_log: ["date", "project_id", "customer_ref", "minutes", "start_time", "end_time", "note", "is_deleted"],
   project: ["name", "code", "color", "description", "team_id", "is_active"],
   api_token: ["name", "start", "scopes", "enabled", "expires_at"],
   holiday: ["calendar_id", "date", "name", "fraction"],

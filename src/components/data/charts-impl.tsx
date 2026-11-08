@@ -15,25 +15,9 @@ import { scaleBand } from "@tanstack/charts/scales/band"
 import { scaleLinear } from "@tanstack/charts/scales/linear"
 import { tooltip } from "@tanstack/charts/tooltip"
 import { portal } from "@tanstack/charts/tooltip/portal"
-import { type ReactNode, useSyncExternalStore } from "react"
 import { fmtMinutes } from "@/lib/format"
 import { ChartFrame } from "./charts"
 import { hourAxis, hourTicks } from "./hour-axis"
-
-const noSubscribe = () => () => {}
-
-/**
- * The server lays the SVG out for a default width, so until hydration measures the container it would show
- * squeezed and then snap to size. It keeps its space but stays hidden until it has its real width.
- */
-function Surface({ children }: { children: ReactNode }) {
-  const hydrated = useSyncExternalStore(
-    noSubscribe,
-    () => true,
-    () => false,
-  )
-  return <div className={hydrated ? undefined : "invisible"}>{children}</div>
-}
 
 /**
  * One tooltip for every chart: anchored above the focused bar (never on top of it), formatted values only
@@ -145,9 +129,7 @@ export function DayBarsChart({
         </table>
       }
     >
-      <Surface>
-        <Chart definition={definition} height={height} ariaLabel={ariaLabel} />
-      </Surface>
+      <Chart definition={definition} height={height} ariaLabel={ariaLabel} />
     </ChartFrame>
   )
 }
@@ -178,7 +160,7 @@ export function HBarChart({ rows, ariaLabel, signed }: { rows: readonly HBar[]; 
         axis: CATEGORY_AXIS,
       },
       x: {
-        scale: () => scaleLinear().domain([ticks[0], ticks.at(-1)!]),
+        scale: () => scaleLinear().domain([ticks[0], ticks[ticks.length - 1]]),
         grid: GRID,
         axis: valueAxis(ticks, (v: number) => `${fmtMinutes(v, { sign: signed }).replace(/:00$/, "")} h`),
       },
@@ -205,9 +187,7 @@ export function HBarChart({ rows, ariaLabel, signed }: { rows: readonly HBar[]; 
         </table>
       }
     >
-      <Surface>
-        <Chart definition={definition} height={Math.max(96, rows.length * 30 + 40)} ariaLabel={ariaLabel} />
-      </Surface>
+      <Chart definition={definition} height={Math.max(96, rows.length * 30 + 40)} ariaLabel={ariaLabel} />
     </ChartFrame>
   )
 }
@@ -276,9 +256,7 @@ export function BalanceChart({
         </table>
       }
     >
-      <Surface>
-        <Chart definition={definition} height={height} ariaLabel={ariaLabel} />
-      </Surface>
+      <Chart definition={definition} height={height} ariaLabel={ariaLabel} />
     </ChartFrame>
   )
 }

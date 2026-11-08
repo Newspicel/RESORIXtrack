@@ -22,6 +22,7 @@ import { useMe } from "@/lib/session"
 import { correctionsQuery, periodQuery, restoreEntryFn } from "./api"
 import { FindingsBadge } from "./day-marks"
 import { EntriesTable } from "./entries-table"
+import { entryContext } from "./entry-context"
 import { type Entry, EntryDialog, type EntryTarget } from "./entry-dialog"
 import { EntryHistoryDialog } from "./entry-history"
 import { invalidateTimeData } from "./invalidate"
@@ -80,15 +81,6 @@ export function TimeView({
   const closeOrOpen = (open: boolean) => {
     if (!open && search.add) onSearch({ ...search, add: undefined })
     setEditOpen(open)
-  }
-  const ctx = {
-    owner: view.user,
-    self,
-    today: view.today,
-    lockedMonths: view.lockedMonths,
-    reasonRequired: view.reasonRequired,
-    canEdit: view.canEdit,
-    entries: view.entries,
   }
   const openAdd = (date: string, start?: string) => {
     setTarget({ date: date > view.today ? view.today : date, start })
@@ -272,7 +264,7 @@ export function TimeView({
         open={editOpen || adding}
         onOpenChange={closeOrOpen}
         target={adding ? { date: view.today } : target}
-        ctx={ctx}
+        ctx={entryContext(view, self)}
         correction={target.entry ? corrections[target.entry.id] : undefined}
         onHistory={openHistory}
         onRestore={restore}

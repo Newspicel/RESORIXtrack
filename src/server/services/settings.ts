@@ -5,14 +5,14 @@
  * the first version, `setting_versions` each later value with the day it applies from. Calculations read the
  * value of each day (`settingsTimeline().at(date)`), so a change never reaches earlier days.
  */
-import { asc, eq, or } from "drizzle-orm"
+import { asc, desc, eq, inArray } from "drizzle-orm"
 import { isOneOf } from "@/lib/guards"
 import type { Json } from "@/lib/json"
 import { db } from "../db"
 import { absences, balanceAdjustments, settings as settingsTable, settingVersions, timeEntries } from "../db/schema"
-import { Conflict, Validation } from "../errors"
-import { addDays, localToday } from "../time"
-import { latestSignedDate } from "./locks"
+import { Validation } from "../errors"
+import { localToday } from "../time"
+import { ensureAfterLastSignOff } from "./locks"
 
 export {
   DEFAULTS,
@@ -86,16 +86,7 @@ export function settingsTimeline(): SettingsTimeline {
   return {
     changes,
     at: (date) => {
-      let lo = 0
-      let hi = changes.length - 1
-      let found = -1
-      while (lo <= hi) {
-        const mid = (lo + hi) >> 1
-        if (changes[mid] <= date) {
-          found = mid
-          lo = mid + 1
-        } else hi = mid - 1
-      }
+      const found = changes.findLastIndex((c) => c <= date)
       return found < 0 ? base : snapshots[found]
     },
   }
@@ -105,7 +96,7 @@ const companyToday = (base: Settings) => localToday(base.default_timezone)
 
 export function getAllSettings(): Settings {
   const timeline = settingsTimeline()
-  return timeline.changes.length ? timeline.at(companyToday(timeline.at(""))) : timeline.at("")
+  return timeline.at(companyToday(timeline.at("")))
 }
 
 export function getSetting<K extends SettingKey>(key: K): Settings[K] {
@@ -159,12 +150,7 @@ export function updateSettings(input: Partial<Record<string, unknown>>, opts: { 
         writeBase(key, value)
       }
     } else if (changed.length) {
-      const latest = latestSignedDate()
-      if (latest != null && from <= latest)
-        throw new Conflict(`Changes can apply from ${addDays(latest, 1)} on, after the last signed-off month`, {
-          code: "period_signed_off",
-          fields: { validFrom: "signed_off" },
-        })
+      ensureAfterLastSignOff(from, "validFrom")
       for (const [key, value] of changed)
         db.insert(settingVersions)
           .values({ key, validFrom: from, value })
@@ -181,8 +167,7 @@ export function settingChanges(): { key: string; validFrom: string; value: Json 
   return db
     .select({ key: settingVersions.key, validFrom: settingVersions.validFrom, value: settingVersions.value })
     .from(settingVersions)
-    .where(or(...VERSIONED_SETTINGS.map((k) => eq(settingVersions.key, k))))
-    .orderBy(asc(settingVersions.validFrom))
+    .where(inArray(settingVersions.key, [...VERSIONED_SETTINGS]))
+    .orderBy(desc(settingVersions.validFrom), desc(settingVersions.id))
     .all()
-    .toReversed()
 }

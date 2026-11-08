@@ -10,6 +10,7 @@ import { errorFields } from "@/lib/guards"
 import { useI18n } from "@/lib/i18n"
 import { LOCALES } from "@/lib/i18n-core"
 import { DEFAULT_LOCALE, isSupportedLocale } from "@/lib/locales"
+import { refreshSession } from "@/lib/session"
 import { changePassword, profileQuery, saveProfile } from "./api"
 
 export function PersonalSection() {
@@ -34,12 +35,7 @@ export function PersonalSection() {
       }
       toast.success(t("common.saved"))
       formApi.reset(value)
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ["profile"] }),
-        qc.invalidateQueries({ queryKey: ["bootstrap"] }),
-      ])
-      // the document title is rendered from the route context, which holds the old language
-      if (value.locale !== p.locale) await router.invalidate()
+      await Promise.all([qc.invalidateQueries({ queryKey: ["profile"] }), refreshSession(qc, router)])
     },
   })
   return (
@@ -73,13 +69,7 @@ export function PersonalSection() {
           <form.AppField name="notifyEmailOnCorrection">
             {(f) => <f.SwitchField row label={t("profile.notify_corrections")} />}
           </form.AppField>
-          <form.Subscribe selector={(st) => !st.isDefaultValue}>
-            {(dirty) => (
-              <SettingsFooter note={dirty ? t("admin.settings.unsaved") : undefined}>
-                <form.SubmitButton variant={dirty ? "default" : "outline"}>{t("common.save")}</form.SubmitButton>
-              </SettingsFooter>
-            )}
-          </form.Subscribe>
+          <form.SaveBar placement="group" />
         </SettingsGroup>
       </FormRoot>
     </form.AppForm>

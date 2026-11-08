@@ -18,6 +18,7 @@ import { fmtClockTime, hhmmToMin, minToHhmm, parseTimeText } from "./lib"
 
 const STEP = 15
 const COMPLETE_TIME = /^\d{1,2}[:.]\d{2}(\s*[ap]\.?m?\.?)?$/i
+const isComplete = (text: string) => COMPLETE_TIME.test(text.trim())
 
 function suggestions(from: string | null): string[] {
   const first = from ? Math.floor(hhmmToMin(from) / STEP) * STEP + STEP : 0
@@ -70,18 +71,30 @@ export function TimeInput({
   const items = suggestions(start)
   const current = parseTimeText(text) ?? (value || null)
   const anchor = anchorOf(current)
+  const [open, setOpen] = useState(false)
 
   return (
     <Autocomplete.Root
       items={items}
       mode="none"
+      open={open}
+      onOpenChange={(next, { reason, event }) => {
+        // typing reopens the list on every keystroke, also on the one that completes (and commits) a time
+        const typedComplete =
+          reason === "input-change" && event.target instanceof HTMLInputElement && isComplete(event.target.value)
+        setOpen(next && !typedComplete)
+      }}
       openOnInputClick
       value={text}
       itemToStringValue={(t: string) => fmtClockTime(t, hour12)}
       onValueChange={(next, details) => {
         setText(next)
         // a picked suggestion or a complete typed time applies at once; partial input waits for blur or Enter
-        if (details.reason === "item-press" || COMPLETE_TIME.test(next.trim())) commit(next)
+        if (details.reason === "item-press") commit(next)
+        else if (isComplete(next)) {
+          commit(next)
+          setOpen(false)
+        }
       }}
     >
       <Autocomplete.Input
@@ -96,7 +109,10 @@ export function TimeInput({
           onBlur?.()
         }}
         onKeyDown={(e) => {
-          if (e.key === "Enter") commit(text)
+          if (e.key === "Enter") {
+            commit(text)
+            setOpen(false)
+          }
           rest.onKeyDown?.(e)
         }}
       />

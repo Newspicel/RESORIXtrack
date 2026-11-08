@@ -36,8 +36,9 @@ import {
   workSchedules,
 } from "../db/schema"
 import { env } from "../env"
-import { Conflict, Forbidden, NotFound, Validation } from "../errors"
-import { iso, isValidTz, localDateOf, localToday, utcnow } from "../time"
+import { Conflict, NotFound, Validation } from "../errors"
+import { addDays, iso, isValidTz, localDateOf, localToday, utcnow } from "../time"
+import { maxDay, minDay } from "./absences.schemas"
 import { accountStart } from "./accounts"
 import { stopRunning } from "./clock"
 import { signedMonthsOverlapping } from "./locks"
@@ -50,13 +51,14 @@ import {
   canEditSchedule,
   ensureNotJoiningOwnTeam,
   getUserOr404,
-  otherAdminExists,
   requireAdmin,
+  requireSomeoneElse,
 } from "./permissions"
 import { record, snapshot } from "./revisions"
 import { getSetting } from "./settings"
 import { archiveTerms } from "./terms"
-import { currentTerms, type PersonTimeline, personTimeline, TERM_KEYS } from "./timeline"
+import { currentTerms, type PersonTimeline, personTimeline } from "./timeline"
+import { TERM_KEYS } from "./timeline.schemas"
 
 const EMAIL_RE =
   /^[a-z0-9!#$%&'*+/=?^_`{|}~.-]{1,64}@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/
@@ -411,14 +413,13 @@ const SELF_LOCKED = [
 const norm = (v: unknown) => (v === "" || v === undefined ? null : v)
 
 /**
- * Administrators cannot widen their own access or change what their own time and vacation count against, as
- * long as another administrator can do it for them.
+ * Widens access or changes what time and vacation count against: administrators need someone else for that on
+ * their own account.
  */
-function ensureNoSelfGrant(u: User, patch: Partial<UserInput>): void {
+function grantsOrRetargets(u: User, patch: Partial<UserInput>): boolean {
   const gainsCapability = (patch.capabilities ?? []).some((c) => !(u.capabilities ?? []).includes(c))
   const changesContract = SELF_LOCKED.some((k) => patch[k] !== undefined && norm(patch[k]) !== norm(u[k]))
-  if (gainsCapability || changesContract)
-    throw new Forbidden("Another administrator has to change this for you", { code: "not_for_yourself" })
+  return gainsCapability || changesContract
 }
 
 /** Emails are deferred (outbox) and go out only after the transaction committed. */
@@ -427,7 +428,8 @@ export function updateUser(actor: Actor, userId: number, patch: Partial<UserInpu
   const u = getUserOr404(userId)
   if (u.anonymizedAt) throw new Conflict("This account is anonymised", { code: "already_anonymised" })
   validate(patch, u)
-  if (u.id === actor.id && otherAdminExists(actor)) ensureNoSelfGrant(u, patch)
+  if (grantsOrRetargets(u, patch))
+    requireSomeoneElse(actor, u.id, "Another administrator has to change this for you", { hrExempt: false })
   const next: Partial<typeof users.$inferInsert> = {}
   let oldEmail: string | null = null
   if (patch.email !== undefined) {
@@ -530,12 +532,12 @@ function ensureEmploymentMoveAllowed(
   const [from, to] =
     key === "employmentStart"
       ? [
-          minDate(old ?? "0001-01-01", value ?? "0001-01-01"),
-          addDaysTo(maxDate(old ?? "0001-01-01", value ?? "0001-01-01"), -1),
+          minDay(old ?? "0001-01-01", value ?? "0001-01-01"),
+          addDays(maxDay(old ?? "0001-01-01", value ?? "0001-01-01"), -1),
         ]
       : [
-          addDaysTo(minDate(old ?? "9999-12-30", value ?? "9999-12-30"), 1),
-          maxDate(old ?? "9999-12-31", value ?? "9999-12-31"),
+          addDays(minDay(old ?? "9999-12-30", value ?? "9999-12-30"), 1),
+          maxDay(old ?? "9999-12-31", value ?? "9999-12-31"),
         ]
   if (from > to) return
   const rows = signedMonthsOverlapping(u.id, from, to)
@@ -570,12 +572,9 @@ export function rehire(actor: Actor, userId: number, start: string): User {
   requireAdmin(actor)
   const u = getUserOr404(userId)
   if (u.anonymizedAt) throw new Conflict("This account is anonymised", { code: "already_anonymised" })
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || Number.isNaN(Date.parse(start)))
-    throw new Validation("Please check your input", { fields: { employmentStart: "invalid" } })
   if (!u.employmentEnd || start <= u.employmentEnd)
     throw new Validation("Rehiring starts after the employment ended", { fields: { employmentStart: "before_end" } })
-  if (u.id === actor.id && otherAdminExists(actor))
-    throw new Forbidden("Another administrator has to change this for you", { code: "not_for_yourself" })
+  requireSomeoneElse(actor, u.id, "Another administrator has to change this for you", { hrExempt: false })
   const before = snapshot("user", u)
   db.insert(employmentHistory)
     .values({ userId: u.id, startDate: u.employmentStart ?? accountStart(u), endDate: u.employmentEnd })
@@ -598,15 +597,12 @@ export function rehire(actor: Actor, userId: number, start: string): User {
   return updated
 }
 
-const minDate = (a: string, b: string) => (a < b ? a : b)
-const maxDate = (a: string, b: string) => (a > b ? a : b)
-const addDaysTo = (d: string, n: number) => Temporal.PlainDate.from(d).add({ days: n }).toString()
-
 /** Sign out everywhere and expire pending invitation and password reset links (optionally API keys too). */
 function revokeAccess(userId: number, opts: { apiKeys?: boolean; passkeys?: boolean } = {}): number {
   if (opts.passkeys) db.delete(passkey).where(eq(passkey.userId, userId)).run()
+  // reset links are stored under a hash of their identifier (auth.ts), so only the value names the person
   db.delete(verification)
-    .where(and(like(verification.identifier, "reset-password:%"), eq(verification.value, String(userId))))
+    .where(eq(verification.value, String(userId)))
     .run()
   db.update(authTokens)
     .set({ usedAt: utcnow() })
@@ -793,8 +789,7 @@ export function ensureInvitable(actor: Actor, userId: number): User {
 export function setEntitlement(actor: Actor, userId: number, year: number, days: number | null, note = ""): void {
   const u = getUserOr404(userId)
   if (!actor.isAdmin && !canAdjustBalance(actor, u)) throw new NotFound("User not found")
-  if (u.id === actor.id && otherAdminExists(actor))
-    throw new Forbidden("Someone else has to set your entitlement", { code: "not_for_yourself" })
+  requireSomeoneElse(actor, u.id, "Someone else has to set your entitlement", { hrExempt: false })
   if (!Number.isInteger(year) || year < 1990 || year > 2100)
     throw new Validation("Invalid year", { fields: { year: "invalid" } })
   const row = db

@@ -104,17 +104,12 @@ export const Entry = named(
 export const ClockState = named(
   "ClockState",
   z.object({
-    state: z.enum(["idle", "working", "on_break"]),
-    since: instant.nullable().meta({ description: "Start of the running entry, or of the break." }),
+    state: z.enum(["idle", "working"]),
+    since: instant.nullable().meta({ description: "Start of the running entry." }),
     scheduledEnd: instant.nullable().meta({ description: "Scheduled clock-out of the running entry, if any." }),
     entry: Entry.nullable(),
     todayWorkedMin: minutes,
     todayBreakMin: minutes,
-    breakProjectId: z
-      .number()
-      .int()
-      .nullable()
-      .meta({ description: "On a break: the project the next clock-in continues unless another is given." }),
     serverTime: instant,
   }),
 )

@@ -11,23 +11,23 @@ import { Conflict, Validation } from "../errors"
 import { addDays, localToday } from "../time"
 import { accountStart } from "./accounts"
 import { resolveCalendarId } from "./holidays"
-import { signedMonthsOverlapping } from "./locks"
+import { ensureAfterLastSignOff } from "./locks"
 import { currentTerms, type PersonTimeline, personTimeline } from "./timeline"
 
 /**
  * Changed terms apply from `from` (default today): the current ones are kept for the days before, unless they
  * only just started (`from` is their first day) or nothing was recorded yet. Returns the day they apply from.
  */
-export function archiveTerms(u: User, from: string | null, timeline: PersonTimeline = personTimeline(u)): string {
+export function archiveTerms(
+  u: User,
+  from: string | null,
+  timeline: PersonTimeline = personTimeline(u),
+  calendarId: () => number | null = () => resolveCalendarId(u),
+): string {
   const today = localToday(u.timezone)
   const day = from ?? today
   if (day > today) throw new Validation("Changes apply from today at the latest", { fields: { termsFrom: "future" } })
-  const latest = signedMonthsOverlapping(u.id, "0001-01-01", "9999-12-31").at(-1)?.periodEndDate ?? null
-  if (latest != null && day <= latest)
-    throw new Conflict(`Changes can apply from ${addDays(latest, 1)} on, after the last signed-off month`, {
-      code: "period_signed_off",
-      fields: { termsFrom: "signed_off" },
-    })
+  ensureAfterLastSignOff(day, "termsFrom", u.id)
   const currentFrom = timeline.currentFrom ?? accountStart(u, timeline)
   if (day < currentFrom && timeline.currentFrom)
     throw new Conflict(`The current terms apply from ${currentFrom}; pick that day or later`, {
@@ -40,7 +40,7 @@ export function archiveTerms(u: User, from: string | null, timeline: PersonTimel
         userId: u.id,
         validUntil: addDays(day, -1),
         ...currentTerms(u),
-        holidayCalendarId: resolveCalendarId(u),
+        holidayCalendarId: calendarId(),
       })
       .run()
   return day
@@ -48,7 +48,15 @@ export function archiveTerms(u: User, from: string | null, timeline: PersonTimel
 
 /** Keep the earlier terms of everyone in `people` before a change that reaches them from today. */
 export function archiveFromToday(people: User[]): void {
-  for (const u of people) archiveTerms(u, null)
+  // the calendar follows from the own and team calendar only, so people sharing both share it
+  const calendars = new Map<string, number | null>()
+  for (const u of people) {
+    const key = `${u.holidayCalendarId}:${u.teamId}`
+    archiveTerms(u, null, personTimeline(u), () => {
+      if (!calendars.has(key)) calendars.set(key, resolveCalendarId(u))
+      return calendars.get(key) ?? null
+    })
+  }
 }
 
 /** People whose holiday calendar comes from their team (`teamId`) or, with null, the company default. */

@@ -2,20 +2,15 @@
   "label": "Clock",
   "start": "Clock in",
   "stop": "Clock out",
-  "break": "Start break",
-  "break_short": "Break",
-  "resume": "End break",
   "stop_now": "Clock out now",
   "stop_later": "Clock out later",
   "state": {
     "idle": "Not clocked in",
-    "working": "Working",
-    "on_break": "On break"
+    "working": "Working"
   },
   "headline": {
     "idle": "You're not clocked in",
-    "working": "You're clocked in",
-    "on_break": "You're on a break"
+    "working": "You're clocked in"
   },
   "offline": "Offline",
   "pending_one": "Offline, {count} pending",

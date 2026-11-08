@@ -163,10 +163,10 @@ export function WeekTimeline({
                 {list.map(({ entry: e, from, to }) => {
                   const corr = corrections[e.id]
                   const time = `${fmtClockTime(wallClock(e.startAt, tz).time, hour12)}–${e.endAt ? fmtClockTime(wallClock(e.endAt, tz).time, hour12) : "…"}`
-                  const what = e.project?.name
+                  const missing = needsProject?.has(e.id) ?? false
+                  const what = missing ? t("time.no_project") : e.project?.name
                   const label = `${t(`time.kind.${e.kind}`)} ${time}${what ? ` · ${what}` : ""}${e.note ? ` · ${e.note}` : ""}${corr ? ` · ${t("time.changed_by", { name: corr.by })}` : ""}`
                   const marked = e.edited || e.source === "manual"
-                  const missing = needsProject?.has(e.id) ?? false
                   const short = e.project ? projectShort(e.project) : ""
                   return (
                     <button

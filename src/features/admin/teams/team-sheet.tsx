@@ -72,7 +72,7 @@ export function TeamSheet({
       onSuccess: (r) => (teamId == null ? onCreated(r.id) : onClose()),
     },
   )
-  const remove = useAction(() => deleteTeamFn({ data: { id: teamId! } }), {
+  const remove = useAction((id: number) => deleteTeamFn({ data: { id } }), {
     success: t("admin.teams.deleted"),
     onSuccess: onClose,
   })
@@ -186,7 +186,7 @@ export function TeamSheet({
         title={t("admin.teams.delete_title", { name: team?.name ?? "" })}
         description={t("admin.teams.delete_message")}
         confirmLabel={t("common.delete")}
-        onConfirm={() => remove.mutateAsync(undefined)}
+        onConfirm={() => (teamId == null ? undefined : remove.mutateAsync(teamId))}
       />
     </EditorSheet>
   )

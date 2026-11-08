@@ -8,8 +8,9 @@
 import { and, asc, eq, gte, lte } from "drizzle-orm"
 import { db } from "../db"
 import { type Holiday, holidays, type User, userTermsHistory } from "../db/schema"
-import { addDays } from "../time"
+import { addDays, monthBounds } from "../time"
 import { applicableCalendar } from "./holiday-calendars"
+import type { EarlierTerms } from "./timeline"
 
 export function resolveCalendarId(user: Pick<User, "holidayCalendarId" | "teamId">): number | null {
   return applicableCalendar(user)?.calendar.id ?? null
@@ -21,18 +22,28 @@ interface CalendarSpan {
   calendarId: number | null
 }
 
-/** The calendars that apply to `user` over [start, end]: those of the earlier terms, then today's. */
-function calendarSpans(user: Pick<User, "id" | "holidayCalendarId" | "teamId">, start: string, end: string) {
-  const earlier = db
-    .select({ validUntil: userTermsHistory.validUntil, calendarId: userTermsHistory.holidayCalendarId })
+type EarlierCalendars = readonly Pick<EarlierTerms, "validUntil" | "holidayCalendarId">[]
+
+function earlierCalendars(userId: number): EarlierCalendars {
+  return db
+    .select({ validUntil: userTermsHistory.validUntil, holidayCalendarId: userTermsHistory.holidayCalendarId })
     .from(userTermsHistory)
-    .where(eq(userTermsHistory.userId, user.id))
+    .where(eq(userTermsHistory.userId, userId))
     .orderBy(asc(userTermsHistory.validUntil))
     .all()
+}
+
+/** The calendars that apply to `user` over [start, end]: those of the earlier terms (oldest first), then today's. */
+function calendarSpans(
+  user: Pick<User, "holidayCalendarId" | "teamId">,
+  start: string,
+  end: string,
+  earlier: EarlierCalendars,
+) {
   const spans: CalendarSpan[] = []
   let from = "0000-01-01"
   for (const r of earlier) {
-    spans.push({ from, to: r.validUntil, calendarId: r.calendarId })
+    spans.push({ from, to: r.validUntil, calendarId: r.holidayCalendarId })
     from = addDays(r.validUntil, 1)
   }
   spans.push({ from, to: "9999-12-31", calendarId: resolveCalendarId(user) })
@@ -44,13 +55,14 @@ function calendarSpans(user: Pick<User, "id" | "holidayCalendarId" | "teamId">, 
 }
 
 /** The calendar recorded with a sign-off of `month`: the one that applies on its last day. */
-export function monthCalendarId(user: Pick<User, "id" | "holidayCalendarId" | "teamId">, month: string): number | null {
-  const last = addDays(addMonthStart(month), -1)
-  return calendarSpans(user, last, last)[0]?.calendarId ?? null
+export function monthCalendarId(
+  user: Pick<User, "id" | "holidayCalendarId" | "teamId">,
+  month: string,
+  earlier: EarlierCalendars = earlierCalendars(user.id),
+): number | null {
+  const [, last] = monthBounds(Number(month.slice(0, 4)), Number(month.slice(5, 7)))
+  return calendarSpans(user, last, last, earlier)[0]?.calendarId ?? null
 }
-
-const addMonthStart = (month: string) =>
-  Temporal.PlainYearMonth.from(month).add({ months: 1 }).toPlainDate({ day: 1 }).toString()
 
 /** Holidays of a calendar in [start, end], keyed by date. */
 export function calendarHolidays(calendarId: number | null, start: string, end: string): Map<string, Holiday> {
@@ -70,9 +82,10 @@ export function holidaysFor(
   user: Pick<User, "id" | "holidayCalendarId" | "teamId">,
   start: string,
   end: string,
+  earlier: EarlierCalendars = earlierCalendars(user.id),
 ): Map<string, Holiday> {
   const out = new Map<string, Holiday>()
-  for (const span of calendarSpans(user, start, end))
+  for (const span of calendarSpans(user, start, end, earlier))
     for (const [d, h] of calendarHolidays(span.calendarId, span.from, span.to)) out.set(d, h)
   return out
 }

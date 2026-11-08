@@ -3,7 +3,7 @@ import { createFileRoute, redirect, useRouter } from "@tanstack/react-router"
 import { useState } from "react"
 import { toast } from "sonner"
 import { z } from "zod"
-import { defaultDays, HolidayPresetPicker } from "@/components/app/holiday-preset-picker"
+import { HolidayPresetPicker } from "@/components/app/holiday-preset-picker"
 import { focusField } from "@/components/form/focus-field"
 import { FormRoot, useAppForm } from "@/components/form/form"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -58,7 +58,7 @@ function Setup() {
       locale,
       timezone: browserTz("Europe/Zurich"),
       ...defaults,
-      holidays: { key: zurich ? "CH-ZH" : null, days: defaultDays(zurich) },
+      holidays: { key: zurich ? "CH-ZH" : null, days: zurich?.defaultDays ?? [] },
       adminName: "",
       adminEmail: "",
       adminPassword: "",

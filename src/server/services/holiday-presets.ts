@@ -5,7 +5,9 @@
  * by their English name, which is stable across years. Pure: no database access.
  */
 import Holidays from "date-holidays"
+import { DEFAULT_LOCALE, isSupportedLocale } from "@/lib/locales"
 import { Validation } from "../errors"
+import { nowInstant } from "../time"
 
 export interface PresetDay {
   date: string
@@ -27,6 +29,8 @@ export interface HolidayPreset {
   /** this year's days, for the preset picker */
   statutory: PresetDay[]
   selectable: SelectableDay[]
+  /** the selectable days ticked when the preset is picked */
+  defaultDays: string[]
 }
 
 /** Local or non-English names from date-holidays mapped to one English name (translated in the UI). */
@@ -51,7 +55,9 @@ const ALWAYS_SUNDAY = new Set([
 ])
 export const FEDERAL_DAY = "08-01" // Bundesfeiertag, the only federal public holiday (ArG Art. 20a para. 1)
 
-const lang = (locale?: string) => (locale && ["en", "de", "fr", "it"].includes(locale) ? locale : "en")
+const lang = (locale?: string) => (isSupportedLocale(locale) ? locale : DEFAULT_LOCALE)
+
+const currentYear = () => nowInstant().toZonedDateTimeISO(Temporal.Now.timeZoneId()).year
 
 /** The 26 cantons (code without "CH-"), named in the given language. */
 export function cantons(locale?: string): { code: string; name: string }[] {
@@ -125,11 +131,12 @@ export function presetHolidays(key: string, year: number, presetDays: readonly s
 }
 
 /** Ticked by default: commune days (they apply in most of the canton); optional days are the company's call. */
-export function defaultPresetDays(key: string, year: number = Temporal.Now.plainDateISO().year): string[] {
-  if (!isPresetKey(key)) return []
-  return selectableDays(key, year)
-    .filter((d) => d.kind === "commune")
-    .map((d) => d.name)
+function ticksByDefault(selectable: readonly SelectableDay[]): string[] {
+  return selectable.filter((d) => d.kind === "commune").map((d) => d.name)
+}
+
+export function defaultPresetDays(key: string, year: number = currentYear()): string[] {
+  return isPresetKey(key) ? ticksByDefault(selectableDays(key, year)) : []
 }
 
 /** The ticked days, deduplicated; a name that is not selectable in the preset is a field error. */
@@ -152,6 +159,9 @@ export function legacyPresetName(key: string): string {
   return `${key} ${presetName(key)}`
 }
 
-export function holidayPresets(locale?: string, year: number = Temporal.Now.plainDateISO().year): HolidayPreset[] {
-  return cantons(locale).map((c) => Object.assign({ key: `CH-${c.code}`, label: c.name }, cantonYear(c.code, year)))
+export function holidayPresets(locale?: string, year: number = currentYear()): HolidayPreset[] {
+  return cantons(locale).map((c) => {
+    const { statutory, selectable } = cantonYear(c.code, year)
+    return { key: `CH-${c.code}`, label: c.name, statutory, selectable, defaultDays: ticksByDefault(selectable) }
+  })
 }

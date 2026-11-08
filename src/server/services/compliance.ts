@@ -15,21 +15,22 @@ import { and, asc, eq, inArray } from "drizzle-orm"
 import { db } from "../db"
 import { type User, users } from "../db/schema"
 import { addDays, localToday, weekStart, zone } from "../time"
+import { minDay } from "./absences.schemas"
 import {
   breakRequiredMin,
   computeDaysFrom,
   type Day,
-  dayStartsMs,
   employedSpans,
   employmentFraction,
   entitlementForYear,
   entitlementOverrides,
   loadContext,
+  type Prebuilt,
   workdaysFactor,
 } from "./accounts"
 import { type Actor, dataFrom, isManager, requireView, seesDate, visibleUserIds } from "./permissions"
-import { type Settings, settingsTimeline } from "./settings"
-import { dayOfMs, type PersonTimeline, personTimeline, type Terms } from "./timeline"
+import { type Settings, type SettingsTimeline, settingsTimeline } from "./settings"
+import { dayOfMs, dayStartsMs, type PersonTimeline, personTimeline, type Terms } from "./timeline"
 
 export const RULES = {
   break_min: "ArG Art. 15",
@@ -89,10 +90,10 @@ const H = 3600_000
 const MIN_REST_MS = 11 * H
 const SHORT_REST_MS = 8 * H
 const MAX_SPAN_MIN = 14 * 60
-const BLOCK_GAP_MS = 3 * H
+export const BLOCK_GAP_MS = 3 * H
 const MAX_CONSECUTIVE = 6
 const DAILY_OVERTIME_MAX = 120
-const SPLIT_PIECE_MIN = 15 // a split break counts in pieces of at least 15 min
+export const SPLIT_PIECE_MIN = 15 // a split break counts in pieces of at least 15 min
 const MAX_STRETCH_MIN = 330 // more than 5.5 h before or after a break needs a break of its own (ArGV 1 Art. 18)
 const COMP_REST_THRESHOLD = 300 // > 5 h of Sunday/holiday work needs a 24 h rest day (ArG Art. 20 para. 2)
 const finding = (rule: RuleKey, severity: Severity, value: number, limit: number, at: Partial<Finding>): Finding => ({
@@ -155,13 +156,14 @@ export function overtimeFromDays(
   return out
 }
 
-interface Block {
+export interface Block {
   day: string
   startMs: number
   endMs: number
 }
 
-function workingBlocks(entries: EntryInterval[], tzOn: (date: string) => string): Block[] {
+/** Entries merged into blocks with work (gaps under 3 h), each on the local day it starts. */
+export function workingBlocks(entries: EntryInterval[], tzOn: (date: string) => string): Block[] {
   const sorted = [...entries].filter((e) => e.endMs > e.startMs).sort((a, b) => a.startMs - b.startMs)
   const blocks: Block[] = []
   let cur: { startMs: number; endMs: number; hasWork: boolean } | null = null
@@ -348,6 +350,24 @@ function workingDayBreaks(
     .filter((e) => e.endMs > span.startMs && e.startMs < span.endMs)
     .sort((a, b) => a.startMs - b.startMs)
   if (!segs.length) return []
+  const { gaps, stretches } = breakGaps(segs)
+  const worked = stretches.reduce((sum, s) => sum + s, 0)
+  const required = breakRequiredMin(worked)
+  const out: Finding[] = []
+  const taken = breakTaken(gaps, required)
+  if (taken + 1e-9 < required) out.push(finding("break_min", "violation", taken, required, { date: day }))
+  // without any break the day already has a break_min finding
+  const longest = Math.max(...stretches)
+  if (stretches.length > 1 && longest > MAX_STRETCH_MIN)
+    out.push(finding("break_stretch", "violation", longest, MAX_STRETCH_MIN, { date: day }))
+  return out
+}
+
+/**
+ * Gaps (min) between work segments sorted by start, the work stretches (min) between breaks of at least
+ * 15 min, and the end of the last segment. `segs` must not be empty.
+ */
+export function breakGaps(segs: readonly { startMs: number; endMs: number }[]) {
   const gaps: number[] = []
   const stretches: number[] = [0]
   let lastEnd = segs[0].startMs
@@ -360,17 +380,12 @@ function workingDayBreaks(
     stretches[stretches.length - 1] += (e.endMs - e.startMs) / 60000
     lastEnd = Math.max(lastEnd, e.endMs)
   }
-  const worked = stretches.reduce((sum, s) => sum + s, 0)
-  const required = breakRequiredMin(worked)
-  const out: Finding[] = []
-  const taken =
-    required >= 60 ? gaps.filter((g) => g >= SPLIT_PIECE_MIN).reduce((sum, g) => sum + g, 0) : Math.max(0, ...gaps)
-  if (taken + 1e-9 < required) out.push(finding("break_min", "violation", taken, required, { date: day }))
-  // without any break the day already has a break_min finding
-  const longest = Math.max(...stretches)
-  if (stretches.length > 1 && longest > MAX_STRETCH_MIN)
-    out.push(finding("break_stretch", "violation", longest, MAX_STRETCH_MIN, { date: day }))
-  return out
+  return { gaps, stretches, lastEnd }
+}
+
+/** Break minutes that count toward `required`: 15 and 30 min in one piece, 60 min in pieces of at least 15 min. */
+export function breakTaken(gaps: readonly number[], required: number): number {
+  return required >= 60 ? gaps.filter((g) => g >= SPLIT_PIECE_MIN).reduce((sum, g) => sum + g, 0) : Math.max(0, ...gaps)
 }
 
 /** Sunday, 1 August or a full-day public holiday of the person's calendar (ArG Art. 18, 20a). */
@@ -428,15 +443,28 @@ function activeWithin(start: string, end: string, at: ReturnType<typeof dayConte
   })
 }
 
-const minDay = (a: string, b: string) => (a < b ? a : b)
 const daysBetween = (a: string, b: string) => Temporal.PlainDate.from(a).until(b).days
 const termChanges = (timeline: PersonTimeline) => timeline.earlier.map((t) => addDays(t.validUntil, 1))
+
+/** The timelines of `loaded`, else the ones passed in, else built now. */
+function prebuilt(
+  user: User,
+  loaded: Loaded | undefined,
+  pre: Prebuilt,
+): { settings: SettingsTimeline; timeline: PersonTimeline } {
+  if (loaded)
+    return {
+      settings: { at: loaded.ctx.settingsAt, changes: loaded.ctx.settingChanges },
+      timeline: loaded.ctx.timeline,
+    }
+  return { settings: pre.settings ?? settingsTimeline(), timeline: pre.timeline ?? personTimeline(user) }
+}
 
 /** Days and entries of a person, loaded once and shared by the checks (compliance report). */
 export type Loaded = ReturnType<typeof load>
 
-export function load(user: User, from: string, to: string) {
-  const ctx = loadContext(user, from, to, { includePending: false })
+export function load(user: User, from: string, to: string, pre: Prebuilt = {}) {
+  const ctx = loadContext(user, from, to, { ...pre, includePending: false })
   const nowMs = ctx.nowMs
   const entries: EntryInterval[] = ctx.entries.map((e) => ({
     kind: e.kind,
@@ -447,16 +475,15 @@ export function load(user: User, from: string, to: string) {
 }
 
 /** Findings for a person in [start, end] (dates in the person's timezone). */
-export function periodFindings(user: User, start: string, end: string, loaded?: Loaded): Finding[] {
+export function periodFindings(user: User, start: string, end: string, loaded?: Loaded, pre: Prebuilt = {}): Finding[] {
   if (end < start) return []
-  const settings = settingsTimeline()
-  const timeline = personTimeline(user)
+  const { settings, timeline } = prebuilt(user, loaded, pre)
   const at = dayContext(settings.at, timeline)
   if (!activeWithin(start, end, at, [...settings.changes, ...termChanges(timeline)])) return []
   const from = weekStart(addDays(start, -7))
   // a week beyond the end: the compensatory rest day may follow Sunday work (ArG Art. 20)
   const to = addDays(weekStart(addDays(end, 7)), 6)
-  const { days, entries } = loaded ?? load(user, from, to)
+  const { days, entries } = loaded ?? load(user, from, to, { settings, timeline })
   const { rules, person } = at(end)
   return evaluatePeriod({ start, end, tz: user.timezone, days, entries, person, rules, at, tzOn: timeline.tzOn })
 }
@@ -472,12 +499,12 @@ export interface OvertimeYear {
 }
 
 /** Überzeit tally of a calendar year vs 170 h (45-h staff) / 140 h (50-h staff). */
-export function overtimeYear(user: User, year: number, loaded?: Loaded): OvertimeYear {
+export function overtimeYear(user: User, year: number, loaded?: Loaded, pre: Prebuilt = {}): OvertimeYear {
   const yStart = `${year}-01-01`
   const yEnd = `${year}-12-31`
   const today = localToday(user.timezone)
   const to = yEnd < today ? addDays(weekStart(yEnd), 6) : today
-  const { ctx, days } = loaded ?? load(user, weekStart(yStart), to)
+  const { ctx, days } = loaded ?? load(user, weekStart(yStart), to, pre)
   const perDay = overtimeFromDays(days, (w) => ctx.timeline.termsOn(w).legalWeeklyMaxHours)
   // the limit follows the legal maximum at the end of the year (or today)
   const weeklyMaxHours = ctx.timeline.termsOn(minDay(yEnd, today)).legalWeeklyMaxHours
@@ -553,19 +580,25 @@ export function hasVacationBlock(days: Pick<Day, "date" | "scheduledMin" | "vaca
 }
 
 /** Year-level findings: Überzeit tally, minimum vacation entitlement, two-week vacation block. */
-export function yearFindings(user: User, year: number, overtime?: OvertimeYear, loaded?: Loaded): Finding[] {
-  const settings = settingsTimeline()
-  const timeline = personTimeline(user)
+export function yearFindings(
+  user: User,
+  year: number,
+  overtime?: OvertimeYear,
+  loaded?: Loaded,
+  pre: Prebuilt = {},
+): Finding[] {
+  const { settings, timeline } = prebuilt(user, loaded, pre)
   const yEnd = minDay(`${year}-12-31`, localToday(user.timezone))
   const { rules, person } = dayContext(settings.at, timeline)(yEnd)
   if (!active(rules, person)) return []
   const out: Finding[] = []
-  const ot = overtimeYearFinding(overtime ?? overtimeYear(user, year, loaded))
+  const ot = overtimeYearFinding(overtime ?? overtimeYear(user, year, loaded, { settings, timeline }))
   if (ot) out.push(ot)
   const frac = employmentFraction(timeline, year)
   if (frac <= 0) return out
   const ctx =
-    loaded?.ctx ?? loadContext(user, `${year}-01-01`, `${year}-12-31`, { includePending: false, entries: false })
+    loaded?.ctx ??
+    loadContext(user, `${year}-01-01`, `${year}-12-31`, { settings, timeline, includePending: false, entries: false })
   const yearDays = () =>
     (loaded?.days ?? computeDaysFrom(ctx, { raw: true })).filter((d) => d.date.startsWith(`${year}-`))
   const spans = employedSpans(timeline, year)
@@ -614,9 +647,11 @@ export function findingsFor(actor: Actor, userId: number, start: string, end: st
 
 export function yearFindingsFor(actor: Actor, userId: number, year: number) {
   const user = requireView(actor, userId)
-  const overtime = overtimeYear(user, year)
+  const pre = { settings: settingsTimeline(), timeline: personTimeline(user) }
+  const overtime = overtimeYear(user, year, undefined, pre)
   const weeks = overtime.weeks.filter((w) => seesDate(actor, user, addDays(w.week, 6)))
-  return { overtime: { ...overtime, weeks }, findings: coveredFindings(actor, user, yearFindings(user, year)) }
+  const findings = yearFindings(user, year, overtime, undefined, pre)
+  return { overtime: { ...overtime, weeks }, findings: coveredFindings(actor, user, findings) }
 }
 
 export interface TeamComplianceRow {
@@ -651,8 +686,9 @@ export function teamComplianceSummary(
     .where(and(...conds))
     .orderBy(asc(users.name))
     .all()
+  const settings = settingsTimeline()
   return people.map((u) => {
-    const findings = coveredFindings(actor, u, periodFindings(u, start, end))
+    const findings = coveredFindings(actor, u, periodFindings(u, start, end, undefined, { settings }))
     const rules: Partial<Record<RuleKey, number>> = {}
     for (const f of findings) rules[f.rule] = (rules[f.rule] ?? 0) + 1
     return { userId: u.id, name: u.name, teamId: u.teamId, counts: countFindings(findings), rules }

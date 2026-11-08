@@ -12,11 +12,6 @@ export interface PresetChoice {
   days: string[]
 }
 
-/** Ticked by default: commune days apply in most of the canton; optional days are the company's call. */
-export function defaultDays(preset: HolidayPreset | undefined): string[] {
-  return preset?.selectable.filter((d) => d.kind === "commune").map((d) => d.name) ?? []
-}
-
 const SHOWN_COMMUNES = 4
 
 /** Canton (list and map), its statutory days and a checklist of its optional and commune days. */
@@ -41,7 +36,7 @@ export function HolidayPresetPicker({
   const preset = presets.find((p) => p.key === value.key)
   const pick = (key: string | null) => {
     if (key === value.key) return
-    onChange({ key, days: defaultDays(presets.find((p) => p.key === key)) })
+    onChange({ key, days: presets.find((p) => p.key === key)?.defaultDays ?? [] })
   }
   const toggle = (name: string, on: boolean) =>
     onChange({ key: value.key, days: on ? [...value.days, name] : value.days.filter((d) => d !== name) })

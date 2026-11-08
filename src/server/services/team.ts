@@ -11,7 +11,6 @@ import { addDays, iso, localToday, monthBounds, weekStart } from "../time"
 import { absenceTypesById, serializeAbsenceType } from "./absence-types"
 import { absencesInRange, clippedDays, minDay, serializeAbsences } from "./absences"
 import { computeDays, personAccounts, summarize, timeBalance, vacationAccount } from "./accounts"
-import { openBreaks } from "./clock"
 import { countFindings, periodFindings, teamComplianceSummary } from "./compliance"
 import {
   type Actor,
@@ -23,27 +22,24 @@ import {
   seesDate,
 } from "./permissions"
 import { scheduleOn, schedulesOf } from "./schedules"
+import { settingsTimeline } from "./settings"
 import { monthStatus, parseMonth, scopeUsers } from "./signoffs"
 
 export { overviewInput } from "./team.schemas"
 
 import { overviewInput } from "./team.schemas"
 
-export type PresenceState = "working" | "break" | "off"
+export type PresenceState = "working" | "off"
 
-/** Running entries and open breaks of these people: two queries. */
+/** Running entries of these people: one query. */
 function presence(userIds: number[]): Map<number, { state: PresenceState; since: string }> {
   if (!userIds.length) return new Map()
   const rows = db
-    .select({ userId: timeEntries.userId, kind: timeEntries.kind, startAt: timeEntries.startAt })
+    .select({ userId: timeEntries.userId, startAt: timeEntries.startAt })
     .from(timeEntries)
     .where(and(inArray(timeEntries.userId, userIds), isNull(timeEntries.endAt), eq(timeEntries.isDeleted, false)))
     .all()
-  const out = new Map<number, { state: PresenceState; since: string }>()
-  for (const [userId, b] of openBreaks(userIds)) out.set(userId, { state: "break", since: b.since })
-  // a running entry wins over a break left behind
-  for (const r of rows) out.set(r.userId, { state: r.kind === "break" ? "break" : "working", since: iso(r.startAt) })
-  return out
+  return new Map(rows.map((r) => [r.userId, { state: "working" as const, since: iso(r.startAt) }]))
 }
 
 function teamNames(people: User[]): Map<number, string> {
@@ -79,6 +75,7 @@ export function teamOverview(actor: Actor, raw: z.input<typeof overviewInput> = 
   const signed = monthStatus(ids, month)
   const names = teamNames(people)
   const lastDay = minDay(mEnd, today)
+  const settings = settingsTimeline()
   const findings = new Map(
     mStart <= lastDay
       ? teamComplianceSummary(actor, mStart, lastDay, input.teamId).map((r) => [r.userId, r.counts])
@@ -87,7 +84,7 @@ export function teamOverview(actor: Actor, raw: z.input<typeof overviewInput> = 
   // the team summary leaves out the viewer; a lead in their own team still sees their own row's findings
   const self = people.find((u) => u.id === actor.id)
   if (self && mStart <= lastDay && !findings.has(self.id))
-    findings.set(self.id, countFindings(periodFindings(self, mStart, lastDay)))
+    findings.set(self.id, countFindings(periodFindings(self, mStart, lastDay, undefined, { settings })))
 
   const members = people.map((u) => {
     const mine = week.filter((a) => a.userId === u.id)
@@ -104,7 +101,7 @@ export function teamOverview(actor: Actor, raw: z.input<typeof overviewInput> = 
         daysThisWeek: clippedDays(u, a, wStart, wEnd),
       }
     }
-    const acc = personAccounts(u, mStart, mEnd, y)
+    const acc = personAccounts(u, mStart, mEnd, y, { settings })
     const vac = acc.vacation
     return {
       user: {

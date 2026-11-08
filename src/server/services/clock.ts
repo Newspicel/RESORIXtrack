@@ -1,10 +1,7 @@
 /**
- * The clock (idle, working, on a break), port of v1 services/entries.py. A break is the gap between two work
- * entries: `pause` closes the running entry like a clock-out and remembers the break (app_state, with the
- * project), so the clock shows "on a break since" and the next clock-in ends it on the same project. A
- * clock-out during the break ends the day; a break left open expires after 12 h. "Clock out later" schedules
- * the clock-out: the entry stays open and is closed at exactly that time by `closeDueScheduled` (worker job
- * every minute, and first thing in every clock request).
+ * The clock (idle <-> working), port of v1 services/entries.py. A break is simply a clock-out: the gap between
+ * two work entries. "Clock out later" schedules the clock-out: the entry stays open and is closed at exactly
+ * that time by `closeDueScheduled` (worker job every minute, and first thing in every clock request).
  *
  * - Actions are idempotent: repeating the current state's action is a no-op (double clicks, retries).
  * - `at` backdates an action (offline sync, or a time chosen by hand with `custom`, which marks the entry
@@ -18,19 +15,17 @@
  *   second, so no break appears and the legal-rest check does not apply. Within the first minute of an entry
  *   it just relabels that entry.
  */
-import { and, eq, gt, inArray, isNotNull, isNull, like, lt, lte, max } from "drizzle-orm"
-import { isRecord } from "@/lib/guards"
+import { and, eq, gt, isNotNull, isNull, like, lt, lte, max } from "drizzle-orm"
 import { db, rawSqlite } from "../db"
 import { appState, type TimeEntry, timeEntries, type User } from "../db/schema"
 import { AppError, Conflict, Validation } from "../errors"
-import { dayBoundsUtc, iso, localDateOf, localToday, nowInstant, utcnow, zone } from "../time"
+import { dayBoundsUtc, instantOfMs, iso, localClock, localDateOf, localToday, nowInstant, utcnow } from "../time"
 import { CLOCK_ACTIONS, type OFFLINE_ACTIONS } from "./clock.schemas"
 import { ensureLegalRest } from "./clock-guards"
 import {
   type EntrySource,
   type EntryView,
   entriesBetween,
-  instantOfMs,
   MAX_ENTRY_MS,
   ms,
   parseInstantInput,
@@ -46,14 +41,13 @@ export { CLOCK_ACTIONS, OFFLINE_ACTIONS } from "./clock.schemas"
 
 export type ClockAction = (typeof CLOCK_ACTIONS)[number]
 export type OfflineClockAction = (typeof OFFLINE_ACTIONS)[number]
-export type ClockStateName = "idle" | "working" | "on_break"
+export type ClockStateName = "idle" | "working"
 
 const FUTURE_TOLERANCE_MS = 2 * 60_000
 const BACKDATE_NOTE_AFTER_MS = 15 * 60_000
 const CLOCK_BACKDATE_LIMIT_MS = 48 * 3600_000
 const RAPID_MS = 5000
 const OFFLINE_KEEP_DAYS = 30
-const BREAK_EXPIRES_MS = 12 * 3600_000
 export const SCHEDULED_CLOCK_OUT_REASON = "clock (scheduled clock-out)"
 
 export interface ClockState {
@@ -65,66 +59,7 @@ export interface ClockState {
   todayWorkedMin: number
   /** Gaps between today's work entries (first start to last end minus worked), as the time account counts. */
   todayBreakMin: number
-  /** On a break: the project the next clock-in continues. */
-  breakProjectId: number | null
   serverTime: string
-}
-
-// ------------------------------------------------------------------ breaks
-
-interface OpenBreak {
-  since: string
-  projectId: number | null
-}
-
-const breakKey = (userId: number) => `clock-break:${userId}`
-
-function parseBreak(value: string | undefined): OpenBreak | null {
-  const b: unknown = value ? JSON.parse(value) : null
-  if (!isRecord(b) || typeof b.since !== "string") return null
-  const projectId = typeof b.projectId === "number" ? b.projectId : null
-  return nowInstant().epochMilliseconds - ms(b.since) < BREAK_EXPIRES_MS ? { since: b.since, projectId } : null
-}
-
-/** The break a person is on: started with `pause`, not yet ended by a clock-in or clock-out, under 12 h old. */
-export function openBreak(userId: number): OpenBreak | null {
-  return parseBreak(
-    db
-      .select()
-      .from(appState)
-      .where(eq(appState.key, breakKey(userId)))
-      .get()?.value,
-  )
-}
-
-/** Open breaks of these people (one query on the primary key). */
-export function openBreaks(userIds: number[]): Map<number, OpenBreak> {
-  if (!userIds.length) return new Map()
-  const rows = db
-    .select()
-    .from(appState)
-    .where(inArray(appState.key, userIds.map(breakKey)))
-    .all()
-  const out = new Map<number, OpenBreak>()
-  for (const r of rows) {
-    const b = parseBreak(r.value)
-    if (b) out.set(Number(r.key.slice("clock-break:".length)), b)
-  }
-  return out
-}
-
-function beginBreak(userId: number, since: number, projectId: number | null): void {
-  const value = JSON.stringify({ since: iso(instantOfMs(since)), projectId } satisfies OpenBreak)
-  db.insert(appState)
-    .values({ key: breakKey(userId), value, updatedAt: utcnow() })
-    .onConflictDoUpdate({ target: appState.key, set: { value, updatedAt: utcnow() } })
-    .run()
-}
-
-export function endBreak(userId: number): void {
-  db.delete(appState)
-    .where(eq(appState.key, breakKey(userId)))
-    .run()
 }
 
 export function openEntry(userId: number): TimeEntry | undefined {
@@ -144,7 +79,6 @@ export function clockState(user: User): ClockState {
   let first = Number.POSITIVE_INFINITY
   let last = Number.NEGATIVE_INFINITY
   for (const t of entriesBetween(user.id, s, en)) {
-    if (t.kind !== "work") continue // legacy break rows
     const a = Math.max(ms(t.startAt), ms(s))
     const b = Math.min(t.endAt ? ms(t.endAt) : now, ms(en))
     if (b <= a) continue
@@ -153,15 +87,13 @@ export function clockState(user: User): ClockState {
     last = Math.max(last, b)
   }
   const breaks = worked > 0 ? Math.max(0, (last - first) / 60000 - worked) : 0
-  const pause = e ? null : openBreak(user.id)
   return {
-    state: e ? "working" : pause ? "on_break" : "idle",
+    state: e ? "working" : "idle",
     entry: e ? serializeEntry(e) : null,
-    since: e ? iso(e.startAt) : (pause?.since ?? null),
+    since: e ? iso(e.startAt) : null,
     scheduledEnd: e ? iso(e.scheduledEndAt) : null,
     todayWorkedMin: Math.round(worked * 100) / 100,
     todayBreakMin: Math.round(breaks * 100) / 100,
-    breakProjectId: pause?.projectId ?? null,
     serverTime: iso(utcnow()),
   }
 }
@@ -251,8 +183,9 @@ function startNew(actor: Actor, t0: number, source: RevisionSource, opts: StartO
       })
   }
   if (!opts.continues) ensureLegalRest(user, t)
+  // a switch passes the project it already resolved
   const project = opts.continues
-    ? resolveProjectFields(actor, user, opts.project ?? {}, null)
+    ? { projectId: opts.project?.projectId ?? null }
     : projectOrNone(actor, user, opts.project)
   const scheduled = opts.continues?.scheduledEndAt
   const entrySource: EntrySource = source === "web" ? "clock" : source
@@ -329,11 +262,6 @@ function close(actor: Actor, e: TimeEntry, t0: number, source: RevisionSource, r
   return t
 }
 
-const localHHMM = (t: number, tz: string) =>
-  Temporal.Instant.fromEpochMilliseconds(t).toZonedDateTimeISO(zone(tz)).toPlainTime().toString({
-    smallestUnit: "minute",
-  })
-
 /** "Clock out later": the entry stays open and `closeDueScheduled` closes it at `t0` (whole seconds). */
 function schedule(actor: Actor, e: TimeEntry, t0: number, source: RevisionSource): void {
   const t = Math.floor(t0 / 1000) * 1000
@@ -357,7 +285,7 @@ function schedule(actor: Actor, e: TimeEntry, t0: number, source: RevisionSource
     actor,
     subjectUserId: actor.id,
     before,
-    reason: `clock-out scheduled for ${localHHMM(t, actor.user.timezone)}`,
+    reason: `clock-out scheduled for ${localClock(t, actor.user.timezone)}`,
     source,
   })
 }
@@ -434,28 +362,12 @@ export function clockAction(actor: Actor, action: ClockAction, opts: ClockOption
   if (action === "unschedule") {
     if (current?.scheduledEndAt) unschedule(actor, current, source)
   } else if (action === "start" || (action === "switch" && !current)) {
-    if (!current) {
-      // ending a break carries on with the project worked on before it, unless another one is given
-      const pause = openBreak(user.id)
-      const project = opts.projectId === undefined && pause ? { projectId: pause.projectId } : opts
-      startNew(actor, clockTime(at, undefined), source, { note: opts.note, project })
-      endBreak(user.id)
-    }
+    if (!current) startNew(actor, clockTime(at, undefined), source, { note: opts.note, project: opts })
   } else if (action === "switch" && current) {
     switchProject(actor, current, clockTime(at, current), source, opts)
-  } else if (action === "pause") {
-    if (current) {
-      const end = close(actor, current, clockTime(at, current), source, "clock (break)")
-      beginBreak(user.id, end, current.projectId)
-    }
   } else if (current) {
     if (at && ms(at) > nowInstant().epochMilliseconds + FUTURE_TOLERANCE_MS) schedule(actor, current, ms(at), source)
-    else {
-      close(actor, current, clockTime(at, current), source)
-      endBreak(user.id)
-    }
-  } else {
-    endBreak(user.id) // a clock-out during a break ends the day
+    else close(actor, current, clockTime(at, current), source)
   }
   return clockState(user)
 }
@@ -496,7 +408,6 @@ function switchProject(actor: Actor, current: TimeEntry, t: number, source: Revi
  * the 24 h limit, so a forgotten clock-out is not credited for days.
  */
 export function stopRunning(user: User, actor: Actor | null, reason = ""): TimeEntry | null {
-  endBreak(user.id)
   const e = openEntry(user.id)
   if (!e) return null
   const before = snapshot("time_entry", e)

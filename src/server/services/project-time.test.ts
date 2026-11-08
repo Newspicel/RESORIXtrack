@@ -154,24 +154,6 @@ describe("clock with projects", () => {
     expect(computeDays(anna, TODAY, TODAY)[0]).toMatchObject({ workedMin: 180, breakMin: 0, projectMin: 180 })
   })
 
-  it("ending a break continues its project unless another one is chosen", () => {
-    const { anna, pm, internal } = org()
-    const A = loadActor(anna.id)
-    const client = saveProject(loadActor(pm.id), { name: "Client" })
-    freeze(at(-120))
-    clockAction(A, "start", { projectId: internal.id })
-    freeze(at(-60))
-    expect(clockAction(A, "pause")).toMatchObject({ state: "on_break", breakProjectId: internal.id })
-    freeze(at(-50))
-    clockAction(A, "start")
-    expect(openEntry(anna.id)?.projectId).toBe(internal.id)
-    freeze(at(-30))
-    clockAction(A, "pause")
-    freeze(at(-20))
-    clockAction(A, "start", { projectId: client.id })
-    expect(openEntry(anna.id)?.projectId).toBe(client.id)
-  })
-
   it("a switch after hours of work is not a clock-in: the legal-rest check does not apply", () => {
     const { anna, internal } = org()
     const A = loadActor(anna.id)

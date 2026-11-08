@@ -20,15 +20,12 @@ test("clock in, clock out, clock in again from the bar; dashboard follows", asyn
   await expect(hero).toHaveAccessibleName("You're clocked in")
   await expect(hero).toContainText(/since \d{2}:\d{2}/)
 
-  // a break: the clock counts it, ending it clocks in again; a clock-out during one ends the day
-  await bar.getByRole("button", { name: "Start break", exact: true }).click()
-  await expect(bar).toContainText("On break")
-  await expect(hero).toHaveAccessibleName("You're on a break")
-  await bar.getByRole("button", { name: "End break", exact: true }).click()
-  await expect(bar).toContainText("Working")
+  // a break is simply a clock-out followed by a clock-in
+  await bar.getByRole("button", { name: "Clock out", exact: true }).click()
+  await expect(bar).toContainText("Not clocked in")
+  await expect(hero).toHaveAccessibleName("You're not clocked in")
+  await bar.getByRole("button", { name: "Clock in", exact: true }).click()
   await expect(hero).toHaveAccessibleName("You're clocked in")
-  await bar.getByRole("button", { name: "Start break", exact: true }).click()
-  await expect(hero).toHaveAccessibleName("You're on a break")
   await bar.getByRole("button", { name: "Clock out", exact: true }).click()
   await expect(bar).toContainText("Not clocked in")
   await expect(hero).toHaveAccessibleName("You're not clocked in")
@@ -53,7 +50,6 @@ test("clock out later: stays clocked in until the chosen time; 'clock out now' e
   const hhmm = zurich(new Date(Date.now() + 2 * 3600_000), { hour: "2-digit", minute: "2-digit" })
   await hero.getByRole("button", { name: "Other time" }).click()
   await page.getByLabel("End time").fill(hhmm)
-  await page.keyboard.press("Tab") // closes the time suggestions
   await page.getByRole("button", { name: "Clock out later" }).click()
   await expect(hero).toContainText(`Clocks out automatically at ${hhmm}`)
   await expect(hero).toHaveAccessibleName("You're clocked in")
@@ -150,7 +146,7 @@ test("projects: an entry books its project, the reminder marks work without one,
   const dialog = page.getByRole("dialog", { name: "Add entry" })
   await dialog.getByLabel("Start").fill("09:00")
   await dialog.getByLabel("End").fill("10:15")
-  await dialog.getByLabel("Note").fill("E2E project entry") // closes the time suggestions
+  await dialog.getByLabel("Note").fill("E2E project entry")
   await dialog.getByLabel(/^Reason/).fill("Forgot to clock in")
   await dialog.getByRole("combobox", { name: "Project" }).click()
   await page.getByRole("option", { name: /^Training/ }).click()

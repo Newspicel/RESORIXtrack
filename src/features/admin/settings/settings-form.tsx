@@ -3,10 +3,9 @@ import { useState } from "react"
 import { toast } from "sonner"
 import { EffectiveDateDialog } from "@/components/app/effective-date-dialog"
 import { Segmented } from "@/components/app/segmented"
-import { SaveBar, SettingRow, SettingsGroup } from "@/components/app/settings"
+import { SettingRow, SettingsGroup } from "@/components/app/settings"
 import { FormRoot, useAppForm } from "@/components/form/form"
 import { applyServerErrors } from "@/components/form/server-errors"
-import { Button } from "@/components/ui/button"
 import { Combobox } from "@/components/ui/combobox"
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@/components/ui/input-group"
 import { Textarea } from "@/components/ui/textarea"
@@ -182,7 +181,10 @@ export function SettingsForm({
                     value={String(field.state.value)}
                     onValueChange={(v) => field.handleChange(v)}
                     aria-labelledby={`s-${s.key}-label`}
-                    options={s.options!.map((o) => ({ value: o, label: t(`admin.settings.options.${s.key}.${o}`) }))}
+                    options={(s.options ?? []).map((o) => ({
+                      value: o,
+                      label: t(`admin.settings.options.${s.key}.${o}`),
+                    }))}
                   />
                 }
               />
@@ -260,29 +262,18 @@ export function SettingsForm({
       <FormRoot form={form} className="flex flex-col gap-8">
         {groups.map((g) => (
           <SettingsGroup key={g.title} title={t(`admin.settings.groups.${g.title}`)}>
-            {g.fields.map((s) =>
-              s.when ? (
-                <form.Subscribe key={s.key} selector={(st) => st.values[s.when![0]]}>
-                  {(v) => (String(v) === s.when![1] ? render(s) : null)}
+            {g.fields.map((s) => {
+              if (!s.when) return render(s)
+              const [key, shownFor] = s.when
+              return (
+                <form.Subscribe key={s.key} selector={(st) => st.values[key]}>
+                  {(v) => (String(v) === shownFor ? render(s) : null)}
                 </form.Subscribe>
-              ) : (
-                render(s)
-              ),
-            )}
+              )
+            })}
           </SettingsGroup>
         ))}
-        <form.Subscribe selector={(st) => !st.isDefaultValue}>
-          {(dirty) => (
-            <SaveBar dirty={dirty} label={t("admin.settings.unsaved")}>
-              {dirty ? (
-                <Button type="button" variant="ghost" onClick={() => form.reset()}>
-                  {t("common.discard")}
-                </Button>
-              ) : null}
-              <form.SubmitButton>{t("common.save")}</form.SubmitButton>
-            </SaveBar>
-          )}
-        </form.Subscribe>
+        <form.SaveBar />
       </FormRoot>
       {asking ? (
         <EffectiveDateDialog

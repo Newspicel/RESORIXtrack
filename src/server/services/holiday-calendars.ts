@@ -251,6 +251,14 @@ export function applicableCalendar(user: Pick<User, "holidayCalendarId" | "teamI
   return def ? { calendar: def, source: "default", team: null } : null
 }
 
+/** Everyone whose applicable calendar (own, else team's, else the default, as in applicableCalendar) is `calendarId`. */
+function peopleOnCalendar(calendarId: number): User[] {
+  const own = sql`(select ${holidayCalendars.id} from ${holidayCalendars} where ${holidayCalendars.id} = ${users.holidayCalendarId})`
+  const team = sql`(select ${holidayCalendars.id} from ${teams} join ${holidayCalendars} on ${holidayCalendars.id} = ${teams.holidayCalendarId} where ${teams.id} = ${users.teamId})`
+  const fallback = sql`(select ${holidayCalendars.id} from ${holidayCalendars} where ${eq(holidayCalendars.isDefault, true)} limit 1)`
+  return db.select().from(users).where(sql`coalesce(${own}, ${team}, ${fallback}) = ${calendarId}`).all()
+}
+
 /** Years with at least one holiday, ascending. */
 function calendarYears(calendarId: number): number[] {
   const year = sql<string>`substr(${holidays.date}, 1, 4)`
@@ -406,7 +414,8 @@ export function setDefaultCalendar(actor: Actor, id: number): HolidayCalendar {
 export function deleteCalendar(actor: Actor, id: number): void {
   requireAdmin(actor)
   const cal = getCalendar(id)
-  if (calendarCountedBefore(cal.id, localToday(getSetting("default_timezone"))))
+  const people = peopleOnCalendar(cal.id)
+  if (calendarCountedBefore(cal.id, localToday(getSetting("default_timezone")), people.length > 0))
     throw new Conflict("This calendar counted for days already passed and can no longer be deleted", {
       code: "calendar_in_use",
     })
@@ -420,36 +429,27 @@ export function deleteCalendar(actor: Actor, id: number): void {
     if (frozen) ensureHolidayChangeAllowed(frozen.d)
   }
   // its people fall back to another calendar from today
-  archiveFromToday(
-    db
-      .select()
-      .from(users)
-      .all()
-      .filter((u) => applicableCalendar(u)?.calendar.id === cal.id),
-  )
+  archiveFromToday(people)
   for (const h of db.select().from(holidays).where(eq(holidays.calendarId, cal.id)).all()) removeHoliday({ actor }, h)
   db.delete(holidayCalendars).where(eq(holidayCalendars.id, cal.id)).run()
 }
 
 /** Did the calendar have holidays before `today` while someone counted with it (now or in earlier terms)? */
-function calendarCountedBefore(calendarId: number, today: string): boolean {
+function calendarCountedBefore(calendarId: number, today: string, countsNow: boolean): boolean {
   const past = db
     .select({ d: holidays.date })
     .from(holidays)
     .where(and(eq(holidays.calendarId, calendarId), lt(holidays.date, today)))
     .get()
   if (!past) return false
-  const earlier = db
-    .select({ id: userTermsHistory.id })
-    .from(userTermsHistory)
-    .where(eq(userTermsHistory.holidayCalendarId, calendarId))
-    .get()
-  if (earlier) return true
-  return db
-    .select({ holidayCalendarId: users.holidayCalendarId, teamId: users.teamId })
-    .from(users)
-    .all()
-    .some((u) => applicableCalendar(u)?.calendar.id === calendarId)
+  if (countsNow) return true
+  return (
+    db
+      .select({ id: userTermsHistory.id })
+      .from(userTermsHistory)
+      .where(eq(userTermsHistory.holidayCalendarId, calendarId))
+      .get() != null
+  )
 }
 
 // ------------------------------------------------------------------ holidays

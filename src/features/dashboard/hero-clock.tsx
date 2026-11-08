@@ -1,6 +1,6 @@
 /**
  * The dashboard's clock card: a ring that fills towards today's target, the live time, the state, a scheduled
- * clock-out ("clock out later"), the project (switch while working) and the actions (clock in/out, break, custom time,
+ * clock-out ("clock out later"), the project (switch while working) and the actions (clock in/out, custom time,
  * add time manually in place, report sick).
  */
 import { useQuery, useQueryClient } from "@tanstack/react-query"

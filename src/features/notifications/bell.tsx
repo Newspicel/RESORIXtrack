@@ -27,26 +27,23 @@ function applyRead<T extends NotificationList>(state: T, ids: number[] | null): 
 export function NotificationsBell() {
   const i = useI18n()
   const me = useMe()
-  const initialUnread = useBootstrap().counts.unread
+  // the badge counts from the bootstrap (refreshed with it); the list loads while the popover is open
+  const unreadCount = useBootstrap().counts.unread
   const [open, setOpen] = useState(false)
   const qc = useQueryClient()
   const q = useQuery({ ...notificationsQuery, enabled: open })
-  // read marks show at once; the lists are refetched when the Action settles (a failure falls back to them)
+  // read marks show at once; both are reloaded when the Action settles (a failure falls back to them)
   const [{ items, unread }, markLocally] = useOptimistic(
-    { items: q.data?.items, unread: q.data?.unread ?? initialUnread },
+    { items: q.data?.items, unread: unreadCount },
     (state, ids: number[] | null) => applyRead(state, ids),
   )
   const markRead = (ids: number[] | null) =>
     startTransition(async () => {
       markLocally(ids)
-      const ok = await markNotificationsRead({ data: { ids } }).then(
-        () => true,
-        () => false,
-      )
-      // the query is disabled once the popover closes, so invalidating alone would leave the old count
-      if (ok) qc.setQueryData(notificationsQuery.queryKey, (old) => old && { ...old, ...applyRead(old, ids) })
+      await markNotificationsRead({ data: { ids } }).catch(() => undefined)
       await Promise.all([
-        qc.invalidateQueries({ queryKey: ["notifications"] }),
+        // fetched even with the popover closed (a disabled query ignores invalidation), so a reopen is current
+        qc.prefetchQuery({ ...notificationsQuery, staleTime: 0 }),
         qc.invalidateQueries({ queryKey: ["bootstrap"] }),
       ])
     })

@@ -66,7 +66,11 @@ export const users = sqliteTable(
     birthDate: text(),
     anonymizedAt: instant(),
   },
-  (t) => [index("ix_users_team").on(t.teamId), index("ix_users_active_name").on(t.isActive, t.name)],
+  (t) => [
+    index("ix_users_team").on(t.teamId),
+    index("ix_users_active_name").on(t.isActive, t.name),
+    index("ix_users_calendar").on(t.holidayCalendarId),
+  ],
 )
 
 /**
@@ -93,7 +97,10 @@ export const userTermsHistory = sqliteTable(
     holidayCalendarId: integer(),
     createdAt: instant().notNull().default(nowInstant),
   },
-  (t) => [uniqueIndex("uq_user_terms_history_until").on(t.userId, t.validUntil)],
+  (t) => [
+    uniqueIndex("uq_user_terms_history_until").on(t.userId, t.validUntil),
+    index("ix_user_terms_history_calendar").on(t.holidayCalendarId),
+  ],
 )
 
 /** Earlier employment periods (rehiring); `users.employment_start/end` is the current one. */

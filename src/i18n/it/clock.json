@@ -2,20 +2,15 @@
   "label": "Timbratura",
   "start": "Timbra entrata",
   "stop": "Timbra uscita",
-  "break": "Inizia pausa",
-  "break_short": "Pausa",
-  "resume": "Termina pausa",
   "stop_now": "Timbra uscita adesso",
   "stop_later": "Timbra uscita più tardi",
   "state": {
     "idle": "Non timbrato",
-    "working": "Al lavoro",
-    "on_break": "In pausa"
+    "working": "Al lavoro"
   },
   "headline": {
     "idle": "Non hai timbrato l'entrata",
-    "working": "Hai timbrato l'entrata",
-    "on_break": "Sei in pausa"
+    "working": "Hai timbrato l'entrata"
   },
   "offline": "Offline",
   "pending_one": "Offline, {count} in sospeso",

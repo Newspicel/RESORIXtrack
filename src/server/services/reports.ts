@@ -8,15 +8,16 @@ import type { z } from "zod"
 import { db } from "../db"
 import { monthSignoffs, projects, teams, type User } from "../db/schema"
 import { Forbidden, Validation } from "../errors"
-import { addDays, dayBoundsUtc, iso, localToday, monthBounds, rangeBoundsUtc } from "../time"
+import { addDays, dayBoundsUtc, iso, localClock, localDateOf, localToday, monthBounds, rangeBoundsUtc } from "../time"
 import { absenceTypesById } from "./absence-types"
 import { absencesInRange, clippedDays, minDay, userNames } from "./absences"
-import { computeDays, personAccounts, summarize, timeBalance, vacationAccount } from "./accounts"
+import { computeDaysFrom, loadContext, personAccounts, summarize, timeBalance, vacationAccount } from "./accounts"
 import { editedEntryIds, entriesBetween } from "./entries"
 import { type Actor, clampFrom, isManager, requireView, seesDate } from "./permissions"
-import { type ProjectItem, projectItems, projectMode } from "./project-time"
-import { getAllSettings, getSetting } from "./settings"
+import { type ProjectItem, projectItems } from "./project-time"
+import { getAllSettings, getSetting, settingsTimeline } from "./settings"
 import { scopeUsers } from "./signoffs"
+import { personTimeline } from "./timeline"
 
 export { balancesInput, rangeInput, timesheetInput } from "./reports.schemas"
 
@@ -28,9 +29,6 @@ function checkRange(from: string, to: string): void {
     throw new Validation("Range too large (max 2 years)", { fields: { to: "too_long" } })
 }
 
-const localTime = (at: string, tz: string) =>
-  Temporal.Instant.from(at).toZonedDateTimeISO(tz).toPlainTime().toString({ smallestUnit: "minute" })
-const localDate = (at: string, tz: string) => Temporal.Instant.from(at).toZonedDateTimeISO(tz).toPlainDate().toString()
 const emptyCounts = (): Record<string, number> => ({})
 
 function pushTo<T>(map: Record<string, T[]>, key: string, item: T): void {
@@ -76,12 +74,14 @@ export function timesheet(actor: Actor, raw: z.input<typeof timesheetInput>) {
   // a lead covering from a later day sees the month from that day on
   const start = clampFrom(actor, user, monthStart)
   const tz = user.timezone
-  const days = start <= end ? computeDays(user, start, end) : []
+  const pre = { timeline: personTimeline(user), settings: settingsTimeline() }
+  const days = start <= end ? computeDaysFrom(loadContext(user, start, end, pre)) : []
   const today = localToday(tz)
-  const balanceBefore = timeBalance(user, addDays(start, -1)).balanceMin
+  const balanceBefore = timeBalance(user, addDays(start, -1), pre).balanceMin
   // complete days only, like the summary: today is still in progress
-  const balanceAfter = start < today ? timeBalance(user, minDay(end, addDays(today, -1))).balanceMin : balanceBefore
-  const vac = vacationAccount(user, year)
+  const balanceAfter =
+    start < today ? timeBalance(user, minDay(end, addDays(today, -1)), pre).balanceMin : balanceBefore
+  const vac = vacationAccount(user, year, undefined, pre)
   const [startUtc, endUtc] = rangeBoundsUtc(start, end, tz)
   const entries = entriesBetween(user.id, startUtc, endUtc)
   const edited = editedEntryIds(entries.map((e) => e.id))
@@ -90,11 +90,11 @@ export function timesheet(actor: Actor, raw: z.input<typeof timesheetInput>) {
     { id: number; kind: string; start: string; end: string | null; edited: boolean; note: string }[]
   > = {}
   for (const e of entries) {
-    pushTo(perDay, localDate(e.startAt, tz), {
+    pushTo(perDay, localDateOf(e.startAt, tz), {
       id: e.id,
       kind: e.kind,
-      start: localTime(e.startAt, tz),
-      end: e.endAt ? localTime(e.endAt, tz) : null,
+      start: localClock(e.startAt, tz),
+      end: e.endAt ? localClock(e.endAt, tz) : null,
       edited: edited.has(e.id) || e.source === "manual",
       note: e.note,
     })
@@ -138,7 +138,6 @@ export function timesheet(actor: Actor, raw: z.input<typeof timesheetInput>) {
     days,
     entries: perDay,
     projectTime,
-    projectMode: projectMode(),
     summary: summarize(days),
     payroll: payrollConfig(),
     balanceBeforeMin: balanceBefore,
@@ -172,9 +171,10 @@ export function balances(actor: Actor, raw: z.input<typeof balancesInput>) {
   const [start, end] = month ? monthBounds(year, month) : [`${year}-01-01`, `${year}-12-31`]
   const people = scopeUsers(actor, { teamId: input.teamId, periodStart: start })
   const teamNames = teamNameMap(people)
+  const settings = settingsTimeline()
   const rows = people.map((u) => {
     const from = clampFrom(actor, u, start)
-    const acc = personAccounts(u, [from, end].sort()[0], end, year)
+    const acc = personAccounts(u, [from, end].sort()[0], end, year, { settings })
     const s = summarize(from <= end ? acc.days : [])
     const vac = acc.vacation
     return {
@@ -376,14 +376,14 @@ export function rawEntries(actor: Actor, raw: z.input<typeof rangeInput>) {
     const [, endUtc] = dayBoundsUtc(input.to, tz)
     const entries = entriesBetween(u.id, startUtc, endUtc, true)
     const edited = editedEntryIds(entries.map((e) => e.id))
-    const local = (at: string) => `${localDate(at, tz)} ${localTime(at, tz)}`
+    const local = (at: string) => `${localDateOf(at, tz)} ${localClock(at, tz)}`
     return entries.map((e) => ({
       entryId: e.id,
       userId: u.id,
       name: u.name,
       email: u.email,
       kind: e.kind,
-      date: localDate(e.startAt, tz),
+      date: localDateOf(e.startAt, tz),
       startLocal: local(e.startAt),
       endLocal: e.endAt ? local(e.endAt) : "",
       startUtc: iso(e.startAt),

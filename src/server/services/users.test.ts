@@ -43,6 +43,19 @@ function addPasskey(userId: number, id: string) {
 }
 const passkeysOf = (userId: number) => db.select().from(s.passkey).where(eq(s.passkey.userId, userId)).all().length
 
+/** A password reset link as Better Auth stores it (identifier hashed, value the user id). */
+function resetLink(userId: number) {
+  db.insert(s.verification)
+    .values({ identifier: `hashed-${userId}`, value: String(userId), expiresAt: new Date(Date.now() + 1e6) })
+    .run()
+}
+const resetLinksOf = (userId: number) =>
+  db
+    .select()
+    .from(s.verification)
+    .where(eq(s.verification.value, String(userId)))
+    .all().length
+
 describe("users administration", () => {
   it("handles passkeys separately from two-factor; deactivation removes them", () => {
     const admin = loadActor(makeAdmin().id)
@@ -196,6 +209,17 @@ describe("users administration", () => {
     )
     expect(db.select().from(s.teamLeads).where(eq(s.teamLeads.userId, u.id)).all()).toHaveLength(0)
     expect(setActive(admin, u.id, true).isActive).toBe(true)
+  })
+
+  it("an email change ends pending password reset links, stored under a hashed identifier", () => {
+    const admin = loadActor(makeAdmin().id)
+    const u = makeUser()
+    const other = makeUser()
+    resetLink(u.id)
+    resetLink(other.id)
+    updateUser(admin, u.id, { email: "moved@example.nomail" })
+    expect(resetLinksOf(u.id)).toBe(0)
+    expect(resetLinksOf(other.id)).toBe(1)
   })
 
   it("sets a password (revoking sessions) and resets two-factor", () => {

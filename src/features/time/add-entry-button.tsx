@@ -10,6 +10,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { useT } from "@/lib/i18n"
 import { useMe } from "@/lib/session"
 import { periodQuery } from "./api"
+import { entryContext } from "./entry-context"
 import { EntryDialog } from "./entry-dialog"
 import { todayIn } from "./lib"
 import { periodParams } from "./period"
@@ -44,15 +45,7 @@ export function AddEntryButton({ label, size }: { label: string; size?: "default
           open={open}
           onOpenChange={setOpen}
           target={{ date: view.today }}
-          ctx={{
-            owner: view.user,
-            self: true,
-            today: view.today,
-            lockedMonths: view.lockedMonths,
-            reasonRequired: view.reasonRequired,
-            canEdit: view.canEdit,
-            entries: view.entries,
-          }}
+          ctx={entryContext(view, true)}
           onHistory={() => undefined}
         />
       ) : null}

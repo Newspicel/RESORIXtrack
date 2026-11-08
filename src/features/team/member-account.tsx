@@ -234,7 +234,8 @@ function AdjustmentDialog({ userId, name, onClose }: { userId: number; name: str
         }),
     },
     onSubmit: async ({ value, formApi }) => {
-      const amount = value.account === "time" ? parseSignedHours(value.amount)! : Number(value.amount.replace(",", "."))
+      const amount = value.account === "time" ? parseSignedHours(value.amount) : Number(value.amount.replace(",", "."))
+      if (amount == null) return
       const effectiveDate = value.effectiveDate || null
       const failed = await failure(
         createAdjustmentFn({

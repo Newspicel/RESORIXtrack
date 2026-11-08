@@ -193,10 +193,26 @@ export function otherAdminExists(actor: Actor): boolean {
   )
 }
 
+/**
+ * Changes concerning the actor themselves need another administrator, unless there is none. With `hrExempt`,
+ * HR may act for themselves (they manage time data anyway).
+ */
+export function requireSomeoneElse(
+  actor: Actor,
+  targetUserId: number,
+  message: string,
+  opts: { hrExempt: boolean },
+): void {
+  if (targetUserId !== actor.id || (opts.hrExempt && actor.isHr) || !otherAdminExists(actor)) return
+  throw new Forbidden(message, { code: "not_for_yourself" })
+}
+
 /** An administrator who leads `teamId` adds nobody to it (that would open their time data), unless HR or alone. */
 export function ensureNotJoiningOwnTeam(actor: Actor, teamId: number | null): void {
-  if (teamId == null || actor.isHr || !actor.ledTeamIds.has(teamId) || !otherAdminExists(actor)) return
-  throw new Forbidden("Another administrator has to add people to a team you lead", { code: "not_for_yourself" })
+  if (teamId == null || !actor.ledTeamIds.has(teamId)) return
+  requireSomeoneElse(actor, actor.id, "Another administrator has to add people to a team you lead", {
+    hrExempt: true,
+  })
 }
 
 /** Schedules and balances of `target` (one's own only as HR when nobody else could). */

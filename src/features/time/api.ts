@@ -6,10 +6,10 @@ import { db } from "@/server/db"
 import { revisions, users } from "@/server/db/schema"
 import { Validation } from "@/server/errors"
 import { authed, tx } from "@/server/middleware"
-import { computeDaysFrom, loadContext, summarize, timeBalance, vacationAccount } from "@/server/services/accounts"
+import { computeDaysFrom, loadContext, personAccounts, summarize } from "@/server/services/accounts"
 import { clockAction, clockState, syncOffline } from "@/server/services/clock"
 import { CLOCK_ACTIONS, OFFLINE_ACTIONS } from "@/server/services/clock.schemas"
-import { periodFindings } from "@/server/services/compliance"
+import { coveredFindings, periodFindings } from "@/server/services/compliance"
 import {
   createEntry,
   deleteEntry,
@@ -24,8 +24,8 @@ import {
 } from "@/server/services/entries"
 import { lockedMonths } from "@/server/services/locks"
 import { withOutbox } from "@/server/services/outbox"
-import { type Actor, canManageUser, dataFrom, requireView } from "@/server/services/permissions"
-import { firstDayMissingProject, projectMode } from "@/server/services/project-time"
+import { type Actor, canManageUser, requireView, seesDate } from "@/server/services/permissions"
+import { firstDayMissingProject, RECENT_DAYS } from "@/server/services/project-time"
 import { revisionVisible } from "@/server/services/revisions"
 import { getAllSettings } from "@/server/services/settings"
 import { addDays, iso, localDateOf, localToday, monthBounds, rangeBoundsUtc, weekStart } from "@/server/time"
@@ -58,8 +58,8 @@ function resolveRange(p: z.output<typeof periodInput>): [string, string] {
     return [s, addDays(s, 6)]
   }
   if (p.month) return monthBounds(Number(p.month.slice(0, 4)), Number(p.month.slice(5, 7)))
-  const from = p.from!
-  const to = p.to!
+  const { from, to } = p
+  if (!from || !to) throw new Validation("from/to, week or month is required")
   if (to < from) throw new Validation("'to' is before 'from'", { fields: { to: "before_start" } })
   if (Temporal.PlainDate.from(from).until(to).days > 400)
     throw new Validation("Range too large", { fields: { to: "too_long" } })
@@ -76,16 +76,14 @@ function periodView(actor: Actor, p: z.output<typeof periodInput>) {
   const ctx = loadContext(user, from, to)
   const [s, e] = rangeBoundsUtc(from, to, user.timezone)
   // a lead covering from a later day sees the days from then on
-  const first = dataFrom(actor, user)
-  const visible = (d: string) => first == null || d >= first
+  const visible = (d: string) => seesDate(actor, user, d)
   const rows = entriesBetween(user.id, s, e, p.includeDeleted).filter((r) =>
     visible(localDateOf(r.startAt, user.timezone)),
   )
   const edited = editedEntryIds(rows.map((r) => r.id))
   const days = computeDaysFrom(ctx, { editedEntryIds: edited }).filter((d) => visible(d.date))
-  const findings = periodFindings(user, from, to).filter(
-    (f) => (f.date == null || visible(f.date)) && (f.week == null || visible(addDays(f.week, 6))),
-  )
+  const pre = { timeline: ctx.timeline, settings: { at: ctx.settingsAt, changes: ctx.settingChanges } }
+  const findings = coveredFindings(actor, user, periodFindings(user, from, to, undefined, pre))
   const own = user.id === actor.id
   return {
     user: { id: user.id, name: user.name, timezone: user.timezone, recordingMode: user.recordingMode },
@@ -95,7 +93,6 @@ function periodView(actor: Actor, p: z.output<typeof periodInput>) {
     days,
     summary: summarize(days),
     entries: serializeEntries(rows, user.id),
-    projectMode: projectMode(),
     findings,
     lockedMonths: lockedMonths(user, from, to),
     canEdit: own || canManageUser(actor, user),
@@ -119,14 +116,18 @@ export const fetchTimeOverview = createServerFn({ method: "GET" })
     const user = actor.user
     const today = localToday(user.timezone)
     const ws = weekStart(today)
-    const days = computeDaysFrom(loadContext(user, ws, addDays(ws, 6)))
+    // one load: the week, the recent days checked for projects, the balance and the vacation account
+    const acc = personAccounts(user, addDays(today, -RECENT_DAYS), addDays(ws, 6), Number(today.slice(0, 4)))
+    const days = acc.days.filter((d) => d.date >= ws)
+    const todayRow = days.find((d) => d.date === today)
+    if (!todayRow) throw new Error("today outside its own week")
     return {
-      today: days.find((d) => d.date === today)!,
+      today: todayRow,
       week: { days, summary: summarize(days) },
-      balance: timeBalance(user),
-      vacation: vacationAccount(user, Number(today.slice(0, 4))),
+      balance: acc.balance,
+      vacation: acc.vacation,
       clock: clockState(user),
-      projectMissingDay: firstDayMissingProject(user),
+      projectMissingDay: firstDayMissingProject(user, acc.days),
     }
   })
 

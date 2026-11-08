@@ -1,22 +1,22 @@
 import type { AnyFormApi } from "@tanstack/react-form"
-import { useSuspenseQuery } from "@tanstack/react-query"
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
 import { Link, useRouter } from "@tanstack/react-router"
 import { ChevronLeft } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 import { EffectiveDateDialog } from "@/components/app/effective-date-dialog"
 import { Page, PageHeader } from "@/components/app/page"
-import { SaveBar } from "@/components/app/settings"
 import { PanelSkeleton, TabPanel } from "@/components/app/tab-panel"
 import { TabStrip } from "@/components/app/tab-strip"
 import { PersonAvatar } from "@/components/app/user-menu"
 import { FormRoot } from "@/components/form/form"
 import { applyServerErrors } from "@/components/form/server-errors"
-import { Button, ButtonLink } from "@/components/ui/button"
+import { ButtonLink } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { isOneOf } from "@/lib/guards"
 import { useI18n } from "@/lib/i18n"
 import { DEFAULT_LOCALE, isSupportedLocale } from "@/lib/locales"
+import { refreshSession } from "@/lib/session"
 import { updateUserFn, userDetailQuery, userRefsQuery } from "../api/users"
 import { USER_TABS, type UserTab } from "../search"
 import { useAction } from "../ui"
@@ -105,6 +105,7 @@ export function UserDetailPage({ userId, tab, onTab }: { userId: number; tab: Us
 
 function ProfileForm({ userId }: { userId: number }) {
   const { t, tError } = useI18n()
+  const qc = useQueryClient()
   const router = useRouter()
   const { data: u } = useSuspenseQuery(userDetailQuery(userId))
   const { data: refs } = useSuspenseQuery(userRefsQuery)
@@ -114,10 +115,9 @@ function ProfileForm({ userId }: { userId: number }) {
     {
       success: t("common.saved"),
       silentError: true,
-      // your own language, name or timezone: the whole app shows them, not only the admin pages
-      invalidate: u.isSelf ? [["admin"], ["bootstrap"]] : undefined,
       onSuccess: () => {
-        if (u.isSelf) void router.invalidate()
+        // your own language, name or timezone: the whole app shows them, not only the admin pages
+        if (u.isSelf) void refreshSession(qc, router)
       },
     },
   )
@@ -168,20 +168,7 @@ function ProfileForm({ userId }: { userId: number }) {
             <EarlierTerms user={u} />
           </div>
         </fieldset>
-        {locked ? null : (
-          <form.Subscribe selector={(st) => !st.isDefaultValue}>
-            {(dirty) => (
-              <SaveBar dirty={dirty} label={t("admin.settings.unsaved")}>
-                {dirty ? (
-                  <Button type="button" variant="ghost" onClick={() => form.reset()}>
-                    {t("common.discard")}
-                  </Button>
-                ) : null}
-                <form.SubmitButton>{t("common.save")}</form.SubmitButton>
-              </SaveBar>
-            )}
-          </form.Subscribe>
-        )}
+        {locked ? null : <form.SaveBar />}
       </FormRoot>
       {asking ? (
         <EffectiveDateDialog

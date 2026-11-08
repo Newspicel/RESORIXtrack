@@ -5,9 +5,9 @@
 import { and, asc, count, desc, eq, inArray, isNull, or } from "drizzle-orm"
 import { db } from "../db"
 import { holidayCalendars, type Team, type TeamLead, teamLeads, teams, users } from "../db/schema"
-import { Conflict, Forbidden, NotFound, Validation } from "../errors"
+import { Conflict, NotFound, Validation } from "../errors"
 import { notify } from "./notifications"
-import { type Actor, activeLeadRows, ensureNotJoiningOwnTeam, otherAdminExists, requireAdmin } from "./permissions"
+import { type Actor, activeLeadRows, ensureNotJoiningOwnTeam, requireAdmin, requireSomeoneElse } from "./permissions"
 import { record, snapshot } from "./revisions"
 import { archiveFromToday, inheritingCalendar } from "./terms"
 import { logLeadChange } from "./users"
@@ -211,8 +211,7 @@ function ensureNoDuplicate(teamId: number, input: LeadInput, exceptId?: number) 
 
 export function addLead(actor: Actor, teamId: number, input: LeadInput): TeamLead {
   requireAdmin(actor)
-  if (input.userId === actor.id && !actor.isHr && otherAdminExists(actor))
-    throw new Forbidden("Another administrator has to make you a lead", { code: "not_for_yourself" })
+  requireSomeoneElse(actor, input.userId, "Another administrator has to make you a lead", { hrExempt: true })
   const t = getTeam(teamId)
   validateLead(input)
   ensureNoDuplicate(t.id, input)
@@ -247,8 +246,7 @@ export function updateLead(
   requireAdmin(actor)
   const row = db.select().from(teamLeads).where(eq(teamLeads.id, leadId)).get()
   if (!row) throw new NotFound("Lead not found")
-  if (row.userId === actor.id && !actor.isHr && otherAdminExists(actor))
-    throw new Forbidden("Another administrator has to change your lead role", { code: "not_for_yourself" })
+  requireSomeoneElse(actor, row.userId, "Another administrator has to change your lead role", { hrExempt: true })
   const merged = {
     userId: row.userId,
     role: input.role,

@@ -177,6 +177,26 @@ describe("employment periods", () => {
     )
   })
 
+  it("rehiring works without a recorded employment start, also after a signed-off month", () => {
+    const u = makeUser({ employmentStart: null, employmentEnd: "2025-06-30" })
+    makeSchedule(u.id, { validFrom: "2025-01-01" })
+    lockMonth(u.id, "2025-06")
+    rehire(admin(), u.id, "2026-01-01")
+    const [earlier] = db.select().from(s.employmentHistory).where(eq(s.employmentHistory.userId, u.id)).all()
+    expect([earlier.startDate, earlier.endDate]).toEqual(["2025-01-01", "2025-06-30"])
+    // the guard still refuses an archived period that leaves out a signed-off month
+    const v = makeUser({ employmentStart: null, employmentEnd: "2025-06-30" })
+    lockMonth(v.id, "2025-03")
+    lockMonth(v.id, "2025-06")
+    expect(() =>
+      rawSqlite()
+        .prepare(
+          "INSERT INTO employment_history (user_id, start_date, end_date) VALUES (?, '2025-05-01', '2025-06-30')",
+        )
+        .run(v.id),
+    ).toThrow(/period signed off/)
+  })
+
   it("an earlier employment start gets the first schedule, so no day lacks a target", () => {
     const u = makeUser({ employmentStart: "2026-03-01" })
     makeSchedule(u.id, { validFrom: "2026-03-01" })

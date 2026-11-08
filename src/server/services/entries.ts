@@ -10,7 +10,17 @@ import { and, asc, desc, eq, gt, gte, inArray, isNull, lt, ne, or } from "drizzl
 import { db } from "../db"
 import { revisions, type TimeEntry, timeEntries, type User, users } from "../db/schema"
 import { Conflict, Forbidden, NotFound, Validation } from "../errors"
-import { fmtInstant, iso, localDateOf, localToday, nowInstant, rangeBoundsUtc, utcnow, zone } from "../time"
+import {
+  fmtInstant,
+  instantOfMs,
+  iso,
+  localDateOf,
+  localToday,
+  nowInstant,
+  rangeBoundsUtc,
+  utcnow,
+  zone,
+} from "../time"
 import { ensureOpenInstants } from "./locks"
 import { notify } from "./notifications"
 import { deferMail } from "./outbox"
@@ -52,7 +62,6 @@ export function parseInstantInput(value: string, tz: string, field = "at"): stri
 }
 
 export const ms = (at: string): number => Date.parse(at)
-export const instantOfMs = (n: number): string => new Date(n).toISOString().replace("Z", "000Z")
 
 // ------------------------------------------------------------------ serialization
 

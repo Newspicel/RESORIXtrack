@@ -1,16 +1,14 @@
 /**
  * Clock in / clock out control: a compact pill in the desktop top bar and a sticky bar above the tab bar on
- * phones. One primary action per state (clock in, clock out, end the break); the secondary one starts a break
- * while working and ends the day while on one; "custom time" sits in front. During a break the bars count the
- * break. With a scheduled clock-out ("clock out later") the primary action reads "Clock out now" and the bars
- * show "until 17:30". Keyboard: S clocks in/out or ends the break, B starts or ends a break (only when no
- * input has focus). Offline clicks queue and show as
+ * phones. One primary action per state; "custom time" is secondary. A break is simply a clock-out. With a
+ * scheduled clock-out ("clock out later") the primary action reads "Clock out now" and the bars show
+ * "until 17:30". Keyboard: S clocks in/out (only when no input has focus). Offline clicks queue and show as
  * pending until they are synced. With projects on, the state text names the running entry's project and
  * `ClockProject` picks it (switches while working, sets the next clock-in's project while idle), on the
  * dashboard and in the top bar.
  */
 import { useQuery } from "@tanstack/react-query"
-import { CloudOff, Coffee, LogOut, Play, Square, Timer } from "lucide-react"
+import { CloudOff, Play, Square, Timer } from "lucide-react"
 import { type ReactElement, useEffect, useEffectEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { Kbd } from "@/components/ui/kbd"
@@ -26,15 +24,7 @@ import type { ClockStateName } from "@/server/services/clock"
 import { CustomTimeButton } from "./custom-time"
 import { PICKER_ATTR, useNextProject, useProjectPrompt, visibleProjectPicker, writeNextProject } from "./next-project"
 import { registerServiceWorker } from "./register-sw"
-import {
-  type LiveClock,
-  liveSinceSec,
-  liveWorkedMin,
-  primaryAction,
-  scheduledTimeText,
-  secondaryAction,
-  useClock,
-} from "./use-clock"
+import { type LiveClock, liveWorkedMin, primaryAction, scheduledTimeText, useClock } from "./use-clock"
 import { useNow } from "./use-now"
 
 export type Clock = ReturnType<typeof useClock>
@@ -48,16 +38,14 @@ export function ClockControl({ variant }: { variant: "topbar" | "bar" }) {
 const STATE_DOT: Record<ClockStateName, string> = {
   idle: "bg-faint-foreground",
   working: "bg-work",
-  on_break: "bg-break",
 }
 
-/** h:mm of today's work, ticking while working; the running break while on one. */
+/** h:mm of today's work, ticking while working. */
 function LiveFigure({ c, className }: { c: LiveClock; className?: string }) {
-  const now = useNow(c.state !== "idle")
-  const min = c.state === "on_break" ? liveSinceSec(c, now) / 60 : liveWorkedMin(c, now)
+  const now = useNow(c.state === "working")
   return (
     <span className={cn("tabular", className)} suppressHydrationWarning>
-      {fmtMinutes(Math.floor(min))}
+      {fmtMinutes(Math.floor(liveWorkedMin(c, now)))}
     </span>
   )
 }
@@ -106,9 +94,8 @@ export function ClockProject({
   }, [stale, me.id])
   if (mode === "off" || !c) return null
   const working = c.state === "working"
-  // the entry is null right after an optimistic switch: show the choice until the server answers; a break
-  // continues its project unless another one is chosen
-  const value = working && c.entry ? c.entry.projectId : (next ?? (c.state === "on_break" ? c.breakProjectId : null))
+  // the entry is null right after an optimistic switch: show the choice until the server answers
+  const value = working && c.entry ? c.entry.projectId : next
   // required: flag a running entry without one, and an idle clock only after a clock-in was tried without one
   const missing =
     mode === "required" && (working ? c.entry != null && c.entry.projectId == null : prompted && value == null)
@@ -130,7 +117,7 @@ export function ClockProject({
   )
 }
 
-/** S: clock in/out (ends a break), B: start or end a break. Ignored while typing or while an overlay is open. */
+/** S: clock in/out. Ignored while typing or while an overlay is open. */
 function useShortcuts(clock: Clock) {
   const onKey = useEffectEvent((e: KeyboardEvent) => {
     const state = clock.data?.state
@@ -139,13 +126,9 @@ function useShortcuts(clock: Clock) {
     if (el instanceof HTMLElement && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName)))
       return
     if (document.querySelector("[role=dialog],[role=alertdialog],[role=menu]")) return
-    const key = e.key.toLowerCase()
-    if (key === "s") {
+    if (e.key.toLowerCase() === "s") {
       e.preventDefault()
       void clock.act(primaryAction(state))
-    } else if (key === "b" && state !== "idle") {
-      e.preventDefault()
-      void clock.act(state === "working" ? "pause" : "start")
     }
   })
   useEffect(() => {
@@ -166,10 +149,7 @@ function ShortcutTip({ label, keyName, children }: { label: string; keyName?: st
   )
 }
 
-/**
- * The actions for the current state (both bars and the dashboard card): custom time, the secondary action
- * (start a break, or end the day during one) and the primary one.
- */
+/** The primary action for the current state, with the custom-time popover (both bars and the dashboard card). */
 export function ClockActions({
   clock,
   size = "sm",
@@ -187,24 +167,9 @@ export function ClockActions({
   const c = clock.data
   if (!c) return null
   const primary = primaryAction(c.state)
-  const secondary = secondaryAction(c.state)
   const PrimaryIcon = primary === "start" ? Play : Square
   const iconSize = size === "lg" ? "icon-lg" : size === "default" ? "icon" : "icon-sm"
-  const primaryLabel =
-    c.state === "on_break"
-      ? t("clock.resume")
-      : primary === "start"
-        ? t("clock.start")
-        : c.scheduledEnd
-          ? t("clock.stop_now")
-          : t("clock.stop")
-  const secondaryLabel = secondary === "pause" ? t("clock.break") : t("clock.stop")
-  const secondaryShort = secondary === "pause" ? t("clock.break_short") : t("clock.stop")
-  // the dashboard card spells the secondary action out; the top bar keeps it quiet, with a short label from
-  // xl up; the phone bar shows its icon
-  const full = labels && size === "lg"
-  const compact = labels && size === "sm"
-  const SecondaryIcon = secondary === "pause" ? Coffee : LogOut
+  const primaryLabel = primary === "start" ? t("clock.start") : c.scheduledEnd ? t("clock.stop_now") : t("clock.stop")
   return (
     <div className={cn("flex items-center gap-1", className)}>
       {custom ? (
@@ -213,20 +178,6 @@ export function ClockActions({
           size={iconSize}
           onSubmit={(at) => void clock.act(primary, { at, custom: true })}
         />
-      ) : null}
-      {secondary ? (
-        <ShortcutTip label={secondaryLabel} keyName={secondary === "pause" ? "B" : undefined}>
-          <Button
-            variant={full ? "outline" : "ghost"}
-            size={full ? "lg" : compact ? "sm" : iconSize}
-            aria-label={full ? undefined : secondaryLabel}
-            onClick={() => void clock.act(secondary)}
-            className={cn(!full && "text-muted-foreground hover:text-foreground", compact && "max-xl:w-8 max-xl:px-0")}
-          >
-            <SecondaryIcon data-icon={full || compact ? "inline-start" : undefined} />
-            {full ? secondaryLabel : compact ? <span className="hidden xl:inline">{secondaryShort}</span> : null}
-          </Button>
-        </ShortcutTip>
       ) : null}
       <ShortcutTip label={primaryLabel} keyName="S">
         <Button
