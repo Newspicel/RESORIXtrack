@@ -3,9 +3,9 @@
  * difference to the target, holidays, absences, findings and signed-off months. Segments are buttons
  * (edit) and carry their project's colour and name, so a day reads as one block split by project; clicking
  * an empty part of a track adds an entry at that time (rounded to 15 minutes). `needsProject` entries (work
- * without a required project) are outlined.
+ * without a required project) stand out in the warning tone with a dashed edge and "No project".
  */
-import { Moon, PenLine, Sun } from "lucide-react"
+import { FolderX, Moon, PenLine, Sun } from "lucide-react"
 import type { MouseEvent } from "react"
 import { Duration, InProgress } from "@/components/data/duration"
 import { fmtDay, fmtMinutes, fmtWeekdayShort } from "@/lib/format"
@@ -166,6 +166,7 @@ export function WeekTimeline({
                   const what = e.project?.name
                   const label = `${t(`time.kind.${e.kind}`)} ${time}${what ? ` · ${what}` : ""}${e.note ? ` · ${e.note}` : ""}${corr ? ` · ${t("time.changed_by", { name: corr.by })}` : ""}`
                   const marked = e.edited || e.source === "manual"
+                  const missing = needsProject?.has(e.id) ?? false
                   const short = e.project ? projectShort(e.project) : ""
                   return (
                     <button
@@ -176,11 +177,12 @@ export function WeekTimeline({
                       title={label}
                       className={cn(
                         "@container absolute inset-y-1 flex items-center gap-1 overflow-hidden rounded-[5px] px-1.5 text-left text-[11px] font-medium whitespace-nowrap transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                        e.kind === "work"
-                          ? "bg-work text-primary-foreground hover:bg-work/85"
-                          : "bg-break/60 text-foreground hover:bg-break/75",
-                        e.corrected && "ring-2 ring-warning ring-inset",
-                        needsProject?.has(e.id) && "outline-2 outline-offset-1 outline-info",
+                        missing
+                          ? "border-2 border-dashed border-warning bg-warning/15 text-warning hover:bg-warning/25"
+                          : e.kind === "work"
+                            ? "bg-work text-primary-foreground hover:bg-work/85"
+                            : "bg-break/60 text-foreground hover:bg-break/75",
+                        e.corrected && !missing && "ring-2 ring-warning ring-inset",
                         e.project && "pl-2.5",
                       )}
                       style={{ left: pct(from), width: `calc(${pct(to - from)} - 1px)` }}
@@ -194,14 +196,21 @@ export function WeekTimeline({
                         />
                       ) : null}
                       {/* labels by the block's rendered width, so a narrow phone timeline shows no fragments */}
-                      {marked ? (
+                      {missing ? (
+                        <>
+                          <FolderX className="size-3 shrink-0" aria-hidden />
+                          <span className="hidden shrink-0 font-semibold @min-[5.5rem]:inline">
+                            {t("time.no_project")}
+                          </span>
+                        </>
+                      ) : marked ? (
                         <PenLine className="hidden size-3 shrink-0 opacity-80 @min-[3rem]:block" aria-hidden />
                       ) : null}
                       {short ? <span className="hidden truncate @min-[1.5rem]:inline">{short}</span> : null}
                       <span
                         className={cn(
                           "hidden truncate tabular opacity-80",
-                          short ? "@min-[6rem]:inline" : "@min-[4.25rem]:inline",
+                          missing ? "@min-[11rem]:inline" : short ? "@min-[6rem]:inline" : "@min-[4.25rem]:inline",
                         )}
                       >
                         {time}

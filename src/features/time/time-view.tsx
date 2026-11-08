@@ -238,7 +238,7 @@ export function TimeView({
             <MonthView view={view} onPick={(date) => go({ view: undefined, date })} />
           )}
         </PeriodContent>
-        {mode === "week" ? <Legend /> : null}
+        {mode === "week" ? <Legend missingProject={needsProject.size > 0} /> : null}
       </section>
 
       <Section title={t("time.entries")}>
@@ -288,7 +288,7 @@ export function TimeView({
   )
 }
 
-function Legend() {
+function Legend({ missingProject }: { missingProject: boolean }) {
   const { t } = useI18n()
   return (
     <ul className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground md:justify-end">
@@ -300,6 +300,12 @@ function Legend() {
         <span className="size-2.5 rounded-sm ring-2 ring-warning ring-inset" aria-hidden />
         {t("time.legend_corrected")}
       </li>
+      {missingProject ? (
+        <li className="flex items-center gap-1.5">
+          <span className="size-2.5 rounded-sm border border-dashed border-warning bg-warning/15" aria-hidden />
+          {t("time.project_missing")}
+        </li>
+      ) : null}
     </ul>
   )
 }
